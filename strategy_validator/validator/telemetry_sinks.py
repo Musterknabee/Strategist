@@ -68,13 +68,18 @@ class HttpPostTelemetrySink:
             req = urllib.request.Request(self._url, data=payload, method="POST", headers=headers)
             try:
                 with urllib.request.urlopen(req, timeout=self._timeout) as resp:  # noqa: S310
-                    resp.read()
+                    try:
+                        resp.read()
+                    except OSError:
+                        # Response headers already committed; body read can flake on Windows after 2xx.
+                        pass
                 return
             except (
                 TimeoutError,
                 urllib.error.URLError,
                 urllib.error.HTTPError,
                 ConnectionError,
+                OSError,
             ) as exc:
                 last_err = exc
                 if attempt < self._max_retries - 1 and self._backoff_start_ms > 0:

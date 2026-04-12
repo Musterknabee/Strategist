@@ -12,5 +12,6 @@ build/
 .env
 .venv/
 venv/
+.qwen/
 *.prom
 pilot_*.jsonl

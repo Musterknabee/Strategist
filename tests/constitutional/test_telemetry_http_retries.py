@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from typing import Any, ClassVar
+from typing import Any
 
 import pytest
 
@@ -11,14 +11,12 @@ from strategy_validator.validator.telemetry_sinks import HttpPostTelemetrySink
 
 
 class _FlakyHandler(BaseHTTPRequestHandler):
-    attempts: ClassVar[int] = 0
-
     def log_message(self, *args: Any) -> None:  # noqa: ANN401
         return
 
     def do_POST(self) -> None:  # noqa: N802
-        _FlakyHandler.attempts += 1
-        if _FlakyHandler.attempts < 3:
+        self.server.attempts += 1  # type: ignore[attr-defined]
+        if self.server.attempts < 3:
             self.send_error(503)
             return
         self.send_response(204)
@@ -27,8 +25,8 @@ class _FlakyHandler(BaseHTTPRequestHandler):
 
 @pytest.mark.constitutional
 def test_http_post_sink_retries_until_success() -> None:
-    _FlakyHandler.attempts = 0
     server = HTTPServer(("127.0.0.1", 0), _FlakyHandler)
+    server.attempts = 0  # type: ignore[attr-defined]
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     _, port = server.server_address
@@ -37,11 +35,11 @@ def test_http_post_sink_retries_until_success() -> None:
         sink = HttpPostTelemetrySink(
             url,
             timeout_seconds=2.0,
-            max_retries=4,
+            max_retries=3,
             backoff_start_ms=1.0,
         )
         sink.emit({"event": "retry_test"})
-        assert _FlakyHandler.attempts == 3
+        assert server.attempts == 3  # type: ignore[attr-defined]
     finally:
         server.shutdown()
         server.server_close()
