@@ -1,0 +1,28 @@
+tribunal_thresholds:
+  min_evidence_density: 0.3
+  neutral_novelty: 0.5
+  neutral_polarity: 0.0
+  neutral_tolerance: 0.05
+
+# Optional examples (uncomment and edit for your deployment):
+# runtime_policy:
+#   capacity_impact_model: HEURISTIC   # or CALIBRATED (requires calibration_artifact_path in PRODUCTION)
+#   calibration_artifact_path: null
+# market_data_http_connector:
+#   enabled: false
+#   provider_id: http_json_live
+#   liquidity_url_template: ""
+#   borrow_url_template: ""
+#   api_key_env_var: null
+#   timeout_seconds: 10
+# market_data_alpaca_connector:
+#   enabled: false
+#   provider_id: alpaca_data_v2
+#   data_base_url: https://data.alpaca.markets
+#   api_key_id_env: APCA_API_KEY_ID
+#   api_secret_key_env: APCA_API_SECRET_KEY
+#   timeout_seconds: 10
+#   enable_borrow_from_trading_api: false
+#   trading_base_url: https://paper-api.alpaca.markets
+#   etb_borrow_cost_bps: 20
+#   htb_borrow_cost_bps: 300

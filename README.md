@@ -1,0 +1,29 @@
+# Strategy Validator & Forensic Analyst: Engineering Constitution
+
+## Repository Layout & Ownership
+
+| Package | Responsibility | Primary Owners |
+| :--- | :--- | :--- |
+| `core/` | Canonical enums, exceptions, and manifest definitions. | Platform Architects |
+| `contracts/` | Typed Pydantic models for cross-layer communication. | Platform Architects |
+| `ledger/` | Immutable experiment lineage and state storage. | Data Integrity Team |
+| `validator/` | Robustness engines, cost realism, and adjudication. | Quantitative Analysts |
+| `tribunal/` | Semantic feature review and qualitative constraints. | Domain Experts |
+| `feature_factory/` | PIT feature generation (cannot adjudicate success). | Feature Engineers |
+| `proposers/` | External strategy/feature proposals. | Alpha Researchers |
+
+## Import Laws
+
+1.  **Strict Proposer Isolation**: `proposers/` may ONLY import from `core/`, `contracts/`, and `api/`. They are clients of the system, not operators.
+2.  **Tribunal Blindness**: `tribunal/` agents cannot see `validator/` logic or results to prevent bias. They also cannot write to the `ledger`.
+3.  **Adjudication Bottleneck**: Only `validator.orchestrator` is permitted to import `ledger.writer`. Any state transition must pass through the orchestrator's gates.
+4.  **No Direct Feature Adjudication**: `feature_factory` provides data but cannot access performance metrics or influence promotion directly.
+
+## Ledger Integrity
+
+*   **Read/Write Split**: Consumers must use `ledger.reader`. Only the adjudication path uses `ledger.writer`.
+*   **Immutability**: Once an experiment result is committed, it cannot be mutated. Errors must be corrected via new append-only entries.
+
+## Enforcement
+
+Constitutional boundaries are enforced via `import-linter` (see `pyproject.toml`) and AST checks in `tests/constitutional/`. GitHub Actions runs `pytest` plus import-linter on push and pull request.
