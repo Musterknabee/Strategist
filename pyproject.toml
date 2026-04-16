@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "strategy-validator"
-version = "0.1.0rc1"
+version = "1.0.0"
 description = "Strategy Validator & Forensic Analyst — constitutional baseline"
 readme = "README.md"
 requires-python = ">=3.11"
