@@ -8,7 +8,7 @@ from strategy_validator.api.routes.queue import router as queue_router
 from strategy_validator.api.routes.readiness import router as readiness_router
 from strategy_validator.api.routes.ui import router as ui_router
 from strategy_validator.api.routes.rebuild import router as rebuild_router
-from strategy_validator.application.readiness import get_readiness_health_payload
+from strategy_validator.application import get_readiness_health_payload
 
 app = FastAPI(title='strategy-validator-api')
 

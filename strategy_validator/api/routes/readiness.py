@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from strategy_validator.api.auth import require_mutation_auth
-from strategy_validator.application.readiness import (
+from strategy_validator.application import (
     get_readiness_health_payload,
     publish_release_bundle_from_paths,
 )
