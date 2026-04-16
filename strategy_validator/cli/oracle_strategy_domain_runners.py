@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -195,10 +196,17 @@ def cmd_oracle_strategic_memory_horizon(ns: argparse.Namespace) -> int:
     sealed_history_reports = []
     sealed_history_manifest_paths = []
     for bundle in getattr(ns, "verified_history_bundle", []):
-        try:
-            narrative_raw, manifest_raw, verification_raw = bundle.split(":", 2)
-        except ValueError as exc:
-            raise ValueError("verified history bundles must use narrative_path:manifest_path:verification_path") from exc
+        narrative_raw = manifest_raw = verification_raw = ""
+        # Windows drive letters introduce ":" characters into absolute paths, so parse using
+        # a Windows-absolute-path extractor when possible.
+        windows_paths = re.findall(r"[A-Za-z]:\\[^:]+", bundle)
+        if len(windows_paths) == 3:
+            narrative_raw, manifest_raw, verification_raw = windows_paths
+        else:
+            parts = bundle.split(":", 2)
+            if len(parts) != 3:
+                raise ValueError("verified history bundles must use narrative_path:manifest_path:verification_path")
+            narrative_raw, manifest_raw, verification_raw = parts
         narrative, manifest, _ = load_verified_strategic_stack_history_bundle_payload(
             narrative_report_path=Path(narrative_raw),
             manifest_path=Path(manifest_raw),
