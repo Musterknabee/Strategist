@@ -18,6 +18,7 @@ def test_ci_workflow_validates_strategist_web_shell() -> None:
     assert 'ui/strategist-web/package-lock.json' in workflow
     assert 'working-directory: ui/strategist-web' in workflow
     assert '- name: npm ci' in workflow
+    assert 'Install Strategist web dependencies (validate)' in workflow
     assert 'npm ci' in workflow
     assert 'Strategist web check' in workflow
     assert '- name: typecheck' in workflow

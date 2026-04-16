@@ -81,10 +81,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: ui/strategist-web/package-lock.json
       - name: Repo hygiene gate (fail-closed)
         run: python -c "from strategy_validator.cli.hygiene_check import main; raise SystemExit(main([]))"
       - name: Install full runtime and dev tools
         run: pip install -e ".[dev]"
+      - name: Install Strategist web dependencies (validate)
+        working-directory: ui/strategist-web
+        run: npm ci
       - name: Release candidate chain (generate -> assess -> verify bundle)
         run: |
           set -euo pipefail
