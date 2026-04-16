@@ -27,7 +27,9 @@ Completed in sandbox:
 
 ## Remaining work
 - complete remaining long-tail test convergence beyond the executed slices
-- storage upgrade path beyond single-node SQLite
+
+Completed after the sandbox execution record above:
+- storage upgrade path beyond single-node SQLite is now documented truthfully as `sqlite_single_node` with `PATH_DECLARED_NOT_IMPLEMENTED` surfaced through readiness and observability
 - frontend dependency pinning / lockfile generation
 - stricter UI truthfulness and CI coverage for the Next.js app
 - deploy manifests and rollback/backup drills

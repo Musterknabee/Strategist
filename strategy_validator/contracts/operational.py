@@ -29,6 +29,9 @@ class DeploymentReadiness(BaseModel):
     config_fingerprint: str
     schema_version: int
     expected_schema_version: int
+    storage_backend: str
+    storage_upgrade_status: str
+    storage_upgrade_summary: str
     blockers: List[ReadinessBlocker] = []
     warnings: List[ReadinessBlocker] = []
     adjudication_allowed: bool
@@ -49,6 +52,9 @@ class OperationalHeartbeat(BaseModel):
     blocker_reasons: List[str]
     schema_version: int
     expected_schema_version: int
+    storage_backend: str
+    storage_upgrade_status: str
+    storage_upgrade_summary: str
     storage_status_summary: str
     market_data_policy_summary: str
     adjudication_allowed: bool
@@ -93,6 +99,9 @@ class OperationalDiagnostics(BaseModel):
     runtime_mode: RuntimeMode
     config_fingerprint: str
     readiness_status: Literal["READY", "DEGRADED", "BLOCKED"]
+    storage_backend: str
+    storage_upgrade_status: str
+    storage_upgrade_summary: str
     storage_target: str
     market_data_source_policy: str
     production_safe_adjudication_allowed: bool

@@ -15,6 +15,9 @@ def get_readiness_health_payload() -> dict[str, Any]:
         'surface': 'readiness',
         'status': readiness.status,
         'adjudication_allowed': readiness.adjudication_allowed,
+        'storage_backend': readiness.storage_backend,
+        'storage_upgrade_status': readiness.storage_upgrade_status,
+        'storage_upgrade_summary': readiness.storage_upgrade_summary,
         'blocker_codes': [blocker.code for blocker in readiness.blockers],
     }
 

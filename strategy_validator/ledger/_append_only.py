@@ -21,6 +21,12 @@ _DEFAULT_DB_NAME = "ledger.sqlite3"
 _TABLE_NAME = "ledger_events"
 _ALLOWED_WRITE_PREFIX = f"INSERT INTO {_TABLE_NAME}".upper()
 _WINDOWS_ABS_RE = re.compile(r"^[A-Za-z]:[\/].+")
+_STORAGE_BACKEND = "sqlite_single_node"
+_STORAGE_UPGRADE_STATUS = "PATH_DECLARED_NOT_IMPLEMENTED"
+_STORAGE_UPGRADE_SUMMARY = (
+    "Current ledger backend remains single-node SQLite. "
+    "Upgrade path is governed backup, explicit migration, and append-only export/import planning before any backend change."
+)
 
 
 def _is_windows_absolute(path_str: str) -> bool:
@@ -179,3 +185,11 @@ def get_schema_version_info() -> tuple[int, int]:
             return current, EXPECTED_SCHEMA_VERSION
     except Exception:
         return 0, EXPECTED_SCHEMA_VERSION
+
+
+def get_storage_posture() -> dict[str, str]:
+    return {
+        "storage_backend": _STORAGE_BACKEND,
+        "storage_upgrade_status": _STORAGE_UPGRADE_STATUS,
+        "storage_upgrade_summary": _STORAGE_UPGRADE_SUMMARY,
+    }

@@ -31,6 +31,7 @@ from strategy_validator.ledger._append_only import (
     _DEFAULT_DB_DIR,
     _DEFAULT_DB_NAME,
     get_schema_version_info,
+    get_storage_posture,
 )
 from strategy_validator.validator.calibration_governance import calibration_governance_violations
 from strategy_validator.validator.calibration_loader import load_calibration_artifact_from_path
@@ -44,6 +45,7 @@ def perform_readiness_check() -> DeploymentReadiness:
     policy = config.runtime_policy
     blockers: List[ReadinessBlocker] = []
     checks: Dict[str, bool] = {}
+    storage_posture = get_storage_posture()
 
     # 1. Config Fingerprint
     config_dict = config.tribunal_thresholds.model_dump(mode="json")
@@ -151,6 +153,9 @@ def perform_readiness_check() -> DeploymentReadiness:
         config_fingerprint=fingerprint,
         schema_version=cur_v,
         expected_schema_version=exp_v,
+        storage_backend=storage_posture["storage_backend"],
+        storage_upgrade_status=storage_posture["storage_upgrade_status"],
+        storage_upgrade_summary=storage_posture["storage_upgrade_summary"],
         blockers=blockers,
         warnings=[], # Implement warning logic if needed in future
         adjudication_allowed=status == "READY",
@@ -177,6 +182,9 @@ def generate_operational_diagnostics() -> OperationalDiagnostics:
         runtime_mode=config.mode,
         config_fingerprint=readiness.config_fingerprint,
         readiness_status=readiness.status,
+        storage_backend=readiness.storage_backend,
+        storage_upgrade_status=readiness.storage_upgrade_status,
+        storage_upgrade_summary=readiness.storage_upgrade_summary,
         storage_target=str(resolve_database_path()),
         market_data_source_policy=md_policy_label,
         production_safe_adjudication_allowed=readiness.status == "READY",
