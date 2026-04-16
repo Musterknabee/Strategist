@@ -1,0 +1,32 @@
+{
+  "generated_at_utc": "2026-04-13T08:52:17.494649Z",
+  "runtime_mode": "DEV",
+  "config_fingerprint": "5b78b4301b32",
+  "policy_sha256": "7c9a41791f0d5df274253caa03f0453f2bd45417286a3cdbc6f2e0e806feb66c",
+  "interface_freeze_id": "0.1.0rc1",
+  "release_commit": "18576242556b813fe6007842efa576f85561f8be",
+  "release_tag": null,
+  "provider_source_policy_summary": "allow_provisional=True; allow_snapshot=True; allow_fallback=False; strict_mode=False",
+  "keyed_host_fingerprint_path": "docs/artifacts/release_closure_2026-04-13/KEYED_HOST_FINGERPRINT.json",
+  "burnin_artifact_paths": [
+    "pilot_followup_alpaca_long.jsonl",
+    "pilot_followup_alpaca_off_hours.jsonl",
+    "pilot_followup_alpaca_sym_QQQ.jsonl"
+  ],
+  "scope": {
+    "environment": "paper",
+    "provider": "alpaca_data_v2",
+    "symbols": [
+      "SPY",
+      "QQQ"
+    ],
+    "allowed_actions": [
+      "observe",
+      "archive",
+      "recommend"
+    ],
+    "operator_signoff_required": true
+  },
+  "operator_signoff_name": null,
+  "operator_signoff_utc": null
+}

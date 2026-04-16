@@ -1,0 +1,19 @@
+{
+  "schema_version": "oracle_quarterly_lane_entry/v1",
+  "appended_at_utc": "2026-04-16T11:00:33.131354Z",
+  "lane_id": "ORACLE_QUARTERLY_LANE",
+  "exact_evidence_support_score": 0.0,
+  "exact_feedback_confirmation_count": 0,
+  "exact_feedback_relief_count": 0,
+  "sequence_number": 3,
+  "entry_id": "794b42ec2724b29344f3806f0cd10436e202e72edbd029e06d55f9360e4ff511",
+  "quarterly_review_id": "d67e842b7cca860b3015a1cff7be197442591b9d582904683e6447efb2f6576f",
+  "previous_entry_hash": "62216f9ef94ed58b9347c65001fd780f3dbf322236e737c046290d7a73f95cf9",
+  "entry_hash": "b0a54fe5af3afd6f634b9bf5ce6dc1eae0397fc4a5d3549d79481681801d50c1",
+  "manifest_path": "quarter6/ORACLE_QUARTERLY_REVIEW_EVIDENCE.json",
+  "manifest_sha256": "e7a554e29ad4ebd5e214b549a2cc38ac3b71e3de04a5b4dfda210dd916ebcb1b",
+  "quarterly_review_classification": "QUARTERLY_REPAIR_STRUCTURAL",
+  "latest_monthly_digest_id": "month-5",
+  "evidence_status": "VERIFIED",
+  "summary_line": "Oracle quarterly review=QUARTERLY_REPAIR_STRUCTURAL; window_entries=3; evidence_gap=0; repair=3; retrain=0; defensive=0; heightened=0; exact_support=0.00; exact_confirm=0; exact_relief=0"
+}

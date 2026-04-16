@@ -1,0 +1,21 @@
+{
+  "generated_at_utc": "2026-04-16T12:27:15.856698Z",
+  "host_kind": "KEYED_OPERATOR_HOST",
+  "host_label": "DESKTOP-VUFPDBG",
+  "interface_freeze_id": "0.1.0rc1",
+  "runtime_mode": "DEV",
+  "config_fingerprint": "f6efbefd8905",
+  "policy_sha256": "45eb4dfbcf4a60a10130239d8c0ff3f3538b6a26fa7ee415ac49a12bd877692b",
+  "git_commit": null,
+  "git_tag": null,
+  "env_presence": {
+    "APCA_API_KEY_ID": true,
+    "APCA_API_SECRET_KEY": true,
+    "STRATEGY_VALIDATOR_ALPACA_API_KEY_ID_ENV": false,
+    "STRATEGY_VALIDATOR_ALPACA_API_SECRET_KEY_ENV": false
+  },
+  "env_value_sha256": {
+    "APCA_API_KEY_ID": "b0b146320abf7c96240706447031ed7932df29d01a404bc728f30f5f4e375e2b",
+    "APCA_API_SECRET_KEY": "21728b5758f6999aafcd1d8281f96bf97dcddb56e077f5429432c0e23ec85cf2"
+  }
+}

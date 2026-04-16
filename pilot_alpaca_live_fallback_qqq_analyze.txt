@@ -1,0 +1,64 @@
+{
+  "rounds": 30,
+  "pilot_schema_counts": {
+    "2": 30
+  },
+  "failure_domain_counts": {
+    "NONE": 30
+  },
+  "failure_code_counts": {
+    "NONE": 30
+  },
+  "vendor_failure_event_domain_counts": {},
+  "vendor_failure_event_code_counts": {},
+  "provider_status_counts": {
+    "STALE": 30
+  },
+  "timeout_signal_rounds": 0,
+  "snapshot_age_s_max": 3600.0,
+  "snapshot_age_s_p95": 3600.0,
+  "latency_ms_distribution": {
+    "n": 30,
+    "min_ms": 306.188,
+    "p50_ms": 329.711,
+    "p90_ms": 352.325,
+    "p95_ms": 353.727,
+    "p99_ms": 400.058,
+    "max_ms": 1316.095
+  },
+  "primary_latency_ms_distribution": {
+    "n": 30,
+    "min_ms": 306.137,
+    "p50_ms": 329.655,
+    "p90_ms": 352.264,
+    "p95_ms": 353.675,
+    "p99_ms": 399.81,
+    "max_ms": 1315.989
+  },
+  "fallback_latency_ms_distribution": {
+    "n": 30,
+    "min_ms": 0.015,
+    "p50_ms": 0.017,
+    "p90_ms": 0.022,
+    "p95_ms": 0.025,
+    "p99_ms": 0.032,
+    "max_ms": 0.124
+  },
+  "latency_ms_p95": 353.727,
+  "effective_freshness_counts": {
+    "FRESH": 30
+  },
+  "primary_freshness_counts": {
+    "STALE": 30
+  },
+  "fallback_applied_rounds": 30,
+  "stale_or_old_snapshot_rounds": 30,
+  "rate_limit_proxy_rounds": 0,
+  "auth_domain_rounds": 0
+}
+
+# Pilot summary (30 rounds) - review before applying
+# Observed many STALE or large snapshot ages -> widen LIVE window or use US RTH off-hours law.
+# STRATEGY_VALIDATOR_LIVE_MARKET_DATA_FRESHNESS_THRESHOLD_SECONDS=<raise_from_observed_p95_age>
+# STRATEGY_VALIDATOR_LIVE_FRESHNESS_MARKET_HOURS_PROFILE=US_EQUITIES_RTH
+# STRATEGY_VALIDATOR_LIVE_FRESHNESS_OFF_HOURS_THRESHOLD_SECONDS=<match_off_hours_p95>

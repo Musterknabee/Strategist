@@ -1,0 +1,19 @@
+{
+  "schema_version": "oracle_monthly_lane_entry/v1",
+  "appended_at_utc": "2026-04-16T10:59:16.488790Z",
+  "lane_id": "ORACLE_MONTHLY_LANE",
+  "exact_evidence_support_score": 0.0,
+  "exact_feedback_confirmation_count": 0,
+  "exact_feedback_relief_count": 0,
+  "sequence_number": 2,
+  "entry_id": "c4181f49f5447dc8415290c31b7d90d3b83c314e6eaa8d84cb1d932d5e1033ce",
+  "monthly_digest_id": "2dc68796c0e4d34ad3d6aacc98d2828f85e72173191ab405569f5ed7132386b0",
+  "previous_entry_hash": "3422095b37cacbdd6108bf13092948e72fcddbc6169f34cf0cb695274360af25",
+  "entry_hash": "5789729e28f0c0c38cc062d4b86ed55541ec8cf2fd7147fb248b59cfe4e0b1ee",
+  "manifest_path": "month3/ORACLE_MONTHLY_DIGEST_EVIDENCE.json",
+  "manifest_sha256": "fdf3a6a0b1c3c76e253a636e18cab539e7c816689d796b471821c73ea5cf1fe8",
+  "doctrine_memory_classification": "DOCTRINE_REPAIR_PERSISTENT",
+  "latest_drift_classification": "RECURRING_REPAIR",
+  "evidence_status": "VERIFIED",
+  "summary_line": "Oracle monthly digest=DOCTRINE_REPAIR_PERSISTENT; window_entries=3; evidence_gap=0; repair=4; retrain=0; defensive=0; heightened=1; escalations=1; exact_support=0.00; exact_confirm=0; exact_relief=0"
+}

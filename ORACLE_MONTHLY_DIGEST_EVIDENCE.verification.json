@@ -1,0 +1,13 @@
+{
+  "verified_at_utc": "2026-04-16T10:59:16.817956Z",
+  "manifest_path": "C:/Users/jpkem/AppData/Local/Temp/pytest-of-jpkem/pytest-4/test_oracle_monthly_lane_appen0/month/ORACLE_MONTHLY_DIGEST_EVIDENCE.json",
+  "status": "INCOMPLETE",
+  "artifact_digests_verified": false,
+  "signature_verified": false,
+  "verified_subject_count": 2,
+  "digest_mismatches": [],
+  "missing_artifact_paths": [
+    "C:\\Users\\jpkem\\AppData\\Local\\Temp\\pytest-of-jpkem\\pytest-4\\test_oracle_monthly_lane_appen0\\month\\ORACLE_MONTHLY_DIGEST.md"
+  ],
+  "notes": []
+}

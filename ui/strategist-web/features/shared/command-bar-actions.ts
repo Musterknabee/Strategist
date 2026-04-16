@@ -1,0 +1,296 @@
+export type CommandBarAction = {
+  id: string;
+  label: string;
+  description: string;
+  domain: string | "shell";
+  kind: "route" | "shell";
+  keywords: string[];
+};
+
+const BASE_ACTIONS: CommandBarAction[] = [
+  {
+    id: "route-workboard",
+    label: "Open workboard",
+    description: "Control-plane queue, packs, and escalations.",
+    domain: "control-plane",
+    kind: "route",
+    keywords: ["queue", "packs", "control", "operator", "workboard"],
+  },
+  {
+    id: "route-burnin",
+    label: "Open burn-in overview",
+    description: "Validator executive summary and promotion posture.",
+    domain: "validator",
+    kind: "route",
+    keywords: ["validator", "burnin", "overview", "promotion"],
+  },
+  {
+    id: "route-forensic",
+    label: "Open validator forensic",
+    description: "Forensic validator deep dive and path stability.",
+    domain: "validator",
+    kind: "route",
+    keywords: ["validator", "forensic", "paths", "stability", "dsr", "pbo"],
+  },
+  {
+    id: "route-providers",
+    label: "Open provider ingress",
+    description: "Validator provider ingress health and provenance.",
+    domain: "validator",
+    kind: "route",
+    keywords: ["providers", "ingress", "openbb", "alpaca", "nim"],
+  },
+  {
+    id: "route-tribunal",
+    label: "Open tribunal workspace",
+    description: "Doctrine, falsification, and thesis review.",
+    domain: "tribunal",
+    kind: "route",
+    keywords: ["tribunal", "doctrine", "falsification", "thesis"],
+  },
+  {
+    id: "route-evidence",
+    label: "Open evidence explorer",
+    description: "Registry, verification, and lineage views.",
+    domain: "evidence",
+    kind: "route",
+    keywords: ["evidence", "registry", "lineage", "verification"],
+  },
+  {
+    id: "route-settings-overview",
+    label: "Open settings overview",
+    description: "Diagnostics overview and local bring-up navigation.",
+    domain: "shell",
+    kind: "route",
+    keywords: ["settings", "diagnostics", "overview", "health"],
+  },
+  {
+    id: "route-setup-checklist",
+    label: "Open setup checklist",
+    description: "Copy-friendly local commands for env bootstrap, doctor, check, and build.",
+    domain: "shell",
+    kind: "route",
+    keywords: ["settings", "checklist", "doctor", "build", "setup"],
+  },
+  {
+    id: "route-quick-actions",
+    label: "Open diagnostics quick actions",
+    description: "Grouped copy/paste command blocks for bootstrap, verification, and diagnostics maintenance.",
+    domain: "shell",
+    kind: "route",
+    keywords: ["settings", "quick actions", "commands", "copy", "diagnostics"],
+  },
+  {
+    id: "route-diagnostics-runbook",
+    label: "Open diagnostics runbook",
+    description: "Combined workflow sequences for first local run, verify-before-build, and diagnostics maintenance.",
+    domain: "shell",
+    kind: "route",
+    keywords: ["settings", "runbook", "workflow", "diagnostics", "maintenance"],
+  },
+  {
+    id: "route-diagnostics-history",
+    label: "Open diagnostics history",
+    description: "Recent local diagnostics export history and filtering surface.",
+    domain: "shell",
+    kind: "route",
+    keywords: ["settings", "history", "diagnostics", "exports", "trail"],
+  },
+  {
+    id: "route-diagnostics-compare",
+    label: "Open diagnostics compare",
+    description: "Compare the latest diagnostics snapshot against aggregate summary history.",
+    domain: "shell",
+    kind: "route",
+    keywords: ["settings", "compare", "diagnostics", "summary", "latest"],
+  },
+  {
+    id: "route-runtime-diagnostics",
+    label: "Open runtime diagnostics",
+    description: "Frontend/backend configuration and local bring-up posture.",
+    domain: "shell",
+    kind: "route",
+    keywords: ["runtime", "diagnostics", "env", "backend", "health"],
+  },
+  {
+    id: "route-frontend-preflight",
+    label: "Open frontend preflight",
+    description: "Quick probe of representative BFF payloads and frontend runtime posture.",
+    domain: "shell",
+    kind: "route",
+    keywords: ["preflight", "probe", "frontend", "runtime", "health"],
+  },
+  {
+    id: "route-diagnostics-export",
+    label: "Open diagnostics export",
+    description: "Single-snapshot runtime and preflight export surface.",
+    domain: "shell",
+    kind: "route",
+    keywords: ["settings", "export", "diagnostics", "snapshot", "preflight"],
+  },
+  {
+    id: "route-diagnostics-latest",
+    label: "Open latest diagnostics snapshot",
+    description: "Quick view of the most recent local diagnostics export entry.",
+    domain: "shell",
+    kind: "route",
+    keywords: ["settings", "latest", "diagnostics", "history", "snapshot"],
+  },
+  {
+    id: "route-diagnostics-summary",
+    label: "Open diagnostics summary",
+    description: "Aggregate view across recent local diagnostics runs.",
+    domain: "shell",
+    kind: "route",
+    keywords: ["settings", "summary", "diagnostics", "history", "aggregate"],
+  },
+  {
+    id: "route-diagnostics-trends",
+    label: "Open diagnostics trends",
+    description: "Daily trend buckets for posture and backend/mock mode across local diagnostics history.",
+    domain: "shell",
+    kind: "route",
+    keywords: ["settings", "trends", "diagnostics", "history", "warnings"],
+  },
+  {
+    id: "route-diagnostics-status-board",
+    label: "Open diagnostics status board",
+    description: "Combined latest posture, summary, compare, trends, and recurring maintenance loop.",
+    domain: "shell",
+    kind: "route",
+    keywords: ["settings", "status board", "diagnostics", "compare", "trends"],
+  },
+  {
+    id: "route-diagnostics-escalation-matrix",
+    label: "Open diagnostics escalation matrix",
+    description: "Escalation-oriented guidance for deciding when to monitor, stabilize, investigate, or reset the diagnostics trail.",
+    domain: "shell",
+    kind: "route",
+    keywords: ["settings", "escalation", "matrix", "reset", "investigate"],
+  },
+  {
+    id: "route-diagnostics-recommendations",
+    label: "Open diagnostics recommendations",
+    description: "Prioritized next moves derived from latest posture, summary pressure, compare alignment, and status-board context.",
+    domain: "shell",
+    kind: "route",
+    keywords: ["settings", "recommendations", "diagnostics", "next steps", "runbook"],
+  },
+  {
+    id: "route-diagnostics-action-queue",
+    label: "Open diagnostics action queue",
+    description: "Queued, watch, and later diagnostics actions grouped as an operational backlog.",
+    domain: "shell",
+    kind: "route",
+    keywords: ["settings", "action queue", "diagnostics", "backlog", "queued"],
+  },
+  {
+    id: "route-diagnostics-incident-playbook",
+    label: "Open diagnostics incident playbook",
+    description: "Response-oriented playbook connecting escalation, action queue, and stabilization/reset loops.",
+    domain: "shell",
+    kind: "route",
+    keywords: ["settings", "incident", "playbook", "diagnostics", "response"],
+  },
+  {
+    id: "route-diagnostics-recovery-scorecard",
+    label: "Open diagnostics recovery scorecard",
+    description: "Recovery-oriented scorecard for deciding whether the shell is ready, stabilizing, or blocked.",
+    domain: "shell",
+    kind: "route",
+    keywords: ["settings", "recovery", "scorecard", "diagnostics", "stabilize"],
+  },
+  {
+    id: "route-diagnostics-readiness-gate",
+    label: "Open diagnostics readiness gate",
+    description: "Go / no-go view combining latest posture, blockers, recovery readiness, and proceed sequence.",
+    domain: "shell",
+    kind: "route",
+    keywords: ["settings", "readiness", "gate", "go", "no-go", "recovery"],
+  },
+  {
+    id: "route-diagnostics-decision-log",
+    label: "Open diagnostics decision log",
+    description: "Audit-style proceed / conditional / hold / stabilize log derived from readiness, recovery, and action-queue posture.",
+    domain: "shell",
+    kind: "route",
+    keywords: ["settings", "decision", "log", "audit", "readiness", "recovery"],
+  },
+  {
+    id: "route-diagnostics-handoff-packet",
+    label: "Open diagnostics handoff packet",
+    description: "Aggregated proceed / stabilize / hold handoff packet derived from readiness, summary pressure, and the decision log.",
+    domain: "shell",
+    kind: "route",
+    keywords: ["settings", "handoff", "packet", "decision", "readiness", "hold", "proceed"],
+  },
+  {
+    id: "route-diagnostics-checkpoint-register",
+    label: "Open diagnostics checkpoint register",
+    description: "Final checkpoint list for deciding whether to proceed, stay under watch, or hold before a fuller validation pass.",
+    domain: "shell",
+    kind: "route",
+    keywords: ["settings", "checkpoint", "register", "proceed", "watch", "hold", "readiness"],
+  },
+  {
+    id: "route-diagnostics-certification-manifest",
+    label: "Open diagnostics certification manifest",
+    description: "Final local certification and attestation derived from readiness, decision posture, handoff, and checkpoint alignment.",
+    domain: "shell",
+    kind: "route",
+    keywords: ["settings", "certification", "manifest", "attestation", "go", "no-go", "checkpoint"],
+  },
+  {
+    id: "route-diagnostics-release-candidate-dossier",
+    label: "Open release-candidate dossier",
+    description: "Final pre-release dossier derived from readiness, certification, checkpoints, handoff, and decision posture.",
+    domain: "shell",
+    kind: "route",
+    keywords: ["settings", "release candidate", "dossier", "pre-release", "certification", "handoff"],
+  },
+  {
+    id: "shell-open-latest-receipt",
+    label: "Open latest receipt",
+    description: "Open the command receipt lane and focus the newest receipt.",
+    domain: "shell",
+    kind: "shell",
+    keywords: ["receipt", "latest", "command", "lane"],
+  },
+  {
+    id: "shell-open-latest-packet",
+    label: "Open latest review packet",
+    description: "Open the review packet lane and inspect the newest packet.",
+    domain: "shell",
+    kind: "shell",
+    keywords: ["packet", "review", "latest", "lane"],
+  },
+  {
+    id: "shell-toggle-receipts",
+    label: "Toggle receipt lane",
+    description: "Show or hide the command receipt lane.",
+    domain: "shell",
+    kind: "shell",
+    keywords: ["receipt", "show", "hide", "lane"],
+  },
+  {
+    id: "shell-toggle-packets",
+    label: "Toggle review packet lane",
+    description: "Show or hide the review packet lane.",
+    domain: "shell",
+    kind: "shell",
+    keywords: ["review", "packet", "show", "hide", "lane"],
+  },
+];
+
+export function getVisibleCommandBarActions(allowedDomains: string[]): CommandBarAction[] {
+  return BASE_ACTIONS.filter((action) => action.domain === "shell" || allowedDomains.includes(action.domain));
+}
+
+export function filterCommandBarActions(actions: CommandBarAction[], query: string): CommandBarAction[] {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return actions;
+  return actions.filter((action) => {
+    const haystack = [action.label, action.description, ...action.keywords].join(" ").toLowerCase();
+    return haystack.includes(normalized);
+  });
+}

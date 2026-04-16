@@ -1,0 +1,93 @@
+{
+  "schema_version": "closure_snapshot_manifest/v1",
+  "generated_at_utc": "2026-04-16T12:27:23.016646Z",
+  "closure_id": "release_closure_live_alpaca_2026-04-16",
+  "closure_dir": "docs/artifacts/release_closure_live_alpaca_2026-04-16",
+  "integrity_status": "VERIFIED",
+  "subjects": [
+    {
+      "name": "KEYED_HOST_FINGERPRINT.json",
+      "path": "docs/artifacts/release_closure_live_alpaca_2026-04-16/KEYED_HOST_FINGERPRINT.json",
+      "digest": {
+        "sha256": "b801c2a02474fd02dafabc16c9d5d801a899d209c0a5b170624c6a11d0e12516"
+      },
+      "size_bytes": 792,
+      "media_type": "application/json"
+    },
+    {
+      "name": "ROLLOUT_BUNDLE.json",
+      "path": "docs/artifacts/release_closure_live_alpaca_2026-04-16/ROLLOUT_BUNDLE.json",
+      "digest": {
+        "sha256": "f2c921725355c5c4c4db7fd6f98db41430cd5715d3e3026318f279d530822e32"
+      },
+      "size_bytes": 942,
+      "media_type": "application/json"
+    },
+    {
+      "name": "DAILY_CHECKLIST.json",
+      "path": "docs/artifacts/release_closure_live_alpaca_2026-04-16/DAILY_CHECKLIST.json",
+      "digest": {
+        "sha256": "cefcc8239262502df5980e78f4cede52d0910dd8ccae137ecb3bf7ce0438b025"
+      },
+      "size_bytes": 425,
+      "media_type": "application/json"
+    },
+    {
+      "name": "RUNTIME_REVIEW.json",
+      "path": "docs/artifacts/release_closure_live_alpaca_2026-04-16/RUNTIME_REVIEW.json",
+      "digest": {
+        "sha256": "b430494021057ea281be7142e7e53cf0b323f83c9283eb77c51703645a9dab34"
+      },
+      "size_bytes": 501,
+      "media_type": "application/json"
+    },
+    {
+      "name": "pilot_alpaca_live_fallback_qqq.jsonl",
+      "path": "pilot_alpaca_live_fallback_qqq.jsonl",
+      "digest": {
+        "sha256": "f575c109eeda75342f1ec5fab9d7dce9c575900b6e27bb5d6d5668faf8a8242b"
+      },
+      "size_bytes": 24857,
+      "media_type": "application/octet-stream"
+    }
+  ],
+  "missing_artifact_paths": [],
+  "invariants": {
+    "interface_freeze_id": "0.1.0rc1",
+    "policy_sha256": "45eb4dfbcf4a60a10130239d8c0ff3f3538b6a26fa7ee415ac49a12bd877692b",
+    "config_fingerprint": "f6efbefd8905",
+    "runtime_mode": "DEV",
+    "release_commit": null,
+    "release_tag": null,
+    "host_kind": "KEYED_OPERATOR_HOST"
+  },
+  "scope": {
+    "environment": "paper",
+    "provider": "alpaca_data_v2",
+    "symbols": [
+      "QQQ"
+    ],
+    "allowed_actions": [
+      "observe",
+      "archive",
+      "recommend"
+    ],
+    "operator_signoff_required": true
+  },
+  "operational_summary": {
+    "startup_check_passed": true,
+    "readiness_status": "READY",
+    "provider_availability_ok": false,
+    "freshness_anomaly_count": 0,
+    "fallback_count": 30,
+    "circuit_open_count": 0,
+    "auth_rate_limit_count": 0,
+    "timeout_count": 0,
+    "policy_change_justified": false,
+    "release_decision": "KEEP_CURRENT_RELEASE",
+    "observe_only_flags": [
+      "fallback_events_observed_below_change_threshold"
+    ],
+    "must_fix_flags": []
+  }
+}

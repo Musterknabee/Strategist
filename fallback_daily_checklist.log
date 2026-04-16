@@ -1,0 +1,17 @@
+{
+  "generated_at_utc": "2026-04-16T11:57:46.853612Z",
+  "startup_check_passed": false,
+  "readiness_status": "READY",
+  "provider_availability_ok": false,
+  "freshness_anomaly_count": 0,
+  "fallback_count": 120,
+  "circuit_open_count": 116,
+  "auth_rate_limit_count": 4,
+  "timeout_count": 0,
+  "retry_count": 0,
+  "telemetry_sink_healthy": true,
+  "policy_change_justified": true,
+  "policy_change_reasons": [
+    "circuit_open_threshold_crossed"
+  ]
+}

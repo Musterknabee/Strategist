@@ -1,0 +1,22 @@
+{
+  "schema_version": "oracle_semiannual_lane_entry/v1",
+  "appended_at_utc": "2026-04-16T11:45:25.653397Z",
+  "lane_id": "ORACLE_SEMIANNUAL_LANE",
+  "exact_evidence_support_score": 0.0,
+  "exact_feedback_confirmation_count": 0,
+  "exact_feedback_relief_count": 0,
+  "sequence_number": 0,
+  "entry_id": "9f9b92fb73408fcc443bd39534f707bccd92d79510660ed2964be5f0ad313164",
+  "semiannual_audit_id": "14c072145f9996091473261706e8f100cfd3e28ad2b4636aba3551efc68cf699",
+  "previous_entry_hash": null,
+  "entry_hash": "fa66b8ae7be833de197f52e58b0fa37dbdf04776256532ddf26f9ba0e3263f5f",
+  "manifest_path": "semi/ORACLE_SEMIANNUAL_AUDIT_EVIDENCE.json",
+  "manifest_sha256": "ec917e060621bb0e5771a3d0d2e14de5b6852c4d3303dbff24cb4fe6d753c63d",
+  "semiannual_audit_classification": "SEMIANNUAL_REPAIR_STRUCTURAL",
+  "strategic_backing_classification": "SEALED_STRATEGIC_STACK_BACKED",
+  "strategic_stack_evidence_count": 1,
+  "strategic_stack_requirement_met": true,
+  "latest_quarterly_review_id": "quarter-0",
+  "evidence_status": "VERIFIED",
+  "summary_line": "Oracle semiannual audit=SEMIANNUAL_REPAIR_STRUCTURAL; backing=SEALED_STRATEGIC_STACK_BACKED; window_entries=1; strategic_stack=1; evidence_gap=0; repair=1; retrain=0; defensive=0; heightened=0; exact_support=0.00; exact_confirm=0; exact_relief=0"
+}

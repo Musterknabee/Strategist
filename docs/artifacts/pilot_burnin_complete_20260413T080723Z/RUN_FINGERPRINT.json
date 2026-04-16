@@ -1,0 +1,61 @@
+{
+  "archived_at_utc": "2026-04-13T08:07:23Z",
+  "archive_path": "docs/artifacts/pilot_burnin_complete_20260413T080723Z",
+  "policy_path": "strategy_validator/promotion_gates.yaml",
+  "policy_sha256": "7c9a41791f0d5df274253caa03f0453f2bd45417286a3cdbc6f2e0e806feb66c",
+  "interface_freeze": "0.1.0rc1",
+  "env_fingerprint": {
+    "STRATEGY_VALIDATOR_ALPACA_MARKET_DATA_ENABLED": {
+      "present": false,
+      "sha256": null
+    },
+    "STRATEGY_VALIDATOR_ALPACA_DATA_BASE_URL": {
+      "present": false,
+      "sha256": null
+    },
+    "STRATEGY_VALIDATOR_ALPACA_TRADING_BASE_URL": {
+      "present": false,
+      "sha256": null
+    },
+    "STRATEGY_VALIDATOR_ALPACA_PROVIDER_ID": {
+      "present": false,
+      "sha256": null
+    },
+    "STRATEGY_VALIDATOR_ALPACA_API_KEY_ID_ENV": {
+      "present": false,
+      "sha256": null
+    },
+    "STRATEGY_VALIDATOR_ALPACA_API_SECRET_KEY_ENV": {
+      "present": false,
+      "sha256": null
+    },
+    "STRATEGY_VALIDATOR_HTTP_MARKET_DATA_ENABLED": {
+      "present": false,
+      "sha256": null
+    },
+    "PILOT_PROBE_SYMBOL": {
+      "present": false,
+      "sha256": null
+    },
+    "APCA_API_KEY_ID": {
+      "present": false,
+      "sha256": null
+    },
+    "APCA_API_SECRET_KEY": {
+      "present": false,
+      "sha256": null
+    }
+  },
+  "artifact_sha256": {
+    "pilot_burnin_round_http_staging.jsonl": "0dc2b83bd4f0731696e1f04b8ea076924ce017ffc036f4a2a85d0d17b0a23bcf",
+    "pilot_burnin_round_http_staging_analyze.txt": "e1acfdb4bcf16d435558387541d521100c4739d29c34294fec4684505b762bb8",
+    "pilot_burnin_round_alpaca.jsonl": "898d7eaa180f3ad7329ee04df79a450a6d1278d636684706aa63b230983f9c2f",
+    "pilot_burnin_round_alpaca_analyze.txt": "662ce1aacce7d48bff3275d13d79346ae7823e493eded5d6a7d32dc6eb8d4889",
+    "pilot_followup_alpaca_long.jsonl": "600eedac4af35bc2f64ce7e7d86760a58588539beb1af9db94cb5fdae8120abd",
+    "pilot_followup_alpaca_long_analyze.txt": "fd56a367cedbfe2899f02ac5e5369170ace7afca7e90870ecb27eca305edd3e2",
+    "pilot_followup_alpaca_off_hours.jsonl": "4138de0aae8b219f94f9624867d99c3346cb4a6f18bec0a4ad7f24532cd31670",
+    "pilot_followup_alpaca_off_hours_analyze.txt": "f7e4af8944bf0fef7818ba3b476ae309d3824acdb444a1fbc4965383c32bbc74",
+    "pilot_followup_alpaca_sym_QQQ.jsonl": "7ba2328941a2b62468e1f24e7f21439083b5c394ea99338eda0db886d60fd87c",
+    "pilot_followup_alpaca_sym_QQQ_analyze.txt": "b8cd3dcf2db8c1e78973fd4841150bc11646b037fb489a59eb983498871660ce"
+  }
+}

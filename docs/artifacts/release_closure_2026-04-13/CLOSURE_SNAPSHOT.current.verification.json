@@ -1,0 +1,11 @@
+{
+  "verified_at_utc": "2026-04-16T12:02:27.531270Z",
+  "manifest_path": "docs/artifacts/release_closure_2026-04-13/CLOSURE_SNAPSHOT.json",
+  "status": "VERIFIED",
+  "verified_subject_count": 7,
+  "artifact_digests_verified": true,
+  "signature_verified": true,
+  "digest_mismatches": [],
+  "missing_artifact_paths": [],
+  "notes": []
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": "oracle_constitutional_lane_entry/v1",
+  "appended_at_utc": "2026-04-16T11:45:26.224544Z",
+  "lane_id": "ORACLE_CONSTITUTIONAL_LANE",
+  "exact_evidence_support_score": 0.0,
+  "exact_feedback_confirmation_count": 0,
+  "exact_feedback_relief_count": 0,
+  "sequence_number": 0,
+  "entry_id": "4ab75ea78783a5a457525e2b93ecef3cf9d6a299db8c7d0b8b7e2ff68b91936f",
+  "constitutional_digest_id": "fc0588a0977bbdcdf0a09771b4b6888e921e9e3beccdf11b4ddc114f863aad40",
+  "previous_entry_hash": null,
+  "entry_hash": "a636042db632daa471cd41e7e2583a7529b2cbe1b37b96452ff087208b348355",
+  "manifest_path": "docs/artifacts/oracle/ORACLE_CONSTITUTIONAL_DIGEST_EVIDENCE.json",
+  "manifest_sha256": "78b241042a01586842c426a285132e7fcd8b3f89de3220a3c42065fa549e99f5",
+  "constitutional_digest_classification": "CONSTITUTIONAL_REPAIR_CHRONIC",
+  "strategic_backing_classification": "DOCTRINE_ONLY_LADDER_BACKED",
+  "strategic_stack_evidence_count": 0,
+  "strategic_stack_requirement_met": false,
+  "latest_annual_review_id": "annual-2",
+  "evidence_status": "VERIFIED",
+  "summary_line": "Oracle constitutional digest=CONSTITUTIONAL_REPAIR_CHRONIC; backing=DOCTRINE_ONLY_LADDER_BACKED; window_entries=3; strategic_stack=0; evidence_gap=0; repair=3; retrain=0; defensive=0; heightened=0; exact_support=0.00; exact_confirm=0; exact_relief=0"
+}

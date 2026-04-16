@@ -1,0 +1,19 @@
+{
+  "generated_at_utc": "2026-04-13T10:31:33.189010Z",
+  "decision": "BLOCK_AND_INVESTIGATE",
+  "primary_classification": "RUNTIME_FAILURE",
+  "secondary_classifications": [
+    "DATA_QUALITY_DEGRADATION",
+    "POLICY_MISMATCH"
+  ],
+  "signoff_status": "WITHHELD",
+  "governed_exception_eligible": false,
+  "governed_exception_codes": [],
+  "reasons": [
+    "Circuit remains open without recovery/fallback."
+  ],
+  "observe_only_flags": [],
+  "must_fix_flags": [
+    "persistent_circuit_open_without_recovery"
+  ]
+}

@@ -1,0 +1,112 @@
+{
+  "schema_version": "closure_snapshot_manifest/v1",
+  "generated_at_utc": "2026-04-16T11:53:06.090139Z",
+  "closure_id": "release_closure_2026-04-13",
+  "closure_dir": "docs/artifacts/release_closure_2026-04-13",
+  "integrity_status": "VERIFIED",
+  "subjects": [
+    {
+      "name": "KEYED_HOST_FINGERPRINT.json",
+      "path": "docs/artifacts/release_closure_2026-04-13/KEYED_HOST_FINGERPRINT.json",
+      "digest": {
+        "sha256": "a4ff28ce0a09fbffbc3d878f48b152657d1a6f8d7a25048cc59ee953de2c103f"
+      },
+      "size_bytes": 626,
+      "media_type": "application/json"
+    },
+    {
+      "name": "ROLLOUT_BUNDLE.json",
+      "path": "docs/artifacts/release_closure_2026-04-13/ROLLOUT_BUNDLE.json",
+      "digest": {
+        "sha256": "38a4fa63d4a08acad1e676acc9ec9dae8c962c61de7d8e0bb42aa065746325a7"
+      },
+      "size_bytes": 1038,
+      "media_type": "application/json"
+    },
+    {
+      "name": "DAILY_CHECKLIST.json",
+      "path": "docs/artifacts/release_closure_2026-04-13/DAILY_CHECKLIST.json",
+      "digest": {
+        "sha256": "e7bd9d1157f2e551a5f15182f1cfda25b03d6aa515c0bc4592d087d66697cfb4"
+      },
+      "size_bytes": 457,
+      "media_type": "application/json"
+    },
+    {
+      "name": "RUNTIME_REVIEW.json",
+      "path": "docs/artifacts/release_closure_2026-04-13/RUNTIME_REVIEW.json",
+      "digest": {
+        "sha256": "3614ebba3d3882b2c489982bc34e0aa62c6add28236d64e9127f359993d6029e"
+      },
+      "size_bytes": 515,
+      "media_type": "application/json"
+    },
+    {
+      "name": "pilot_followup_alpaca_long.jsonl",
+      "path": "pilot_followup_alpaca_long.jsonl",
+      "digest": {
+        "sha256": "42542138e2df2da28fc2cff6780963271d4df49c7aa50da4a55a2605350f3d32"
+      },
+      "size_bytes": 187527,
+      "media_type": "application/octet-stream"
+    },
+    {
+      "name": "pilot_followup_alpaca_off_hours.jsonl",
+      "path": "pilot_followup_alpaca_off_hours.jsonl",
+      "digest": {
+        "sha256": "bdce9dc367fe0fc2e5363053e49fbe21bcab3e0bd7ff53e72751e2812483767d"
+      },
+      "size_bytes": 62535,
+      "media_type": "application/octet-stream"
+    },
+    {
+      "name": "pilot_followup_alpaca_sym_QQQ.jsonl",
+      "path": "pilot_followup_alpaca_sym_QQQ.jsonl",
+      "digest": {
+        "sha256": "b62ae72347dea58da9410657528ec26c5ec9ac7c445468d223cc9a2541b45963"
+      },
+      "size_bytes": 62532,
+      "media_type": "application/octet-stream"
+    }
+  ],
+  "missing_artifact_paths": [],
+  "invariants": {
+    "interface_freeze_id": "0.1.0rc1",
+    "policy_sha256": "7c9a41791f0d5df274253caa03f0453f2bd45417286a3cdbc6f2e0e806feb66c",
+    "config_fingerprint": "5b78b4301b32",
+    "runtime_mode": "DEV",
+    "release_commit": "18576242556b813fe6007842efa576f85561f8be",
+    "release_tag": null,
+    "host_kind": "KEYED_OPERATOR_HOST"
+  },
+  "scope": {
+    "environment": "paper",
+    "provider": "alpaca_data_v2",
+    "symbols": [
+      "SPY",
+      "QQQ"
+    ],
+    "allowed_actions": [
+      "observe",
+      "archive",
+      "recommend"
+    ],
+    "operator_signoff_required": true
+  },
+  "operational_summary": {
+    "startup_check_passed": true,
+    "readiness_status": "READY",
+    "provider_availability_ok": false,
+    "freshness_anomaly_count": 240,
+    "fallback_count": 0,
+    "circuit_open_count": 58,
+    "auth_rate_limit_count": 2,
+    "timeout_count": 0,
+    "policy_change_justified": true,
+    "release_decision": "BLOCK_AND_INVESTIGATE",
+    "observe_only_flags": [],
+    "must_fix_flags": [
+      "persistent_circuit_open_without_recovery"
+    ]
+  }
+}

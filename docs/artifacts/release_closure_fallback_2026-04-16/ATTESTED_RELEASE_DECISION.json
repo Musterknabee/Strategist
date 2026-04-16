@@ -1,0 +1,27 @@
+{
+  "generated_at_utc": "2026-04-16T12:24:41.238844Z",
+  "closure_id": "release_closure_fallback_2026-04-16",
+  "snapshot_path": "docs/artifacts/release_closure_fallback_2026-04-16/CLOSURE_SNAPSHOT.json",
+  "verification_path": "docs/artifacts/release_closure_fallback_2026-04-16/CLOSURE_SNAPSHOT.verification.json",
+  "evidence_integrity_status": "VERIFIED",
+  "machine_decision": "CANDIDATE_RC2",
+  "signoff_status": "WITHHELD",
+  "final_release_stance": "SIGNOFF_WITHHELD",
+  "primary_classification": "DATA_QUALITY_DEGRADATION",
+  "secondary_classifications": [
+    "POLICY_MISMATCH"
+  ],
+  "governed_exception_eligible": false,
+  "governed_exception_codes": [],
+  "applied_governed_exception_id": null,
+  "applied_governed_exception_code": null,
+  "applied_governed_exception_approved_by": null,
+  "applied_governed_exception_valid_until_utc": null,
+  "reasons": [
+    "Observed thresholds crossed; evidence supports policy adjustment discussion."
+  ],
+  "required_operator_actions": [
+    "Review rollout thresholds and determine whether RC2 policy adjustments are required."
+  ],
+  "summary_line": "Verified closure evidence withholds signoff until runtime blockers or policy mismatches are resolved."
+}

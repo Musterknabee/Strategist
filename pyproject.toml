@@ -1,0 +1,182 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "strategy-validator"
+version = "0.1.0rc1"
+description = "Strategy Validator & Forensic Analyst — constitutional baseline"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "pydantic>=2.6",
+    "PyYAML>=6.0",
+    "cryptography>=42",
+]
+
+[project.scripts]
+strategy-validator-startup-check = "strategy_validator.cli.startup_check:main"
+strategy-validator-calibration = "strategy_validator.cli.calibration:main"
+strategy-validator-pilot = "strategy_validator.cli.pilot:main"
+strategy-validator-api = "strategy_validator.cli.api:main"
+strategy-validator-migrate = "strategy_validator.cli.migrate:main"
+strategy-validator-rollout-ops = "strategy_validator.cli.rollout_ops:main"
+
+[project.optional-dependencies]
+api = [
+    "uvicorn>=0.30",
+]
+oracle = [
+]
+data_spine = [
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "statsmodels>=0.14",
+]
+full = [
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "statsmodels>=0.14",
+    "uvicorn>=0.30",
+]
+production = [
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "statsmodels>=0.14",
+    "uvicorn>=0.30",
+]
+dev = [
+    "pytest>=8.0",
+    "import-linter>=2.0",
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "statsmodels>=0.14",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["strategy_validator*"]
+exclude = ["strategy_validator.brain*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+
+[tool.importlinter]
+root_package = "strategy_validator"
+
+[[tool.importlinter.contracts]]
+name = "Proposers may not reach validator or ledger"
+type = "forbidden"
+source_modules = [
+    "strategy_validator.proposers",
+]
+forbidden_modules = [
+    "strategy_validator.validator",
+    "strategy_validator.ledger",
+]
+
+[[tool.importlinter.contracts]]
+name = "Tribunal may not import validator or ledger writer"
+type = "forbidden"
+source_modules = [
+    "strategy_validator.tribunal",
+]
+forbidden_modules = [
+    "strategy_validator.validator",
+    "strategy_validator.ledger.writer",
+]
+
+[[tool.importlinter.contracts]]
+name = "Feature factory does not adjudicate via validator"
+type = "forbidden"
+source_modules = [
+    "strategy_validator.feature_factory",
+]
+forbidden_modules = [
+    "strategy_validator.validator",
+]
+
+[[tool.importlinter.contracts]]
+name = "Feature factory remains separate from tribunal"
+type = "forbidden"
+source_modules = [
+    "strategy_validator.feature_factory",
+]
+forbidden_modules = [
+    "strategy_validator.tribunal",
+]
+
+[[tool.importlinter.contracts]]
+name = "API remains transport-thin"
+type = "forbidden"
+source_modules = [
+    "strategy_validator.api",
+]
+forbidden_modules = [
+    "strategy_validator.validator",
+    "strategy_validator.ledger.writer",
+]
+
+[[tool.importlinter.contracts]]
+name = "Data spine remains PIT infrastructure only"
+type = "forbidden"
+source_modules = [
+    "strategy_validator.data_spine",
+]
+forbidden_modules = [
+    "strategy_validator.validator",
+    "strategy_validator.ledger.writer",
+]
+
+[[tool.importlinter.contracts]]
+name = "Validator must not import proposers"
+type = "forbidden"
+source_modules = [
+    "strategy_validator.validator",
+]
+forbidden_modules = [
+    "strategy_validator.proposers",
+]
+
+[[tool.importlinter.contracts]]
+name = "Tribunal remains separate from feature factory"
+type = "forbidden"
+source_modules = [
+    "strategy_validator.tribunal",
+]
+forbidden_modules = [
+    "strategy_validator.feature_factory",
+]
+
+[[tool.importlinter.contracts]]
+name = "Proposers remain separate from tribunal"
+type = "forbidden"
+source_modules = [
+    "strategy_validator.proposers",
+]
+forbidden_modules = [
+    "strategy_validator.tribunal",
+]
+
+[[tool.importlinter.contracts]]
+name = "Data spine remains separate from tribunal"
+type = "forbidden"
+source_modules = [
+    "strategy_validator.data_spine",
+]
+forbidden_modules = [
+    "strategy_validator.tribunal",
+]
+
+[[tool.importlinter.contracts]]
+name = "Ledger remains separate from proposers"
+type = "forbidden"
+source_modules = [
+    "strategy_validator.ledger",
+]
+forbidden_modules = [
+    "strategy_validator.proposers",
+]

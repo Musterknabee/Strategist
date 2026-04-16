@@ -1,0 +1,44 @@
+name: ci
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  package-minimal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install base package only
+        run: pip install -e .
+      - name: Base import smoke
+        run: |
+          python - <<'PY'
+          import strategy_validator
+          import strategy_validator.core.config
+          import strategy_validator.contracts.operational
+          import strategy_validator.ledger._append_only
+          print("base install smoke passed")
+          PY
+
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install full runtime and dev tools
+        run: pip install -e ".[dev]"
+      - name: Import boundaries (import-linter)
+        env:
+          PYTHONIOENCODING: utf-8
+        run: python -c "from click.testing import CliRunner; from importlinter.cli import lint_imports_command; r=CliRunner().invoke(lint_imports_command, []); import sys; sys.stdout.buffer.write((r.output or '').encode('utf-8','replace')); raise SystemExit(r.exit_code)"
+      - name: Full test suite
+        run: pytest -v
+      - name: Anti-regression invariants (fast constitutional gate)
+        run: pytest tests/constitutional/test_anti_regression_invariants.py -v

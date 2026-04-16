@@ -1,0 +1,18 @@
+{
+  "generated_at_utc": "2026-04-16T11:57:34.892710Z",
+  "host_kind": "KEYED_OPERATOR_HOST",
+  "host_label": "ops-paper-1",
+  "interface_freeze_id": "0.1.0rc1",
+  "runtime_mode": "DEV",
+  "config_fingerprint": "291e6f5608ef",
+  "policy_sha256": "a0fe37a143897be66878b418db45aff3105f05ee4a0b67c8a29d9f132fd167db",
+  "git_commit": null,
+  "git_tag": null,
+  "env_presence": {
+    "APCA_API_KEY_ID": false,
+    "APCA_API_SECRET_KEY": false,
+    "STRATEGY_VALIDATOR_ALPACA_API_KEY_ID_ENV": false,
+    "STRATEGY_VALIDATOR_ALPACA_API_SECRET_KEY_ENV": false
+  },
+  "env_value_sha256": {}
+}

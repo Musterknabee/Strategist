@@ -1,0 +1,3 @@
+"""Strategy Validator platform package (constitutional baseline)."""
+
+__version__ = "0.1.0rc1"

@@ -1,0 +1,22 @@
+{
+  "schema_version": "oracle_annual_lane_entry/v1",
+  "appended_at_utc": "2026-04-16T11:45:25.886672Z",
+  "lane_id": "ORACLE_ANNUAL_LANE",
+  "exact_evidence_support_score": 0.0,
+  "exact_feedback_confirmation_count": 0,
+  "exact_feedback_relief_count": 0,
+  "sequence_number": 0,
+  "entry_id": "db9444475737cb92249c8e56bdbe2fd83d45fae06ec067faa8f26227c4ecd807",
+  "annual_review_id": "7440a4fa7692fad97d19e1011659569c614319a071507571ff8746e923295b34",
+  "previous_entry_hash": null,
+  "entry_hash": "65f647115a0999552d928079157ab9fd8e08f7b3f60bf1c530dacf2d3f97ad45",
+  "manifest_path": "annual/ORACLE_ANNUAL_REVIEW_EVIDENCE.json",
+  "manifest_sha256": "b9e86f9f2890d68b7d4cf881cbac9f98ad86b18bab8380d0d9c01e04b86c3a20",
+  "annual_review_classification": "ANNUAL_REPAIR_STRUCTURAL",
+  "strategic_backing_classification": "SEALED_STRATEGIC_STACK_BACKED",
+  "strategic_stack_evidence_count": 1,
+  "strategic_stack_requirement_met": true,
+  "latest_semiannual_audit_id": "14c072145f9996091473261706e8f100cfd3e28ad2b4636aba3551efc68cf699",
+  "evidence_status": "VERIFIED",
+  "summary_line": "Oracle annual review=ANNUAL_REPAIR_STRUCTURAL; backing=SEALED_STRATEGIC_STACK_BACKED; window_entries=1; strategic_stack=1; evidence_gap=0; repair=1; retrain=0; defensive=0; heightened=0; exact_support=0.00; exact_confirm=0; exact_relief=0"
+}

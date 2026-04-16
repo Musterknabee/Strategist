@@ -1,0 +1,26 @@
+{
+  "generated_at_utc": "2026-04-13T10:31:36.989084Z",
+  "closure_id": "release_closure_2026-04-13",
+  "snapshot_path": "docs/artifacts/release_closure_2026-04-13/CLOSURE_SNAPSHOT.json",
+  "verification_path": "docs/artifacts/release_closure_2026-04-13/CLOSURE_SNAPSHOT.verification.json",
+  "evidence_integrity_status": "INCOMPLETE",
+  "machine_decision": "BLOCK_AND_INVESTIGATE",
+  "signoff_status": "WITHHELD",
+  "final_release_stance": "SIGNOFF_WITHHELD",
+  "primary_classification": "EVIDENCE_INTEGRITY_FAILURE",
+  "secondary_classifications": [
+    "DATA_QUALITY_DEGRADATION",
+    "POLICY_MISMATCH"
+  ],
+  "governed_exception_eligible": false,
+  "governed_exception_codes": [],
+  "reasons": [
+    "Canonical closure evidence is not fully verified; release conclusions cannot be promoted from narrative evidence.",
+    "Closure snapshot is incomplete because referenced rollout artifacts are missing."
+  ],
+  "required_operator_actions": [
+    "Repair the canonical evidence chain and regenerate the closure snapshot.",
+    "Re-run closure snapshot verification before updating signoff documents."
+  ],
+  "summary_line": "Verified closure evidence withholds signoff until runtime blockers or policy mismatches are resolved."
+}

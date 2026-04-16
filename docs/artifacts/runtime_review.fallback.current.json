@@ -1,0 +1,16 @@
+{
+  "generated_at_utc": "2026-04-16T12:24:34.584424Z",
+  "decision": "CANDIDATE_RC2",
+  "primary_classification": "DATA_QUALITY_DEGRADATION",
+  "secondary_classifications": [
+    "POLICY_MISMATCH"
+  ],
+  "signoff_status": "WITHHELD",
+  "governed_exception_eligible": false,
+  "governed_exception_codes": [],
+  "reasons": [
+    "Observed thresholds crossed; evidence supports policy adjustment discussion."
+  ],
+  "observe_only_flags": [],
+  "must_fix_flags": []
+}

@@ -1,0 +1,18 @@
+{
+  "generated_at_utc": "2026-04-13T08:52:12.183528Z",
+  "host_kind": "KEYED_OPERATOR_HOST",
+  "host_label": "PROD_SIGNOFF_HOST",
+  "interface_freeze_id": "0.1.0rc1",
+  "runtime_mode": "DEV",
+  "config_fingerprint": "5b78b4301b32",
+  "policy_sha256": "7c9a41791f0d5df274253caa03f0453f2bd45417286a3cdbc6f2e0e806feb66c",
+  "git_commit": "18576242556b813fe6007842efa576f85561f8be",
+  "git_tag": null,
+  "env_presence": {
+    "APCA_API_KEY_ID": false,
+    "APCA_API_SECRET_KEY": false,
+    "STRATEGY_VALIDATOR_ALPACA_API_KEY_ID_ENV": false,
+    "STRATEGY_VALIDATOR_ALPACA_API_SECRET_KEY_ENV": false
+  },
+  "env_value_sha256": {}
+}

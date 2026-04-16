@@ -1,0 +1,25 @@
+{
+  "generated_at_utc": "2026-04-16T12:27:27.205639Z",
+  "closure_id": "release_closure_live_alpaca_2026-04-16",
+  "snapshot_path": "docs/artifacts/release_closure_live_alpaca_2026-04-16/CLOSURE_SNAPSHOT.json",
+  "verification_path": "docs/artifacts/release_closure_live_alpaca_2026-04-16/CLOSURE_SNAPSHOT.verification.json",
+  "evidence_integrity_status": "VERIFIED",
+  "machine_decision": "KEEP_CURRENT_RELEASE",
+  "signoff_status": "APPROVED",
+  "final_release_stance": "KEEP_CURRENT_BASELINE",
+  "primary_classification": "WITHIN_BOUNDS",
+  "secondary_classifications": [],
+  "governed_exception_eligible": false,
+  "governed_exception_codes": [],
+  "applied_governed_exception_id": null,
+  "applied_governed_exception_code": null,
+  "applied_governed_exception_approved_by": null,
+  "applied_governed_exception_valid_until_utc": null,
+  "reasons": [
+    "Controlled rollout evidence remains within keep-current-release bounds."
+  ],
+  "required_operator_actions": [
+    "Archive the verified closure package as the canonical release evidence chain."
+  ],
+  "summary_line": "Verified closure evidence remains within keep-current-release bounds."
+}

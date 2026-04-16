@@ -1,0 +1,21 @@
+{
+  "generated_at_utc": "2026-04-16T11:11:08.864808Z",
+  "decision": "ROLLBACK_RECOMMENDED",
+  "primary_classification": "RUNTIME_FAILURE",
+  "secondary_classifications": [
+    "DATA_QUALITY_DEGRADATION",
+    "POLICY_MISMATCH"
+  ],
+  "signoff_status": "WITHHELD",
+  "governed_exception_eligible": false,
+  "governed_exception_codes": [],
+  "reasons": [
+    "Readiness/startup checks are not passing.",
+    "Circuit remains open without recovery/fallback."
+  ],
+  "observe_only_flags": [],
+  "must_fix_flags": [
+    "startup_or_readiness_blocked",
+    "persistent_circuit_open_without_recovery"
+  ]
+}

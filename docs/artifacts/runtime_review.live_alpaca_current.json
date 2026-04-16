@@ -1,0 +1,16 @@
+{
+  "generated_at_utc": "2026-04-16T12:26:45.118508Z",
+  "decision": "KEEP_CURRENT_RELEASE",
+  "primary_classification": "WITHIN_BOUNDS",
+  "secondary_classifications": [],
+  "signoff_status": "APPROVED",
+  "governed_exception_eligible": false,
+  "governed_exception_codes": [],
+  "reasons": [
+    "Controlled rollout evidence remains within keep-current-release bounds."
+  ],
+  "observe_only_flags": [
+    "fallback_events_observed_below_change_threshold"
+  ],
+  "must_fix_flags": []
+}

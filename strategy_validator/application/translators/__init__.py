@@ -1,0 +1,3 @@
+from strategy_validator.application.translators.decision_to_governance import translate_decision_record_to_governance
+
+__all__ = ['translate_decision_record_to_governance']
