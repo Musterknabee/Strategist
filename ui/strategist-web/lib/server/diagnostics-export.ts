@@ -25,7 +25,7 @@ export async function buildDiagnosticsExportSnapshot(): Promise<DiagnosticsExpor
   const env = getFrontendEnvConfig();
   const runtime = await fetchRuntime();
   const preflight = await buildFrontendPreflightReport();
-  const mode = env.forceMocks || !env.backendBaseUrl ? "mock-backed" : "backend-connected";
+  const mode = env.usingMocks ? "mock-backed" : "backend-connected";
   const manifest = getFrontendDiagnosticsManifest();
   const generatedAt = new Date().toISOString();
 

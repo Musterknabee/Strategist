@@ -6,6 +6,13 @@ from pathlib import Path
 from typing import Any, Iterable
 from uuid import uuid4
 
+from strategy_validator.application.ui_view_helpers import (
+    coerce_paths,
+    first_float,
+    load_jsonl_records,
+    nested_float,
+    utc_now_iso,
+)
 from strategy_validator.application.burnin import summarize_burnin_set
 from strategy_validator.application.operator_pack_assembly import (
     build_pack_assignment_payload,
@@ -27,49 +34,11 @@ from strategy_validator.validator.oracle_constitutional import generate_oracle_d
 from strategy_validator.validator.oracle_trust import trust_banner_for_lineage_verification
 
 
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def _coerce_paths(values: Iterable[str | Path] | None) -> list[Path]:
-    return [Path(v) for v in values or []]
-
-
-def _load_jsonl_records(paths: list[Path]) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    for path in paths:
-        if not path.exists() or not path.is_file():
-            continue
-        for line in path.read_text(encoding='utf-8').splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                value = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if isinstance(value, dict):
-                rows.append(value)
-    return rows
-
-
-def _first_float(record: dict[str, Any], *keys: str) -> float | None:
-    for key in keys:
-        value = record.get(key)
-        if isinstance(value, (int, float)):
-            return float(value)
-    return None
-
-
-def _nested_float(record: dict[str, Any], path: tuple[str, ...]) -> float | None:
-    value: Any = record
-    for part in path:
-        if not isinstance(value, dict):
-            return None
-        value = value.get(part)
-    if isinstance(value, (int, float)):
-        return float(value)
-    return None
+_utc_now = utc_now_iso
+_coerce_paths = coerce_paths
+_load_jsonl_records = load_jsonl_records
+_first_float = first_float
+_nested_float = nested_float
 
 
 def _build_provider_paths() -> list[dict[str, Any]]:
