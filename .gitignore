@@ -8,12 +8,16 @@ build/
 .mypy_cache/
 .ruff_cache/
 .import_linter_cache/
+.strategy_validator/
+*.log
 *.sqlite3
+artifacts/
 .env
 .venv/
 venv/
 .qwen/
 *.prom
+artifacts/
 pilot_*.jsonl
 pilot_burnin_round*.jsonl
 pilot_burnin_round*_analyze.txt
@@ -21,3 +25,4 @@ pilot_followup*_analyze.txt
 .keys/
 keys/
 docs/artifacts/**/closure_snapshot_signing_private.pem
+pilot_*_analyze.txt

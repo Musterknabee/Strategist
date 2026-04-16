@@ -5,6 +5,8 @@ import { buildDiagnosticsExportSnapshot } from "@/lib/server/diagnostics-export"
 import { readFrontendDiagnosticsHistory, readLatestFrontendDiagnosticsHistoryEntry } from "@/lib/server/diagnostics-history";
 import type { FrontendPreflightCheck } from "@/lib/server/preflight";
 
+export const dynamic = "force-dynamic";
+
 export default async function DiagnosticsExportPage() {
   const snapshot = await buildDiagnosticsExportSnapshot();
   const history = await readFrontendDiagnosticsHistory(8);

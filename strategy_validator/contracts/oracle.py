@@ -6,133 +6,53 @@ from typing import Optional, List, Literal
 from pydantic import BaseModel, Field
 
 from strategy_validator.contracts.operational import EvidenceResourceDescriptor
-
-AdvisoryRegime = Literal[
-    "RISK_ON_LOW_VOL",
-    "TRANSITION",
-    "RISK_OFF_HIGH_VOL",
-    "LIQUIDITY_STRESS",
-]
-
-EpistemicStatus = Literal["NOMINAL", "ELEVATED", "UNKNOWN_UNKNOWNS"]
-StrategyAdvisoryAction = Literal["MAINTAIN", "CANARY", "HIBERNATE"]
-GlobalAdvisoryAction = Literal["OBSERVE", "CANARY_REVIEW", "DEFENSIVE_POSTURE"]
-OracleDriftLevel = Literal["STABLE", "MODERATE", "MATERIAL", "SEVERE"]
-OracleTransitionClassification = Literal[
-    "STATE_STABLE",
-    "REGIME_DRIFT",
-    "STRATEGY_DRIFT",
-    "GLOBAL_ACTION_ESCALATION",
-    "EPISTEMIC_ESCALATION",
-    "EVIDENCE_GAP",
-]
-OracleEvidenceStatus = Literal["VERIFIED", "UNVERIFIED", "INCOMPLETE"]
-OracleSupportVerificationStatus = Literal["VERIFIED", "UNVERIFIED", "INCOMPLETE", "ABSENT"]
-
-OracleMemoryReviewClassification = Literal[
-    "STABLE_RESEARCH_POSTURE",
-    "HEIGHTENED_RESEARCH_POSTURE",
-    "REPAIR_FIRST",
-    "DEFENSIVE_RESEARCH_POSTURE",
-    "STRATEGY_RETRAIN_REVIEW",
-]
-
-OracleDoctrineDriftClassification = Literal[
-    "DOCTRINE_STABLE",
-    "DOCTRINE_ESCALATION",
-    "DOCTRINE_RELIEF",
-    "RECURRING_REPAIR",
-    "RECURRING_RETRAIN",
-    "DOCTRINE_EVIDENCE_GAP",
-]
-
-OracleDoctrineMemoryClassification = Literal[
-    "DOCTRINE_STABLE_BASELINE",
-    "DOCTRINE_HEIGHTENED_WATCH",
-    "DOCTRINE_REPAIR_PERSISTENT",
-    "DOCTRINE_RETRAIN_PERSISTENT",
-    "DOCTRINE_DEFENSIVE_PERSISTENT",
-    "DOCTRINE_EVIDENCE_GAP",
-]
-
-OracleQuarterlyReviewClassification = Literal[
-    "QUARTERLY_STABLE_BASELINE",
-    "QUARTERLY_HEIGHTENED_WATCH",
-    "QUARTERLY_REPAIR_STRUCTURAL",
-    "QUARTERLY_RETRAIN_STRUCTURAL",
-    "QUARTERLY_DEFENSIVE_STRUCTURAL",
-    "QUARTERLY_EVIDENCE_GAP",
-]
-
-OracleSemiannualAuditClassification = Literal[
-    "SEMIANNUAL_STABLE_BASELINE",
-    "SEMIANNUAL_HEIGHTENED_WATCH",
-    "SEMIANNUAL_REPAIR_STRUCTURAL",
-    "SEMIANNUAL_RETRAIN_STRUCTURAL",
-    "SEMIANNUAL_DEFENSIVE_STRUCTURAL",
-    "SEMIANNUAL_EVIDENCE_GAP",
-]
-
-OracleAnnualReviewClassification = Literal[
-    "ANNUAL_STABLE_BASELINE",
-    "ANNUAL_HEIGHTENED_WATCH",
-    "ANNUAL_REPAIR_STRUCTURAL",
-    "ANNUAL_RETRAIN_STRUCTURAL",
-    "ANNUAL_DEFENSIVE_STRUCTURAL",
-    "ANNUAL_EVIDENCE_GAP",
-]
-
-OracleConstitutionalDigestClassification = Literal[
-    "CONSTITUTIONAL_STABLE_BASELINE",
-    "CONSTITUTIONAL_HEIGHTENED_WATCH",
-    "CONSTITUTIONAL_REPAIR_CHRONIC",
-    "CONSTITUTIONAL_RETRAIN_CHRONIC",
-    "CONSTITUTIONAL_DEFENSIVE_CHRONIC",
-    "CONSTITUTIONAL_EVIDENCE_GAP",
-]
-
-OracleDoctrineLineageSealStatus = Literal[
-    "FULLY_SEALED",
-    "CONSTITUTIONALLY_REPLAYABLE",
-    "PARTIALLY_SEALED",
-    "ADVISORY_ONLY_INCOMPLETE",
-]
-
-OracleConstitutionalTrustStatus = Literal[
-    "TRUSTED",
-    "TRUST_RESTRICTED",
-    "UNTRUSTED",
-]
-
-OracleExplanationCategory = Literal["trust", "lineage", "evidence", "policy", "authority", "operator_action", "warning"]
-
-OracleOperatorReadiness = Literal["READY_FOR_REVIEW", "REVIEW_WITH_CAUTION", "HOLD_FOR_REFRESH"]
-OracleArtifactIntegrityStatus = Literal["VERIFIED", "MIXED", "UNVERIFIED", "UNKNOWN"]
-OracleArtifactCoverageStatus = Literal["COMPLETE", "PARTIAL", "MISSING", "UNKNOWN"]
-OracleSupportChainRemediationStatus = Literal["NO_REMEDIATION", "REMEDIATION_RECOMMENDED", "REMEDIATION_REQUIRED"]
-OracleReliancePosture = Literal["ROUTINE_ADVISORY", "CAUTIOUS_ADVISORY_ONLY", "REPAIR_FIRST"]
-OracleEscalationLane = Literal["STANDARD_OPERATOR_FLOW", "HEIGHTENED_OPERATOR_ESCALATION", "CONSTITUTIONAL_REPAIR_ESCALATION"]
-OraclePropagationPosture = Literal["DOWNSTREAM_PROPAGATION_ALLOWED", "REVIEW_ONLY_PROPAGATION", "LOCAL_ONLY_DO_NOT_PROPAGATE"]
-OracleAutomationPosture = Literal["AUTOMATION_ELIGIBLE", "AUTOMATION_REVIEW_REQUIRED", "HUMAN_ONLY_NO_AUTOMATION"]
-OracleGovernancePlaneStatus = Literal["GOVERNANCE_READY", "GOVERNANCE_RESTRICTED", "GOVERNANCE_BLOCKED"]
-OracleGovernanceDimension = Literal["SUPPORT_CHAIN_TRUST", "REMEDIATION", "READINESS", "RELIANCE", "ESCALATION", "PROPAGATION", "AUTOMATION"]
-OracleGovernancePrimarySeverity = Literal["READY", "RESTRICTING", "BLOCKING"]
-OracleGovernancePriorityBand = Literal["ROUTINE_PRIORITY", "ELEVATED_PRIORITY", "CRITICAL_PRIORITY"]
-OracleGovernanceReviewTarget = Literal["ROUTINE_REVIEW_QUEUE", "HEIGHTENED_REVIEW_QUEUE", "CONSTITUTIONAL_REPAIR_QUEUE"]
-OracleGovernanceDispatchPosture = Literal["DISPATCH_ALLOWED", "DISPATCH_REVIEW_ONLY", "DISPATCH_BLOCKED"]
-OracleGovernanceDispatchTimeliness = Literal["DISPATCH_ACTIVE", "DISPATCH_DUE_SOON", "DISPATCH_OVERDUE"]
-OracleGovernanceDispatchClaimUrgency = Literal["CLAIM_NOW", "CLAIM_SOON", "DO_NOT_CLAIM"]
-OracleGovernanceClaimCode = Literal["CLAIM_PERMISSION_BLOCKED", "CLAIM_OVERDUE", "CLAIM_DUE_SOON", "CLAIM_ROUTINE", "CLAIM_IMMEDIATE"]
-OracleGovernanceClaimWorkerLane = Literal["IMMEDIATE_CLAIM_WORKER", "NEAR_DUE_CLAIM_WORKER", "ROUTINE_CLAIM_WORKER", "BLOCKED_CLAIM_HOLDING"]
-OracleGovernanceClaimDisposition = Literal["CLAIM_HOLD", "CLAIM_ESCALATE", "CLAIM_PRIORITIZE", "CLAIM_QUEUE_PROMPT", "CLAIM_QUEUE_ROUTINE"]
-OracleGovernanceClaimActionSeverity = Literal["ROUTINE", "PROMPT", "URGENT", "BLOCKED"]
-OracleGovernanceClaimLeaseMode = Literal["NO_LEASE", "SHORT_LEASE", "STANDARD_LEASE"]
-OracleGovernanceClaimLeaseRenewalPosture = Literal["NO_RENEWAL", "RENEW_SOON", "RENEW_NOW"]
-OracleGovernanceClaimLeaseAction = Literal["NO_LEASE_ACTION", "ACQUIRE_LEASE_NOW", "MAINTAIN_LEASE", "RENEW_LEASE_NOW", "RELEASE_LEASE"]
-OracleGovernanceClaimLeaseCoverage = Literal["NO_LEASE_COVERAGE", "LEASE_PARTIAL_COVERAGE", "LEASE_FULL_COVERAGE"]
-OracleGovernanceClaimLeaseHealth = Literal["LEASE_BLOCKED", "LEASE_DEGRADED", "LEASE_HEALTHY"]
-OracleGovernanceClaimProcessPosture = Literal["PROCESS_BLOCKED", "PROCESS_READY_AFTER_LEASE", "PROCESS_READY_NOW", "PROCESS_QUEUE_ONLY"]
-OracleGovernanceClaimOperability = Literal["CLAIM_OPERABLE", "CLAIM_CONSTRAINED", "CLAIM_INOPERABLE"]
+from strategy_validator.contracts.oracle_types import (
+    AdvisoryRegime,
+    EpistemicStatus,
+    StrategyAdvisoryAction,
+    GlobalAdvisoryAction,
+    OracleDriftLevel,
+    OracleTransitionClassification,
+    OracleEvidenceStatus,
+    OracleSupportVerificationStatus,
+    OracleMemoryReviewClassification,
+    OracleDoctrineDriftClassification,
+    OracleDoctrineMemoryClassification,
+    OracleQuarterlyReviewClassification,
+    OracleSemiannualAuditClassification,
+    OracleAnnualReviewClassification,
+    OracleConstitutionalDigestClassification,
+    OracleDoctrineLineageSealStatus,
+    OracleConstitutionalTrustStatus,
+    OracleExplanationCategory,
+    OracleOperatorReadiness,
+    OracleArtifactIntegrityStatus,
+    OracleArtifactCoverageStatus,
+    OracleSupportChainRemediationStatus,
+    OracleReliancePosture,
+    OracleEscalationLane,
+    OraclePropagationPosture,
+    OracleAutomationPosture,
+    OracleGovernancePlaneStatus,
+    OracleGovernanceDimension,
+    OracleGovernancePrimarySeverity,
+    OracleGovernancePriorityBand,
+    OracleGovernanceReviewTarget,
+    OracleGovernanceDispatchPosture,
+    OracleGovernanceDispatchTimeliness,
+    OracleGovernanceDispatchClaimUrgency,
+    OracleGovernanceClaimCode,
+    OracleGovernanceClaimWorkerLane,
+    OracleGovernanceClaimDisposition,
+    OracleGovernanceClaimActionSeverity,
+    OracleGovernanceClaimLeaseMode,
+    OracleGovernanceClaimLeaseRenewalPosture,
+    OracleGovernanceClaimLeaseAction,
+    OracleGovernanceClaimLeaseCoverage,
+    OracleGovernanceClaimLeaseHealth,
+    OracleGovernanceClaimProcessPosture,
+    OracleGovernanceClaimOperability,
+)
 
 
 class OracleGovernanceClaimActionItem(BaseModel):

@@ -13,11 +13,11 @@ def _utc_now() -> datetime:
 def _relative_or_absolute(path: Path, *, repo_root: Path | None) -> str:
     resolved = path.resolve()
     if repo_root is None:
-        return str(resolved)
+        return resolved.as_posix()
     try:
-        return str(resolved.relative_to(repo_root.resolve()))
+        return resolved.relative_to(repo_root.resolve()).as_posix()
     except ValueError:
-        return str(resolved)
+        return resolved.as_posix()
 
 
 def build_projection_artifact_index_entry(*, registry_path: Path, registry: dict[str, Any], repo_root: Path | None = None) -> dict[str, Any]:
