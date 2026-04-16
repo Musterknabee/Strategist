@@ -29,7 +29,7 @@ export function getFrontendDiagnosticsManifest(): FrontendDiagnosticsManifest {
       {
         href: "/settings/runtime",
         label: "Runtime diagnostics",
-        description: "Inspect normalized backend URL, timeout posture, and mock fallback mode.",
+        description: "Inspect normalized backend URL, timeout posture, and explicit mock-mode posture.",
       },
       {
         href: "/settings/preflight",

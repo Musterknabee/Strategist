@@ -6,6 +6,7 @@ from typing import Any
 
 from strategy_validator.application.burnin import summarize_burnin_set
 from strategy_validator.contracts.operator_reports import ReleaseReadinessReport
+from strategy_validator.core.exceptions import ConstitutionalViolation
 from strategy_validator.ledger.publication_store import FilesystemPublicationStore
 from strategy_validator.validator.rollout_ops import build_rollout_bundle
 from strategy_validator.validator.services.integrity_gate_service import get_current_readiness
@@ -20,6 +21,12 @@ def publish_release_readiness_bundle(
     publication_path: Path,
 ) -> dict[str, Any]:
     readiness = get_current_readiness()
+    if not readiness.adjudication_allowed:
+        blocker_codes = [blocker.code for blocker in readiness.blockers]
+        raise ConstitutionalViolation(
+            'RELEASE_PUBLICATION_BLOCKED: '
+            f'readiness_status={readiness.status}; blocker_codes={",".join(blocker_codes) or "NONE"}'
+        )
     bundle = build_rollout_bundle(
         policy_path=policy_path,
         keyed_host_fingerprint_path=keyed_host_fingerprint_path,

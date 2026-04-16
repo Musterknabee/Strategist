@@ -4,7 +4,6 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
-from uuid import uuid4
 
 from strategy_validator.application.burnin import summarize_burnin_set
 from strategy_validator.application.operator_pack_assembly import (
@@ -516,53 +515,10 @@ def build_ui_pack_detail_payload(
     }
 
 
-_ALLOWED_ACTIONS = {
-    'claim-item': 'Claim item command accepted for governed operator handling.',
-    'acknowledge-reentry': 'Re-entry acknowledgement command accepted and queued for projection refresh.',
-    'renew-lease': 'Lease renewal command accepted for governed claim coverage handling.',
-}
-
-
-def build_ui_operator_command_receipt_payload(
-    *,
-    action: str,
-    operator_id: str = 'operator',
-    work_item_key: str | None = None,
-    review_target: str | None = None,
-    pack_kind: str | None = None,
-    manifest_path: str | None = None,
-) -> dict[str, Any]:
-    if action not in _ALLOWED_ACTIONS:
-        raise ValueError(f'unsupported ui operator action: {action}')
-    command_id = f'ui-cmd-{uuid4().hex}'
-    return {
-        'schema_version': 'ui_operator_command_receipt/v1',
-        'generated_at_utc': _utc_now(),
-        'command_id': command_id,
-        'action': action,
-        'accepted': True,
-        'operator_id': operator_id,
-        'execution_mode': 'SIMULATED_RECEIPT_ONLY',
-        'requires_projection_refresh': True,
-        'target': {
-            'work_item_key': work_item_key,
-            'review_target': review_target,
-            'pack_kind': pack_kind,
-            'manifest_path': manifest_path,
-        },
-        'summary_line': _ALLOWED_ACTIONS[action],
-        'operator_message': (
-            f'Command `{action}` was received for governed processing. '
-            'No UI-side database write occurred; refresh the projection-backed workboard to observe downstream state materialization.'
-        ),
-    }
-
-
 __all__ = [
     'build_ui_workboard_payload',
     'build_ui_burnin_payload',
     'build_ui_pack_detail_payload',
-    'build_ui_operator_command_receipt_payload',
     'build_ui_evidence_payload',
 ]
 
@@ -753,6 +709,7 @@ def build_ui_evidence_payload(
         'RUNTIME_REVIEW.json',
         'ORACLE_EVIDENCE.json',
         'ORACLE_EVENT_LOG.jsonl',
+        'ORACLE_OPERATOR_COMMAND_EVENT_LOG.jsonl',
     )
     source_descriptors = [
         build_projection_source_descriptor(

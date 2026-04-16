@@ -9,6 +9,7 @@ import pytest
 
 from strategy_validator.application.adjudication import build_decision_record, build_kernel_report, build_operator_governance_report
 from strategy_validator.application.release_publication import publish_release_readiness_bundle
+from strategy_validator.core.exceptions import ConstitutionalViolation
 from strategy_validator.contracts.experiments import GateResult
 from strategy_validator.core.enums import RuntimeMode
 
@@ -32,6 +33,22 @@ class _FakeReadiness:
 class _FakeBundle:
     def model_dump(self, mode: str = 'json') -> dict[str, object]:
         return {'scope': 'FULL', 'provider_source_policy_summary': 'stable'}
+
+
+class _BlockedReadiness(_FakeReadiness):
+    def __init__(self) -> None:
+        super().__init__()
+        self.status = 'BLOCKED'
+        self.adjudication_allowed = False
+        self.blockers = [SimpleNamespace(code='INCOMPATIBLE_SCHEMA')]
+
+    def model_dump(self, mode: str = 'json') -> dict[str, object]:
+        return {
+            'status': self.status,
+            'adjudication_allowed': self.adjudication_allowed,
+            'blockers': [{'code': 'INCOMPATIBLE_SCHEMA'}],
+            'config_fingerprint': self.config_fingerprint,
+        }
 
 
 def _decision() -> SimpleNamespace:
@@ -85,3 +102,25 @@ def test_release_publication_bundle_writes_artifact(monkeypatch: pytest.MonkeyPa
     assert written['readiness']['status'] == 'READY'
     assert payload['release_report']['readiness_status'] == 'READY'
     assert payload['payload']['burnin_summary']['total_round_count'] == 1
+
+
+def test_release_publication_fails_closed_when_readiness_is_blocked(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    policy_path = tmp_path / 'policy.json'
+    policy_path.write_text('{}', encoding='utf-8')
+    fingerprint_path = tmp_path / 'fingerprint.json'
+    fingerprint_path.write_text('{}', encoding='utf-8')
+    publication_path = tmp_path / 'release_bundle.json'
+
+    monkeypatch.setattr('strategy_validator.application.release_publication.get_current_readiness', lambda: _BlockedReadiness())
+    monkeypatch.setattr('strategy_validator.application.release_publication.build_rollout_bundle', lambda **kwargs: _FakeBundle())
+
+    with pytest.raises(ConstitutionalViolation, match='RELEASE_PUBLICATION_BLOCKED'):
+        publish_release_readiness_bundle(
+            policy_path=policy_path,
+            keyed_host_fingerprint_path=fingerprint_path,
+            burnin_artifact_paths=[],
+            scope='FULL',
+            publication_path=publication_path,
+        )
+
+    assert not publication_path.exists()

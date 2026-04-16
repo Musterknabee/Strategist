@@ -30,7 +30,8 @@ Available variables:
 - `STRATEGIST_BACKEND_TIMEOUT_MS` — optional timeout for the Next.js BFF → backend hop
 - `STRATEGIST_FORCE_MOCKS` — force the shell to stay on local mock payloads even if a backend URL is configured
 
-If the backend is unavailable, the BFF falls back to local mock payloads so the shell can still be developed safely.
+When `STRATEGIST_FORCE_MOCKS=true`, the shell stays on explicit local mock payloads for frontend-only work.
+Without that flag, production-facing dashboard routes now fail closed when the backend is unavailable instead of presenting silent mock state as operational truth.
 
 ## Local development
 
@@ -74,7 +75,7 @@ So the web surface is scaffolded and iteratively hardened, but still needs a rea
 
 ## Runtime diagnostics
 
-A local bring-up page is available at `/settings/runtime`. It reflects the current frontend server fetch posture (backend base URL, timeout, mock fallback mode) and gives a minimal checklist for first-run validation.
+A local bring-up page is available at `/settings/runtime`. It reflects the current frontend server fetch posture (backend base URL, timeout, and explicit mock-mode posture) and gives a minimal checklist for first-run validation.
 
 A second page is available at `/settings/preflight`. It runs a lightweight server-side probe against representative BFF payloads (`runtime`, `workboard`, `burn-in`) and summarizes what the web shell currently sees before you attempt a full `check`/`build` pass.
 

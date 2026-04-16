@@ -1,0 +1,20 @@
+services:
+  strategy-validator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: strategy-validator:local
+    env_file:
+      - deployment.env.sample
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./artifacts/runtime:/var/lib/strategy-validator
+    environment:
+      STRATEGY_VALIDATOR_LEDGER_DB_PATH: /var/lib/strategy-validator/forensic_ledger.sqlite3
+    command:
+      - strategy-validator-api
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"

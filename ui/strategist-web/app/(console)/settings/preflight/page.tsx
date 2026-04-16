@@ -4,6 +4,12 @@ import { runFrontendPreflight } from "@/lib/server/preflight";
 
 export default async function RuntimePreflightPage() {
   const report = await runFrontendPreflight();
+  const modeLabel = report.runtime.forceMocks ? "Mock-backed" : report.runtime.backendBaseUrl ? "Backend-connected" : "Backend required";
+  const modeTone = report.runtime.forceMocks
+    ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
+    : report.runtime.backendBaseUrl
+      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+      : "border-rose-500/30 bg-rose-500/10 text-rose-300";
 
   return (
     <div className="space-y-6">
@@ -18,8 +24,8 @@ export default async function RuntimePreflightPage() {
         <Card className="border-zinc-800 bg-zinc-900">
           <CardHeader className="pb-2"><CardTitle className="text-sm text-zinc-300">Backend mode</CardTitle></CardHeader>
           <CardContent>
-            <Badge className={report.runtime.usingMocks ? "border-amber-500/30 bg-amber-500/10 text-amber-300" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"}>
-              {report.runtime.usingMocks ? "Mock-backed" : "Backend-connected"}
+            <Badge className={modeTone}>
+              {modeLabel}
             </Badge>
             <div className="mt-2 text-xs text-zinc-400">generated {report.generated_at}</div>
           </CardContent>

@@ -5,13 +5,19 @@ import { getBackendRuntimeConfig } from "@/lib/server/backend";
 
 export default function RuntimeDiagnosticsPage() {
   const runtime = getBackendRuntimeConfig();
+  const modeLabel = runtime.forceMocks ? "Mock-backed" : runtime.backendBaseUrl ? "Backend-connected" : "Backend required";
+  const modeTone = runtime.forceMocks
+    ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
+    : runtime.backendBaseUrl
+      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+      : "border-rose-500/30 bg-rose-500/10 text-rose-300";
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-zinc-100">Runtime diagnostics</h1>
         <p className="mt-1 text-sm text-zinc-400">
-          Local bring-up view for backend reachability, mock mode posture, and server-side fetch configuration.
+          Local bring-up view for backend reachability, explicit mock-mode posture, and server-side fetch configuration.
         </p>
       </div>
 
@@ -19,8 +25,8 @@ export default function RuntimeDiagnosticsPage() {
         <Card className="border-zinc-800 bg-zinc-900">
           <CardHeader className="pb-2"><CardTitle className="text-sm text-zinc-300">Mode</CardTitle></CardHeader>
           <CardContent>
-            <Badge className={runtime.usingMocks ? "border-amber-500/30 bg-amber-500/10 text-amber-300" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"}>
-              {runtime.usingMocks ? "Mock fallback" : "Backend-connected"}
+            <Badge className={modeTone}>
+              {modeLabel}
             </Badge>
           </CardContent>
         </Card>

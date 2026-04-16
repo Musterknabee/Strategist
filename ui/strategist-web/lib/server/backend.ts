@@ -1,8 +1,8 @@
-import { mockBurnIn, mockCommandReceipt, mockEvidence, mockPackDetail, mockRuntime, mockTribunal, mockWorkboard } from "@/lib/mocks/ui";
+import { mockBurnIn, mockEvidence, mockPackDetail, mockRuntime, mockTribunal, mockWorkboard } from "@/lib/mocks/ui";
 import type { UiOperatorCommandReceipt } from "@/lib/contracts/ui";
 import { getStrategistWebEnv } from "@/lib/env";
 
-const { backendBaseUrl, backendTimeoutMs, forceMocks, strictBackend, usingMocks } = getStrategistWebEnv();
+const { backendApiToken, backendBaseUrl, backendTimeoutMs, forceMocks, strictBackend, usingMocks } = getStrategistWebEnv();
 
 function withTimeout(init?: RequestInit): RequestInit {
   if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
@@ -31,11 +31,18 @@ async function fetchJson<T>(path: string, fallback: T, init?: RequestInit): Prom
   }
 
   try {
+    const headers = new Headers(init?.headers);
+    headers.set("Accept", "application/json");
+    headers.set("Content-Type", "application/json");
+    const method = (init?.method ?? "GET").toUpperCase();
+    if (backendApiToken && method !== "GET" && method !== "HEAD") {
+      headers.set("X-Strategy-Validator-Token", backendApiToken);
+    }
     const response = await fetch(
       `${backendBaseUrl}${path}`,
       withTimeout({
         cache: "no-store",
-        headers: { Accept: "application/json", "Content-Type": "application/json" },
+        headers,
         ...init,
       }),
     );
@@ -54,8 +61,63 @@ async function fetchJson<T>(path: string, fallback: T, init?: RequestInit): Prom
   }
 }
 
+async function fetchMutationJson<T>(path: string, init?: RequestInit): Promise<T> {
+  if (!backendBaseUrl) {
+    throw new Error(`Backend mutation route is unavailable for ${path}; configure STRATEGIST_BACKEND_BASE_URL before issuing governed mutations.`);
+  }
+
+  const headers = new Headers(init?.headers);
+  headers.set("Accept", "application/json");
+  headers.set("Content-Type", "application/json");
+  const method = (init?.method ?? "POST").toUpperCase();
+  if (backendApiToken && method !== "GET" && method !== "HEAD") {
+    headers.set("X-Strategy-Validator-Token", backendApiToken);
+  }
+
+  const response = await fetch(
+    `${backendBaseUrl}${path}`,
+    withTimeout({
+      cache: "no-store",
+      headers,
+      ...init,
+    }),
+  );
+  if (!response.ok) {
+    throw new Error(`Backend mutation request failed for ${path} with status ${response.status}`);
+  }
+  return (await response.json()) as T;
+}
+
+async function fetchRequiredReadJson<T>(path: string, fallback: T, init?: RequestInit): Promise<T> {
+  if (forceMocks) {
+    return fallback;
+  }
+
+  if (!backendBaseUrl) {
+    throw new Error(`Backend read route is unavailable for ${path}; configure STRATEGIST_BACKEND_BASE_URL before serving operator projections.`);
+  }
+
+  const headers = new Headers(init?.headers);
+  headers.set("Accept", "application/json");
+  headers.set("Content-Type", "application/json");
+
+  const response = await fetch(
+    `${backendBaseUrl}${path}`,
+    withTimeout({
+      cache: "no-store",
+      headers,
+      ...init,
+    }),
+  );
+  if (!response.ok) {
+    throw new Error(`Backend read request failed for ${path} with status ${response.status}`);
+  }
+  return (await response.json()) as T;
+}
+
 export function getBackendRuntimeConfig() {
   return {
+    backendApiTokenConfigured: backendApiToken.length > 0,
     backendBaseUrl,
     backendTimeoutMs: Number.isFinite(backendTimeoutMs) ? backendTimeoutMs : 5000,
     forceMocks,
@@ -65,11 +127,11 @@ export function getBackendRuntimeConfig() {
 }
 
 export function fetchWorkboard() {
-  return fetchJson("/ui/workboard", mockWorkboard);
+  return fetchRequiredReadJson("/ui/workboard", mockWorkboard);
 }
 
 export function fetchBurnIn() {
-  return fetchJson("/ui/burnin", mockBurnIn);
+  return fetchRequiredReadJson("/ui/burnin", mockBurnIn);
 }
 
 export function fetchPackDetail(query: { pack_kind?: string; manifest_path?: string } = {}) {
@@ -77,23 +139,22 @@ export function fetchPackDetail(query: { pack_kind?: string; manifest_path?: str
   if (query.pack_kind) params.set("pack_kind", query.pack_kind);
   if (query.manifest_path) params.set("manifest_path", query.manifest_path);
   const suffix = params.size ? `?${params.toString()}` : "";
-  return fetchJson(`/ui/packs/detail${suffix}`, mockPackDetail);
+  return fetchRequiredReadJson(`/ui/packs/detail${suffix}`, mockPackDetail);
 }
 
 export function submitUiCommand(action: string, payload: Record<string, unknown>) {
-  const fallback: UiOperatorCommandReceipt = { ...mockCommandReceipt, action };
-  return fetchJson(`/ui/commands/${action}`, fallback, {
+  return fetchMutationJson<UiOperatorCommandReceipt>(`/ui/commands/${action}`, {
     method: "POST",
     body: JSON.stringify(payload),
   });
 }
 
 export function fetchTribunal() {
-  return fetchJson("/ui/tribunal", mockTribunal);
+  return fetchRequiredReadJson("/ui/tribunal", mockTribunal);
 }
 
 export function fetchEvidence() {
-  return fetchJson("/ui/evidence", mockEvidence);
+  return fetchRequiredReadJson("/ui/evidence", mockEvidence);
 }
 
 export function fetchRuntime(role?: string) {

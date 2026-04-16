@@ -1,5 +1,6 @@
 export type StrategistWebEnv = {
   backendBaseUrl: string;
+  backendApiToken: string;
   backendTimeoutMs: number;
   forceMocks: boolean;
   strictBackend: boolean;
@@ -22,11 +23,13 @@ function normalizeBoolean(value: string | undefined): boolean {
 
 export function getStrategistWebEnv(): StrategistWebEnv {
   const backendBaseUrl = normalizeBaseUrl(process.env.STRATEGIST_BACKEND_BASE_URL);
+  const backendApiToken = (process.env.STRATEGIST_BACKEND_API_TOKEN ?? "").trim();
   const backendTimeoutMs = normalizeTimeout(process.env.STRATEGIST_BACKEND_TIMEOUT_MS);
   const forceMocks = normalizeBoolean(process.env.STRATEGIST_FORCE_MOCKS);
   const strictBackend = normalizeBoolean(process.env.STRATEGIST_STRICT_BACKEND);
   return {
     backendBaseUrl,
+    backendApiToken,
     backendTimeoutMs,
     forceMocks,
     strictBackend,

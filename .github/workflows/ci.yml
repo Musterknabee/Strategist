@@ -32,13 +32,32 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: ui/strategist-web/package-lock.json
       - name: Install full runtime and dev tools
         run: pip install -e ".[dev]"
+      - name: Install Strategist web dependencies
+        working-directory: ui/strategist-web
+        run: npm ci
       - name: Import boundaries (import-linter)
         env:
           PYTHONIOENCODING: utf-8
         run: python -c "from click.testing import CliRunner; from importlinter.cli import lint_imports_command; r=CliRunner().invoke(lint_imports_command, []); import sys; sys.stdout.buffer.write((r.output or '').encode('utf-8','replace')); raise SystemExit(r.exit_code)"
+      - name: Strategist web check
+        working-directory: ui/strategist-web
+        run: npm run check
       - name: Full test suite
         run: pytest -v
       - name: Anti-regression invariants (fast constitutional gate)
         run: pytest tests/constitutional/test_anti_regression_invariants.py -v
+      - name: Upload CI handoff artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-handoff-${{ github.run_id }}
+          path: |
+            artifacts/release_candidate/**
+          if-no-files-found: warn
