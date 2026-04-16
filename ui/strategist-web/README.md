@@ -28,9 +28,9 @@ Available variables:
 
 - `STRATEGIST_BACKEND_BASE_URL` — base URL of the Python/FastAPI service exposing the `/ui/*` routes
 - `STRATEGIST_BACKEND_TIMEOUT_MS` — optional timeout for the Next.js BFF → backend hop
-- `STRATEGIST_FORCE_MOCKS` — force the shell to stay on local mock payloads even if a backend URL is configured
+- `STRATEGIST_FORCE_MOCKS` — (dev-only) force the shell to stay on local mock payloads even if a backend URL is configured
 
-If the backend is unavailable, the BFF falls back to local mock payloads so the shell can still be developed safely.
+In production (`NODE_ENV=production`), the web shell is strict-backend by default and will fail closed if the backend is unavailable or misconfigured.
 
 ## Local development
 

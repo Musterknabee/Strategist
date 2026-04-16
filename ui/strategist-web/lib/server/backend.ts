@@ -45,6 +45,9 @@ async function fetchJson<T>(path: string, fallback: T, init?: RequestInit): Prom
       }
       return fallback;
     }
+    if (strictBackend && !forceMocks) {
+      return (await response.json()) as T;
+    }
     return parseJsonOrFallback(response, fallback);
   } catch (error) {
     if (strictBackend && !forceMocks) {

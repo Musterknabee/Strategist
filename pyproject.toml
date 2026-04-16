@@ -22,6 +22,7 @@ strategy-validator-pilot = "strategy_validator.cli.pilot:main"
 strategy-validator-api = "strategy_validator.cli.api:main"
 strategy-validator-migrate = "strategy_validator.cli.migrate:main"
 strategy-validator-rollout-ops = "strategy_validator.cli.rollout_ops:main"
+strategy-validator-release-candidate = "strategy_validator.cli.release_candidate:main"
 
 [project.optional-dependencies]
 api = [

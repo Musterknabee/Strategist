@@ -6,6 +6,10 @@ export type StrategistWebEnv = {
   usingMocks: boolean;
 };
 
+function isProductionRuntime(): boolean {
+  return (process.env.NODE_ENV ?? "").trim().toLowerCase() === "production";
+}
+
 function normalizeBaseUrl(value: string | undefined): string {
   return (value ?? "").trim().replace(/\/$/, "");
 }
@@ -21,16 +25,17 @@ function normalizeBoolean(value: string | undefined): boolean {
 }
 
 export function getStrategistWebEnv(): StrategistWebEnv {
+  const isProd = isProductionRuntime();
   const backendBaseUrl = normalizeBaseUrl(process.env.STRATEGIST_BACKEND_BASE_URL);
   const backendTimeoutMs = normalizeTimeout(process.env.STRATEGIST_BACKEND_TIMEOUT_MS);
-  const forceMocks = normalizeBoolean(process.env.STRATEGIST_FORCE_MOCKS);
-  const strictBackend = normalizeBoolean(process.env.STRATEGIST_STRICT_BACKEND);
+  const forceMocks = !isProd && normalizeBoolean(process.env.STRATEGIST_FORCE_MOCKS);
+  const strictBackend = isProd ? true : normalizeBoolean(process.env.STRATEGIST_STRICT_BACKEND);
   return {
     backendBaseUrl,
     backendTimeoutMs,
     forceMocks,
     strictBackend,
-    usingMocks: forceMocks || (!strictBackend && !backendBaseUrl),
+    usingMocks: forceMocks,
   };
 }
 

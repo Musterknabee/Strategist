@@ -2,6 +2,7 @@ node_modules
 .next
 coverage
 *.log
+*.tsbuildinfo
 .env.local
 .env.development.local
 .env.test.local
