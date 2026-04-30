@@ -29,3 +29,4 @@ scratch/**/*.log
 # Frontend/build caches
 node_modules/
 ui/strategist-web/.next/
+*.tsbuildinfo
