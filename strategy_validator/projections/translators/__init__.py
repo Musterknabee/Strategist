@@ -1,0 +1,3 @@
+from strategy_validator.projections.translators.event_to_terminal_record import translate_projection_match_to_terminal_record_payload
+
+__all__ = ['translate_projection_match_to_terminal_record_payload']

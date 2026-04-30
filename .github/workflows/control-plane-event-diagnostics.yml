@@ -1,0 +1,57 @@
+name: control-plane-event-diagnostics
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  replay-reconcile-index:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Prepare diagnostics output directory
+        run: mkdir -p scratch
+      - name: Replay control-plane event sidecars (artifact-only diagnostic)
+        continue-on-error: true
+        run: |
+          python -m strategy_validator.cli.control_plane_event_sidecars replay \
+            --event-root docs/artifacts \
+            --output-path scratch/control-plane-event-sidecar-replay.json \
+            --json
+      - name: Reconcile sidecars with operator journal (artifact-only diagnostic)
+        continue-on-error: true
+        run: |
+          python -m strategy_validator.cli.control_plane_event_sidecars reconcile \
+            --event-root docs/artifacts \
+            --output-path scratch/control-plane-event-reconciliation.json \
+            --verify-operator-chain \
+            --json
+      - name: Build control-plane event projection index (artifact-only diagnostic)
+        continue-on-error: true
+        run: |
+          python -m strategy_validator.cli.control_plane_event_sidecars index \
+            --event-root docs/artifacts \
+            --output-path scratch/control-plane-event-index.json \
+            --json
+      - name: Build operator action event projection index (artifact-only diagnostic)
+        continue-on-error: true
+        run: |
+          python -m strategy_validator.cli.ledger_ops index-operator-actions \
+            --output-path scratch/operator-action-event-index.json \
+            --json
+      - name: Upload control-plane diagnostics artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: control-plane-event-diagnostics
+          path: |
+            scratch/control-plane-event-sidecar-replay.json
+            scratch/control-plane-event-reconciliation.json
+            scratch/control-plane-event-index.json
+            scratch/operator-action-event-index.json
+          if-no-files-found: ignore

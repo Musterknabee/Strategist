@@ -1,0 +1,3 @@
+from strategy_validator.cli.oracle_queue_read_query_commands import register_oracle_queue_read_query_commands
+
+__all__ = ['register_oracle_queue_read_query_commands']

@@ -1,0 +1,12 @@
+{
+  "policy_change_stale_floor": 10,
+  "policy_change_stale_fraction_denominator": 3,
+  "policy_change_timeout_floor": 5,
+  "policy_change_timeout_fraction_denominator": 4,
+  "policy_change_circuit_floor": 10,
+  "policy_change_circuit_fraction_denominator": 3,
+  "policy_change_auth_rate_limit_floor": 3,
+  "policy_change_auth_rate_limit_fraction_denominator": 5,
+  "decision_auth_rate_limit_block_floor": 5,
+  "decision_circuit_block_floor": 20
+}

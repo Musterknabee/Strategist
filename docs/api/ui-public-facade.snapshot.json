@@ -1,0 +1,148 @@
+{
+  "frontend_expected_package": "ui/strategist-web",
+  "frontend_package_present": true,
+  "frontend_readiness_claimed": false,
+  "mutation_route": "/ui/commands/{action}",
+  "read_plane_only": true,
+  "route_count": 19,
+  "routes": [
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/burnin",
+      "payload_schema": "ui_burnin/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/burnin/forensic",
+      "payload_schema": "ui_burnin/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/burnin/providers",
+      "payload_schema": "ui_burnin/v1"
+    },
+    {
+      "auth_required": true,
+      "kind": "mutation",
+      "method": "POST",
+      "path": "/ui/commands/{action}",
+      "payload_schema": "ui_command_mutation/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/evidence",
+      "payload_schema": "ui_evidence/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "metadata",
+      "method": "GET",
+      "path": "/ui/facade",
+      "payload_schema": "ui_public_facade_inventory/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "metadata",
+      "method": "GET",
+      "path": "/ui/health",
+      "payload_schema": "ui_health/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/operator-actions",
+      "payload_schema": "operator_action_event_projection_index/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/packs/detail",
+      "payload_schema": "ui_pack_detail/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/runtime",
+      "payload_schema": "ui_runtime_status/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/tribunal",
+      "payload_schema": "ui_tribunal/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/workboard",
+      "payload_schema": "ui_workboard_dashboard/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "export",
+      "method": "GET",
+      "path": "/ui/workboard/export",
+      "payload_schema": "oracle_operator_board_export_payload/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "export",
+      "method": "GET",
+      "path": "/ui/workboard/export/document",
+      "payload_schema": "oracle_operator_board_export_document/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "export",
+      "method": "HEAD",
+      "path": "/ui/workboard/export/document",
+      "payload_schema": "oracle_operator_board_export_document/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "metadata",
+      "method": "OPTIONS",
+      "path": "/ui/workboard/export/document",
+      "payload_schema": "ui_workboard_export_options/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "export",
+      "method": "GET",
+      "path": "/ui/workboard/export/index",
+      "payload_schema": "oracle_operator_board_export_index/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "export",
+      "method": "HEAD",
+      "path": "/ui/workboard/export/index",
+      "payload_schema": "oracle_operator_board_export_index/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "metadata",
+      "method": "OPTIONS",
+      "path": "/ui/workboard/export/index",
+      "payload_schema": "ui_workboard_export_options/v1"
+    }
+  ],
+  "routes_sha256": "32a9b636b29361758c508899d11d1a55befa5dbd60c2da4681c33815c41b2526",
+  "schema_version": "ui_public_facade_snapshot/v1",
+  "source_endpoint": "/ui/facade",
+  "source_schema_version": "ui_public_facade_inventory/v1",
+  "surface": "ui"
+}

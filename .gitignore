@@ -1,0 +1,31 @@
+# Python/runtime transients
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.import_linter_cache/
+.strategy_validator/
+
+# Local environments/build outputs
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+
+# Runtime state and generated artifacts
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+*.log
+*.jsonl
+artifacts/
+scratch/**/*.log
+
+# Frontend/build caches
+node_modules/
+ui/strategist-web/.next/

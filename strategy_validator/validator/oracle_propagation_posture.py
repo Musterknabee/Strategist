@@ -1,0 +1,3 @@
+from strategy_validator.control_plane.propagation_posture import assess_operator_propagation_posture
+
+__all__ = ['assess_operator_propagation_posture']

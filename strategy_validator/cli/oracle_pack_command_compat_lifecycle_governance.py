@@ -1,0 +1,3 @@
+from strategy_validator.cli.oracle_pack_lifecycle_governance_commands import register_oracle_pack_lifecycle_governance_commands
+
+__all__ = ['register_oracle_pack_lifecycle_governance_commands']

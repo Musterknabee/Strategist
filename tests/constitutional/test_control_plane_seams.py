@@ -1,0 +1,17 @@
+from strategy_validator.control_plane import (
+    assess_automation_posture,
+    assess_operator_propagation_posture,
+    assess_operator_reliance_posture,
+    assess_trust_plane,
+)
+from strategy_validator.validator.oracle_automation_posture import assess_automation_posture as legacy_assess_automation_posture
+from strategy_validator.validator.oracle_propagation_posture import assess_operator_propagation_posture as legacy_assess_operator_propagation_posture
+from strategy_validator.validator.oracle_reliance_posture import assess_operator_reliance_posture as legacy_assess_operator_reliance_posture
+from strategy_validator.validator.oracle_trust_plane import assess_trust_plane as legacy_assess_trust_plane
+
+
+def test_control_plane_exports_match_legacy_posture_functions():
+    assert legacy_assess_automation_posture is assess_automation_posture
+    assert legacy_assess_operator_propagation_posture is assess_operator_propagation_posture
+    assert legacy_assess_operator_reliance_posture is assess_operator_reliance_posture
+    assert legacy_assess_trust_plane is assess_trust_plane

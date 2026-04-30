@@ -1,0 +1,2 @@
+tribunal_thresholds:
+  max_nuisance_p_value: 0.01

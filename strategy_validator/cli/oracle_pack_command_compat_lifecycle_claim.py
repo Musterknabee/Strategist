@@ -1,0 +1,3 @@
+from strategy_validator.cli.oracle_pack_lifecycle_claim_commands import register_oracle_pack_lifecycle_claim_commands
+
+__all__ = ['register_oracle_pack_lifecycle_claim_commands']

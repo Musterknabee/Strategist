@@ -1,0 +1,94 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "strategy-validator"
+version = "0.1.0rc1"
+description = "Governed strategy validation, adjudication, and operator evidence control plane."
+readme = "docs/ARCHITECTURE_ROADMAP.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [{ name = "Strategy Validator Maintainers" }]
+dependencies = [
+  "fastapi>=0.110",
+  "uvicorn>=0.27",
+  "pydantic>=2.6",
+  "PyYAML>=6.0",
+  "pandas>=2.1",
+  "numpy>=1.26",
+  "statsmodels>=0.14",
+  "cryptography>=42.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "httpx>=0.27",
+  "import-linter>=2.0",
+  "click>=8.1",
+]
+
+[project.scripts]
+strategy-validator-api = "strategy_validator.cli.api:main"
+strategy-validator-hygiene-check = "strategy_validator.cli.hygiene_check:main"
+strategy-validator-ledger-ops = "strategy_validator.cli.ledger_ops:main"
+strategy-validator-control-plane-event-sidecars = "strategy_validator.cli.control_plane_event_sidecars:main"
+strategy-validator-migrate = "strategy_validator.cli.migrate:main"
+strategy-validator-startup-check = "strategy_validator.cli.startup_check:main"
+strategy-validator-research-preflight = "strategy_validator.cli.research_preflight:main"
+strategy-validator-release-candidate = "strategy_validator.cli.release_candidate:main"
+strategy-validator-single-tenant-preflight = "strategy_validator.cli.single_tenant_preflight:main"
+strategy-validator-deployment-env-check = "strategy_validator.cli.deployment_env_check:main"
+strategy-validator-single-tenant-bundle = "strategy_validator.cli.single_tenant_deployment_bundle:main"
+strategy-validator-single-tenant-acceptance = "strategy_validator.cli.single_tenant_deployment_acceptance:main"
+strategy-validator-single-tenant-evidence = "strategy_validator.cli.single_tenant_deployment_evidence:main"
+strategy-validator-single-tenant-api-smoke = "strategy_validator.cli.single_tenant_api_smoke:main"
+
+[tool.setuptools.packages.find]
+include = ["strategy_validator*"]
+exclude = ["tests*", "docs*", "scratch*", "scripts*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"
+markers = [
+  "constitutional: architecture and repository-shape invariants",
+  "boundary: import and module boundary tests",
+]
+
+[tool.importlinter]
+root_package = "strategy_validator"
+
+[[tool.importlinter.contracts]]
+name = "API routes stay behind application surfaces"
+type = "forbidden"
+source_modules = ["strategy_validator.api"]
+allow_indirect_imports = true
+forbidden_modules = [
+  "strategy_validator.validator",
+  "strategy_validator.control_plane",
+  "strategy_validator.projections",
+  "strategy_validator.ledger.writer",
+]
+ignore_imports = [
+  "strategy_validator.api.routes.ui -> strategy_validator.api.routes.ui_routes_workboard_export",
+  "strategy_validator.api.routes.ui -> strategy_validator.api.routes.ui_routes_detail_runtime",
+  "strategy_validator.api.routes.ui -> strategy_validator.api.routes.ui_routes_mutation",
+]
+
+[[tool.importlinter.contracts]]
+name = "Application layer does not depend on CLI"
+type = "forbidden"
+source_modules = ["strategy_validator.application"]
+forbidden_modules = ["strategy_validator.cli"]
+
+[[tool.importlinter.contracts]]
+name = "Advisory validator modules cannot mutate ledger"
+type = "forbidden"
+source_modules = ["strategy_validator.validator"]
+forbidden_modules = ["strategy_validator.ledger.writer"]
+ignore_imports = [
+  "strategy_validator.validator.orchestrator -> strategy_validator.ledger.writer",
+]
