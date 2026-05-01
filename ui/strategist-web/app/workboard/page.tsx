@@ -111,6 +111,7 @@ export default function WorkboardPage() {
   }
 
   const loading = facadeQuery.isLoading || workboardQuery.isLoading;
+  const frontendClaimed = facadeQuery.data?.frontend_readiness_claimed === true;
 
   return (
     <div className="term-page">
@@ -122,8 +123,8 @@ export default function WorkboardPage() {
       <Pane title="Facade · frontend posture (informational)" dense>
         <p className="muted" style={{ fontSize: "10px", margin: 0 }}>
           Backend <code>frontend_readiness_claimed</code>:{" "}
-          <StatusBadge raw={facadeQuery.data?.frontend_readiness_claimed ? "true" : "false"} /> — this UI remains{" "}
-          <strong>NOT_CLAIMED</strong> for production frontend readiness.
+          <StatusBadge raw={frontendClaimed ? "true" : "false"} /> — single-tenant frontend readiness is{" "}
+          <strong>{frontendClaimed ? "CLAIMED" : "NOT_CLAIMED"}</strong>.
         </p>
       </Pane>
 

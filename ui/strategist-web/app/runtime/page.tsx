@@ -276,6 +276,18 @@ export default function RuntimePage() {
                     k: "benchmark_digest",
                     v: asString(rcBench?.evidence_digest)?.slice(0, 16) ?? "—",
                   },
+                  {
+                    k: "bench_process_workers",
+                    v: rcBench?.process_pool_workers != null ? String(rcBench.process_pool_workers) : "—",
+                  },
+                  {
+                    k: "bench_cpu_ms",
+                    v: rcBench?.cpu_duration_ms != null ? String(rcBench.cpu_duration_ms) : "—",
+                  },
+                  {
+                    k: "bench_pool_ms",
+                    v: rcBench?.process_pool_duration_ms != null ? String(rcBench.process_pool_duration_ms) : "—",
+                  },
                 ]}
               />
             )}

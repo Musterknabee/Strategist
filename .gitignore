@@ -22,6 +22,9 @@ deployment.env
 *.secrets
 .keys/
 
+# Local dev layout (optional scripts/setup_local_deployment.py --dev)
+.local/
+
 # Runtime state and generated artifacts
 *.sqlite
 *.sqlite3

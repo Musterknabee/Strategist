@@ -2,7 +2,60 @@
 from __future__ import annotations
 
 import importlib
+import shutil
+import subprocess
 from typing import Any
+
+
+def _probe_nvidia_smi() -> dict[str, Any]:
+    if shutil.which("nvidia-smi") is None:
+        return {
+            "gpu_hardware_detected": False,
+            "nvidia_smi_available": False,
+        }
+    try:
+        completed = subprocess.run(
+            [
+                "nvidia-smi",
+                "--query-gpu=name,memory.total,driver_version",
+                "--format=csv,noheader,nounits",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
+    except Exception as exc:  # pragma: no cover - defensive host probe
+        return {
+            "gpu_hardware_detected": False,
+            "nvidia_smi_available": True,
+            "nvidia_smi_error": exc.__class__.__name__,
+        }
+    if completed.returncode != 0:
+        return {
+            "gpu_hardware_detected": False,
+            "nvidia_smi_available": True,
+            "nvidia_smi_error": (completed.stderr or completed.stdout or "").strip()[:240],
+        }
+    devices: list[dict[str, Any]] = []
+    for index, line in enumerate(completed.stdout.splitlines()):
+        parts = [part.strip() for part in line.split(",")]
+        if not parts or not parts[0]:
+            continue
+        row: dict[str, Any] = {"index": index, "name": parts[0]}
+        if len(parts) > 1:
+            try:
+                row["memory_total_mib"] = int(parts[1])
+            except ValueError:
+                row["memory_total_mib"] = parts[1]
+        if len(parts) > 2:
+            row["driver_version"] = parts[2]
+        devices.append(row)
+    return {
+        "gpu_hardware_detected": bool(devices),
+        "nvidia_smi_available": True,
+        "nvidia_smi_devices": devices,
+    }
 
 
 def probe_gpu_capability() -> dict[str, Any]:
@@ -15,11 +68,14 @@ def probe_gpu_capability() -> dict[str, Any]:
         "device_count": 0,
         "selected_device": "cpu",
         "devices": [],
+        "fallback_status": "GPU_UNAVAILABLE_CPU_FALLBACK",
     }
+    payload.update(_probe_nvidia_smi())
     try:
         torch = importlib.import_module("torch")
     except Exception:
-        payload["reason"] = "TORCH_NOT_INSTALLED"
+        payload["reason"] = "GPU_UNAVAILABLE_CPU_FALLBACK"
+        payload["fallback_status"] = "GPU_UNAVAILABLE_CPU_FALLBACK"
         return payload
 
     payload["torch_available"] = True

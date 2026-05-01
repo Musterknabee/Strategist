@@ -105,6 +105,50 @@ def test_keyed_fred_classifies_401_without_leaking_key(tmp_path: Path, retrieve_
     assert "testfredkey" not in raw
 
 
+def test_alpaca_base_url_with_v2_suffix_is_normalized(tmp_path: Path, retrieve_provider_samples_mod, monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: dict[str, object] = {}
+
+    def fake_http_get(url: str, headers=None, timeout=None):  # noqa: ANN001
+        seen["url"] = url
+        seen["headers"] = headers
+        seen["timeout"] = timeout
+        return 200, b'{"account_number":"redacted-test"}', None
+
+    monkeypatch.setattr(retrieve_provider_samples_mod, "_http_get", fake_http_get)
+    env_file = tmp_path / "e.env"
+    env_file.write_text(
+        "\n".join(
+            [
+                "ALPACA_API_KEY=test-alpaca-key",
+                "ALPACA_API_SECRET=test-alpaca-secret",
+                "ALPACA_BASE_URL=https://paper-api.alpaca.markets/v2",
+                "ALPACA_TRADING_MODE=paper",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    out = tmp_path / "keyed_out"
+    rc = retrieve_provider_samples_mod.main(
+        [
+            "--providers",
+            "alpaca",
+            "--env-file",
+            str(env_file),
+            "--output-dir",
+            str(out),
+            "--manifest-json",
+        ]
+    )
+    assert rc == 0
+    manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+    entry = manifest["entries"][0]
+    assert seen["url"] == "https://paper-api.alpaca.markets/v2/account"
+    assert entry["endpoint"] == "https://paper-api.alpaca.markets/v2/account"
+    raw = json.dumps(manifest)
+    assert "test-alpaca-key" not in raw
+    assert "test-alpaca-secret" not in raw
+
+
 def test_manifest_does_not_embed_env_secrets(tmp_path: Path, retrieve_provider_samples_mod) -> None:
     env_file = tmp_path / "secrets.env"
     token = "NEWSAPI_LEAK_TEST_TOKEN_XYZ"

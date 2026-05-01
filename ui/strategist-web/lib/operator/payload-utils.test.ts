@@ -21,6 +21,12 @@ describe("classifyOperationalStatus", () => {
   it("maps pending to warn", () => {
     expect(classifyOperationalStatus("PENDING_KEY")).toBe("warn");
   });
+
+  it("maps robustness gate labels", () => {
+    expect(classifyOperationalStatus("PROVEN")).toBe("ok");
+    expect(classifyOperationalStatus("NOT_APPLICABLE")).toBe("warn");
+    expect(classifyOperationalStatus("WARNING")).toBe("warn");
+  });
 });
 
 describe("classifyProviderClassifiedStatus", () => {

@@ -51,7 +51,18 @@ def _coerce_database_path(configured: str | None) -> Path:
 
 
 def _is_effectively_absolute(path: Path, configured: str | None) -> bool:
-    return path.is_absolute() or (bool(configured) and _is_windows_absolute(str(configured)))
+    if path.is_absolute():
+        return True
+    if configured and _is_windows_absolute(str(configured)):
+        return True
+    # Windows: env files use POSIX absolute paths (/var/lib/...). pathlib treats those as
+    # drive-rooted (e.g. C:\var\lib\...) and is_absolute() is False; still honor explicit
+    # configured roots for production policy.
+    if os.name == "nt" and configured:
+        raw = str(configured).strip().replace("\\", "/")
+        if raw.startswith("/") and not raw.startswith("//"):
+            return True
+    return False
 
 
 

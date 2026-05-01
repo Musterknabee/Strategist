@@ -1,0 +1,89 @@
+"""Paper-only broker integration contracts (evidence only; no live trading)."""
+from __future__ import annotations
+
+from datetime import datetime
+from enum import Enum
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field, field_validator
+
+
+class PaperBrokerPolicyStatus(str, Enum):
+    DISABLED = "DISABLED"
+    PENDING_KEY = "PENDING_KEY"
+    PAPER_READY = "PAPER_READY"
+    BLOCKED_BY_POLICY = "BLOCKED_BY_POLICY"
+    DEGRADED = "DEGRADED"
+
+
+class PaperBrokerAccountStatus(BaseModel):
+    schema_version: Literal["paper_broker_account_status/v1"] = "paper_broker_account_status/v1"
+    broker_id: str = "alpaca_paper"
+    policy_status: PaperBrokerPolicyStatus
+    trading_blocked_reason: str | None = None
+    account_id: str | None = None
+    equity: float | None = None
+    buying_power: float | None = None
+    currency: str | None = None
+    paper_endpoint_verified: bool = False
+    warnings: list[str] = Field(default_factory=list)
+    retrieved_at_utc: datetime | None = None
+
+    model_config = {"extra": "forbid"}
+
+
+class PaperBrokerOrderIntent(BaseModel):
+    schema_version: Literal["paper_broker_order_intent/v1"] = "paper_broker_order_intent/v1"
+    tracking_id: str
+    symbol: str = Field(min_length=1)
+    side: Literal["buy", "sell"]
+    qty: float = Field(gt=0)
+    order_type: Literal["market", "limit"] = "market"
+    time_in_force: str = "day"
+    limit_price: float | None = None
+    note: str = ""
+
+    model_config = {"extra": "forbid"}
+
+
+class PaperBrokerOrderResult(BaseModel):
+    schema_version: Literal["paper_broker_order_result/v1"] = "paper_broker_order_result/v1"
+    ok: bool
+    policy_status: PaperBrokerPolicyStatus
+    dry_run: bool = False
+    client_order_id: str | None = None
+    broker_order_id: str | None = None
+    status: str | None = None
+    filled_qty: float | None = None
+    warnings: list[str] = Field(default_factory=list)
+    blockers: list[str] = Field(default_factory=list)
+    evidence_redacted: dict[str, Any] = Field(default_factory=dict)
+    retrieved_at_utc: datetime | None = None
+
+    model_config = {"extra": "forbid"}
+
+    @field_validator("retrieved_at_utc")
+    @classmethod
+    def _tz(cls, v: datetime | None) -> datetime | None:
+        if v is not None and v.tzinfo is None:
+            raise ValueError("retrieved_at_utc must be timezone-aware when set")
+        return v
+
+
+class PaperBrokerPositionSnapshot(BaseModel):
+    schema_version: Literal["paper_broker_position_snapshot/v1"] = "paper_broker_position_snapshot/v1"
+    symbol: str
+    qty: float
+    market_value: float | None = None
+    avg_entry_price: float | None = None
+
+    model_config = {"extra": "forbid"}
+
+
+__all__ = [
+    "PaperBrokerAccountStatus",
+    "PaperBrokerOrderIntent",
+    "PaperBrokerOrderResult",
+    "PaperBrokerPolicyStatus",
+    "PaperBrokerPositionSnapshot",
+]

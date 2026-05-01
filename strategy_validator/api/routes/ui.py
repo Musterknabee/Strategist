@@ -171,7 +171,6 @@ def get_ui_research_compute() -> dict[str, object]:
 from strategy_validator.api.routes.ui_routes_workboard_export import router as workboard_export_router
 from strategy_validator.api.routes.ui_routes_detail_runtime import router as detail_runtime_router
 from strategy_validator.api.routes.ui_routes_mutation import router as mutation_router
-
 router.include_router(workboard_export_router)
 router.include_router(detail_runtime_router)
 router.include_router(mutation_router)

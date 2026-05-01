@@ -1,9 +1,11 @@
 """Research compute contracts for optional CPU/CUDA acceleration (advisory-only)."""
 from __future__ import annotations
 
+from datetime import datetime
 from enum import Enum
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ComputeBackend(str, Enum):
@@ -18,6 +20,7 @@ class ComputeFallbackReason(str, Enum):
     CUDA_UNAVAILABLE = "CUDA_UNAVAILABLE"
     CUDA_BACKEND_ERROR = "CUDA_BACKEND_ERROR"
     REQUESTED_CPU = "REQUESTED_CPU"
+    GPU_UNAVAILABLE_CPU_FALLBACK = "GPU_UNAVAILABLE_CPU_FALLBACK"
 
 
 class ComputeDeviceInfo(BaseModel):
@@ -94,11 +97,37 @@ class ResearchComputeResult(BaseModel):
     blockers: tuple[str, ...] = ()
 
 
+class ResearchComputeBenchmarkRecord(BaseModel):
+    schema_version: Literal["research_compute_benchmark/v1"] = "research_compute_benchmark/v1"
+    generated_at_utc: datetime
+    cpu_duration_ms: int
+    process_pool_duration_ms: int | None = None
+    process_pool_workers: int | None = None
+    gpu_available: bool = False
+    gpu_benchmark_duration_ms: int | None = None
+    torch_available: bool = False
+    cuda_available: bool = False
+    fallback_status: str = "GPU_UNAVAILABLE_CPU_FALLBACK"
+    note: str = "advisory_evidence_only_not_live_ready"
+    evidence_digest: str = ""
+    extra: dict[str, Any] = Field(default_factory=dict)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("generated_at_utc")
+    @classmethod
+    def _tz(cls, v: datetime) -> datetime:
+        if v.tzinfo is None:
+            raise ValueError("generated_at_utc must be timezone-aware")
+        return v
+
+
 __all__ = [
     "ComputeBackend",
     "ComputeDeviceInfo",
     "ComputeEvidenceManifest",
     "ComputeFallbackReason",
+    "ResearchComputeBenchmarkRecord",
     "ResearchComputeRequest",
     "ResearchComputeResult",
 ]

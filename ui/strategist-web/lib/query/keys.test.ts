@@ -10,4 +10,9 @@ describe("queryKeys", () => {
     expect(queryKeys.probeHealthz).not.toEqual(queryKeys.probeLivez);
     expect(queryKeys.probeReadyz).not.toEqual(queryKeys.probeApiRoot);
   });
+
+  it("uses distinct paper tracking keys", () => {
+    expect(queryKeys.uiPaperTrackingLatest).not.toEqual(queryKeys.uiPaperTrackingDetail("a"));
+    expect(queryKeys.uiPaperTrackingDetail("a")).not.toEqual(queryKeys.uiPaperTrackingDetail("b"));
+  });
 });

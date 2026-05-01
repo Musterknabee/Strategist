@@ -790,6 +790,8 @@ def _keyed_registry() -> dict[str, Callable[[dict[str, str], bool, Path], Sample
         kid = _first_key(e, ("ALPACA_API_KEY", "APCA_API_KEY_ID"))
         sec = _first_key(e, ("ALPACA_API_SECRET", "APCA_API_SECRET_KEY"))
         base = (e.get("ALPACA_BASE_URL") or "https://paper-api.alpaca.markets").rstrip("/")
+        if base.endswith("/v2"):
+            base = base[:-3].rstrip("/")
         mode = (e.get("ALPACA_TRADING_MODE") or "paper").strip().lower()
         personal = _truthy(e.get("PERSONAL_LIVE_APPROVED")) or _truthy(e.get("STRATEGY_VALIDATOR_PERSONAL_LIVE_APPROVED"))
         if not kid or not sec:

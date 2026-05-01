@@ -243,6 +243,17 @@ export default function ProvidersPage() {
         </>
       )}
 
+      <Pane title="Historical bars ingestion (CLI)" dense>
+        <p className="muted" style={{ fontSize: "10px", margin: "0 0 6px" }}>
+          Optional snapshots for research batches. Missing keys surface as <code>PENDING_KEY</code> — not fake success.
+          PIT is best-effort for vendor daily bars; see <code>docs/strategy_lab/PROVIDER_HISTORICAL_DATA.md</code>.
+        </p>
+        <pre className="json-preview" style={{ fontSize: "10px", margin: 0 }}>
+          strategy-validator-provider-bars ingest --provider tiingo --symbol SPY --timeframe 1d --start 2024-01-01 --end
+          2024-12-31 --as-of 2025-01-01T00:00:00Z --output-root artifacts/strategy_data --env-file deployment.env --json
+        </pre>
+      </Pane>
+
       {health.data && <JsonDetails summary="Drilldown: provider-health JSON" data={health.data} />}
     </div>
   );

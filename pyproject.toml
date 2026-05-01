@@ -48,6 +48,12 @@ strategy-validator-single-tenant-acceptance = "strategy_validator.cli.single_ten
 strategy-validator-single-tenant-evidence = "strategy_validator.cli.single_tenant_deployment_evidence:main"
 strategy-validator-single-tenant-api-smoke = "strategy_validator.cli.single_tenant_api_smoke:main"
 strategy-validator-provider-capabilities = "strategy_validator.cli.provider_capabilities:main"
+strategy-validator-strategy-batch-run = "strategy_validator.cli.strategy_batch_run:main"
+strategy-validator-paper-track = "strategy_validator.cli.paper_track:main"
+strategy-validator-provider-bars = "strategy_validator.cli.provider_bars:main"
+strategy-validator-paper-broker = "strategy_validator.cli.paper_broker:main"
+strategy-validator-portfolio-sim = "strategy_validator.cli.portfolio_sim:main"
+strategy-validator-gpu-probe = "strategy_validator.cli.gpu_probe:main"
 
 [tool.setuptools.packages.find]
 include = ["strategy_validator*"]

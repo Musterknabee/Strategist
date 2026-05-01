@@ -39,6 +39,9 @@ def build_ui_research_compute_payload() -> dict[str, Any]:
     fallback_reason = probe.get("reason")
     if not gpu_available and fallback_reason is None:
         fallback_reason = "CUDA_UNAVAILABLE"
+    worker_model = None
+    if isinstance(benchmark, dict):
+        worker_model = benchmark.get("process_pool_workers")
     return {
         "schema_version": "ui_research_compute/v1",
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -50,6 +53,7 @@ def build_ui_research_compute_payload() -> dict[str, Any]:
         "cpu_fallback_status": "READY" if not gpu_available else "NOT_APPLICABLE",
         "fallback_reason": fallback_reason,
         "research_compute_readiness": readiness,
+        "last_worker_pool_workers": worker_model,
     }
 
 

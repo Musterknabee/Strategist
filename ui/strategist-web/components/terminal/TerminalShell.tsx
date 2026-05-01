@@ -12,14 +12,17 @@ import { EventTape } from "./EventTape";
 import { InspectorDrawer } from "./InspectorDrawer";
 import { ShortcutHelp } from "./ShortcutHelp";
 
-const RAIL: { href: string; abbr: string }[] = [
-  { href: "/", abbr: "OV" },
-  { href: "/workboard", abbr: "WB" },
-  { href: "/readiness", abbr: "RD" },
-  { href: "/evidence", abbr: "EV" },
-  { href: "/ledger", abbr: "LG" },
-  { href: "/providers", abbr: "PR" },
-  { href: "/runtime", abbr: "RT" },
+const RAIL: { href: string; icon: string; label: string }[] = [
+  { href: "/", icon: "O", label: "Overview" },
+  { href: "/readiness", icon: "R", label: "Readiness" },
+  { href: "/evidence", icon: "E", label: "Evidence" },
+  { href: "/ledger", icon: "L", label: "Ledger" },
+  { href: "/providers", icon: "P", label: "Providers" },
+  { href: "/runtime", icon: "T", label: "Runtime" },
+  { href: "/workboard", icon: "W", label: "Workboard" },
+  { href: "/strategy-lab", icon: "S", label: "Strategy Lab" },
+  { href: "/paper-tracking", icon: "K", label: "Paper" },
+  { href: "/research-os", icon: "X", label: "Research OS" },
 ];
 
 function typingTarget(): boolean {
@@ -123,16 +126,29 @@ export function TerminalShell({ children }: { children: ReactNode }) {
     <div className="term-root">
       <div className="term-layout">
         <aside className="term-rail" aria-label="Quick nav">
-          {RAIL.map((r) => (
-            <Link
-              key={r.href}
-              href={r.href}
-              className={`term-rail__link${pathname === r.href ? " is-active" : ""}`}
-              title={r.href}
-            >
-              {r.abbr}
-            </Link>
-          ))}
+          <nav className="term-rail__nav" aria-label="Operator sections">
+            {RAIL.map((r) => (
+              <Link
+                key={r.href}
+                href={r.href}
+                className={`term-rail__link${pathname === r.href ? " is-active" : ""}`}
+                title={r.label}
+              >
+                <span className="term-rail__icon" aria-hidden="true">
+                  {r.icon}
+                </span>
+                <span className="term-rail__label">{r.label}</span>
+              </Link>
+            ))}
+          </nav>
+          <div className="term-rail__bottom" aria-label="Utilities">
+            <button type="button" className="term-rail__utility" title="Shortcut help" onClick={() => setShortcutHelpOpen(true)}>
+              ?
+            </button>
+            <button type="button" className="term-rail__utility" title="Command palette" onClick={() => setPaletteOpen(true)}>
+              K
+            </button>
+          </div>
         </aside>
         <div className="term-column">
           <CommandBar />

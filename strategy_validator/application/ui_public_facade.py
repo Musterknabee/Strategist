@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 
 from strategy_validator.contracts.ui_public_facade import UiPublicFacadeInventory, UiPublicFacadeRoute
+from strategy_validator.application.frontend_readiness_claim import load_frontend_readiness_claim
 from strategy_validator.providers.health import (
     build_provider_health_snapshot,
     provider_health_snapshot_public_payload,
@@ -61,12 +62,21 @@ _UI_PUBLIC_FACADE_ROUTES: tuple[UiPublicFacadeRoute, ...] = (
     UiPublicFacadeRoute('GET', '/ui/operator-actions', 'read', False, 'operator_action_event_projection_index/v1'),
     UiPublicFacadeRoute('GET', '/ui/provider-health', 'read', False, 'provider_health_snapshot/v1'),
     UiPublicFacadeRoute('GET', '/ui/research-compute', 'read', False, 'ui_research_compute/v1'),
+    UiPublicFacadeRoute('GET', '/ui/strategy-batches', 'read', False, 'ui_strategy_batch/v1'),
+    UiPublicFacadeRoute('GET', '/ui/strategy-batches/latest', 'read', False, 'ui_strategy_batch/v1'),
+    UiPublicFacadeRoute('GET', '/ui/strategy-batches/{run_id}', 'read', False, 'ui_strategy_batch/v1'),
+    UiPublicFacadeRoute('GET', '/ui/paper-tracking/latest', 'read', False, 'ui_paper_tracking/v2'),
+    UiPublicFacadeRoute('GET', '/ui/paper-tracking/{tracking_id}', 'read', False, 'ui_paper_tracking/v2'),
+    UiPublicFacadeRoute('GET', '/ui/paper-broker/status', 'read', False, 'ui_paper_broker/v1'),
+    UiPublicFacadeRoute('GET', '/ui/research-os/status', 'read', False, 'ui_research_os_status/v1'),
     UiPublicFacadeRoute('POST', UI_COMMAND_MUTATION_ROUTE, 'mutation', True, 'ui_command_mutation/v1'),
 )
 
 
 def build_ui_public_facade_inventory(repo_root: Path | None = None) -> dict[str, object]:
     frontend_present, frontend_status = _frontend_status(repo_root)
+    readiness_claim = load_frontend_readiness_claim(repo_root)
+    readiness_claimed = bool(readiness_claim.get("frontend_readiness_claimed"))
     inventory = UiPublicFacadeInventory(
         schema_version=UI_PUBLIC_FACADE_SCHEMA_VERSION,
         surface=UI_PUBLIC_FACADE_SURFACE,
@@ -74,8 +84,8 @@ def build_ui_public_facade_inventory(repo_root: Path | None = None) -> dict[str,
         frontend_package_present=frontend_present,
         frontend_package_detected_by_backend=frontend_present,
         frontend_status=frontend_status,
-        frontend_readiness_claimed=False,
-        frontend_runtime_reachable=None,
+        frontend_readiness_claimed=readiness_claimed,
+        frontend_runtime_reachable=readiness_claim.get("frontend_runtime_reachable") if readiness_claimed else None,
         frontend_operator_console_hint=_FRONTEND_OPERATOR_CONSOLE_HINT,
         read_plane_only=True,
         mutation_route=UI_COMMAND_MUTATION_ROUTE,

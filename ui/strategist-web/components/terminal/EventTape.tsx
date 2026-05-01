@@ -15,10 +15,11 @@ export function EventTape() {
   }
   return (
     <div id="terminal-event-tape" className="term-tape" tabIndex={-1} role="log" aria-label="Event tape">
+      <span className="term-tape__label">EVIDENCE / EVENT TAPE</span>
       {tapeLines.map((line) => (
-        <div key={line.id} className="term-tape__line">
+        <div key={line.id} className={`term-tape__chip term-tape__chip--${line.severity}`}>
           {line.ts && <MonoValue truncate>{line.ts}</MonoValue>}
-          <SeverityBadge severity={line.severity}>{line.severity.toUpperCase()}</SeverityBadge>
+          <SeverityBadge severity={line.severity}>{line.severity.toUpperCase().slice(0, 4)}</SeverityBadge>
           <span className="term-tape__text">{line.text}</span>
         </div>
       ))}

@@ -10,5 +10,12 @@ export const queryKeys = {
   uiOperatorActions: ["strategist", "ui", "operator-actions"] as const,
   uiProviderHealth: ["strategist", "ui", "provider-health"] as const,
   uiResearchCompute: ["strategist", "ui", "research-compute"] as const,
+  uiStrategyBatchesLatest: ["strategist", "ui", "strategy-batches", "latest"] as const,
+  uiStrategyBatchesList: ["strategist", "ui", "strategy-batches", "list"] as const,
+  uiPaperTrackingLatest: ["strategist", "ui", "paper-tracking", "latest"] as const,
+  uiPaperTrackingDetail: (trackingId: string) =>
+    ["strategist", "ui", "paper-tracking", "detail", trackingId] as const,
+  uiPaperBrokerStatus: ["strategist", "ui", "paper-broker", "status"] as const,
+  uiResearchOsStatus: ["strategist", "ui", "research-os", "status"] as const,
   uiRuntime: (role: string) => ["strategist", "ui", "runtime", role] as const,
 };

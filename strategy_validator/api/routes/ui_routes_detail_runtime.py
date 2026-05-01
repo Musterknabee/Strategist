@@ -2,6 +2,17 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Query
 from strategy_validator.api.routes import ui as ui_root
+from strategy_validator.application.ui_paper_tracking import (
+    build_ui_paper_tracking_detail_payload,
+    build_ui_paper_tracking_latest_payload,
+)
+from strategy_validator.application.ui_paper_broker import build_ui_paper_broker_status_payload
+from strategy_validator.application.ui_research_os import build_ui_research_os_status_payload
+from strategy_validator.application.ui_strategy_batch import (
+    build_ui_strategy_batch_detail_payload,
+    build_ui_strategy_batch_latest_payload,
+    build_ui_strategy_batch_list_payload,
+)
 
 router = APIRouter()
 
@@ -63,3 +74,37 @@ def get_ui_operator_actions(
 ) -> dict[str, object]:
     return ui_root.build_operator_action_event_index_payload(database_path=database_path, readonly=readonly)
 
+
+@router.get('/strategy-batches/latest')
+def get_strategy_batches_latest() -> dict[str, object]:
+    return build_ui_strategy_batch_latest_payload()
+
+
+@router.get('/strategy-batches')
+def get_strategy_batches() -> dict[str, object]:
+    return build_ui_strategy_batch_list_payload()
+
+
+@router.get('/strategy-batches/{run_id}')
+def get_strategy_batch_by_run(run_id: str) -> dict[str, object]:
+    return build_ui_strategy_batch_detail_payload(run_id)
+
+
+@router.get('/paper-tracking/latest')
+def get_paper_tracking_latest() -> dict[str, object]:
+    return build_ui_paper_tracking_latest_payload()
+
+
+@router.get('/paper-tracking/{tracking_id}')
+def get_paper_tracking_detail(tracking_id: str) -> dict[str, object]:
+    return build_ui_paper_tracking_detail_payload(tracking_id)
+
+
+@router.get('/paper-broker/status')
+def get_paper_broker_status() -> dict[str, object]:
+    return build_ui_paper_broker_status_payload()
+
+
+@router.get('/research-os/status')
+def get_research_os_status() -> dict[str, object]:
+    return build_ui_research_os_status_payload()

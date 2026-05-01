@@ -76,6 +76,7 @@ function OpenInspectorButton() {
 }
 
 beforeEach(() => {
+  cleanup();
   mockPush.mockClear();
   document.body.focus?.();
 });
@@ -90,7 +91,7 @@ describe("TerminalShell", () => {
       </TestHarness>,
     );
     expect(screen.getByLabelText(/quick nav/i)).toBeTruthy();
-    expect(screen.getByTitle("/").textContent).toBe("OV");
+    expect(screen.getByTitle("Overview").textContent).toContain("Overview");
     expect(screen.getByTestId("page").textContent).toBe("page");
     expect(screen.getByText(/G\+O\/W\/R\/E\/L\/P\/T nav/i)).toBeTruthy();
     expect(document.getElementById("terminal-status-rail")).toBeTruthy();

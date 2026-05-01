@@ -25,6 +25,25 @@ describe("invalidateQueriesForRoute", () => {
     spy.mockRestore();
   });
 
+  it("invalidates paper tracking keys for /paper-tracking", () => {
+    const client = new QueryClient();
+    const spy = vi.spyOn(client, "invalidateQueries");
+    invalidateQueriesForRoute(client, "/paper-tracking");
+    const keys = spy.mock.calls.map((c) => c[0]?.queryKey);
+    expect(keys).toContainEqual([...queryKeys.uiPaperTrackingLatest]);
+    spy.mockRestore();
+  });
+
+  it("invalidates strategy batch keys for /strategy-lab", () => {
+    const client = new QueryClient();
+    const spy = vi.spyOn(client, "invalidateQueries");
+    invalidateQueriesForRoute(client, "/strategy-lab");
+    const keys = spy.mock.calls.map((c) => c[0]?.queryKey);
+    expect(keys).toContainEqual([...queryKeys.uiStrategyBatchesLatest]);
+    expect(keys).toContainEqual([...queryKeys.uiStrategyBatchesList]);
+    spy.mockRestore();
+  });
+
   it("invalidates readiness probes for /readiness", () => {
     const client = new QueryClient();
     const spy = vi.spyOn(client, "invalidateQueries");

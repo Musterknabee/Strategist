@@ -57,6 +57,13 @@ export function invalidateQueriesForRoute(client: QueryClient, pathname: string)
       inv(queryKeys.uiResearchCompute);
       inv(queryKeys.probeApiRoot);
       break;
+    case "/strategy-lab":
+      inv(queryKeys.uiStrategyBatchesLatest);
+      inv(queryKeys.uiStrategyBatchesList);
+      break;
+    case "/paper-tracking":
+      inv(queryKeys.uiPaperTrackingLatest);
+      break;
     default:
       void client.invalidateQueries({
         predicate: (q) => Array.isArray(q.queryKey) && q.queryKey[0] === "strategist",
