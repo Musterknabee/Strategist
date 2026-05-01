@@ -1,6 +1,6 @@
 # Single-tenant deployment readiness
 
-This repo is ready to be hardened as a **single-tenant backend deployment** only. It does not include a frontend package, distributed workers, or a multi-tenant runtime.
+This repo is ready to be hardened as a **single-tenant backend deployment**. A governed operator UI package lives under **`ui/strategist-web`** and consumes the `/ui/*` read plane; **frontend readiness is not claimed** by backend inventory until explicit evidence gates pass (see `docs/deployment/FRONTEND_OPERATOR_CONSOLE.md`). There is no multi-tenant runtime in this scope.
 
 ## Required environment contract
 
@@ -38,6 +38,18 @@ The env checker emits `single_tenant_deployment_env_check/v1` and blocks common 
 - research token reuse warnings, configured placeholder research tokens as deployment-blocking errors,
 - POSIX secret-bearing env files that are group/world readable.
 
+
+## Local API process (optional; dev hosts)
+
+- **Docker:** `scripts/run_local_docker_api.ps1` builds the image and runs with named volumes `strategist-local-lib` / `strategist-local-backups`, binding **127.0.0.1:8000** on the host.
+- **Python on the host:** `python scripts/run_local_api_with_deployment_env.py` loads `./deployment.env`, resolves `/var/...` paths the same way as preflight on Windows (e.g. to `C:\var\...`), and serves on **127.0.0.1:8000**. Use this only for smoke/dev; production should follow the bundle/Compose or systemd envelope.
+
+### Durable Docker state (ledger, artifacts, backups)
+
+- **Required posture:** Map **named volumes** (or equivalent host mounts) to `/var/lib/strategy-validator` and `/var/backups/strategy-validator` so **recreating the container does not wipe** the SQLite ledger, artifact tree, or backups.
+- **Non-durable runs:** A `docker run` **without** those volume mounts is useful only for **short-lived image/smoke validation**; do not treat it as the persisted single-tenant deployment or refresh “approved” evidence against that posture alone.
+- **Code vs data lifecycle:** `docker restart` reapplies the **same image**; it does **not** rebuild the image. After pulling or building new code, run `docker build` and **recreate** the container to serve that code (including new HTTP routes such as **GET /** root banner).
+- **Evidence:** Prefer recording ledger verify/backup and API smoke against the **volume-backed** container (e.g. run `strategy-validator-ledger-ops` **inside** the running container so paths match `deployment.env`).
 
 ## Bootstrap a fresh single-tenant volume
 
@@ -92,7 +104,19 @@ strategy-validator-single-tenant-api-smoke \
   --json
 ```
 
-The packaged smoke command emits `single_tenant_api_http_smoke/v1` and verifies `/healthz`, `/readyz`, `/ui/facade`, unauthenticated mutation rejection, and authenticated UI command journaling. Prefer `--env-file deployment.env` or `STRATEGY_VALIDATOR_API_TOKEN` from the environment; `--token` is retained only for compatibility because command-line bearer tokens can appear in shell history and process listings. When `--base-url` is omitted, smoke derives the target from `STRATEGY_VALIDATOR_BASE_URL` if present, otherwise from `STRATEGY_VALIDATOR_HOST_PORT` in the environment or deployment env file, matching the generated Compose and systemd loopback port binding. Generated deployment bundles also carry `commands/api-smoke.py`, a standard-library fallback runner used by `commands/api-smoke.sh` when the package entrypoint is not installed on the target host. The source-tree `scripts/single_tenant_api_smoke.py` remains only a compatibility wrapper around the packaged console command.
+When the API was started with `docker run --env-file deployment.env`, use **`--token-source env-file`** so the smoke bearer token is read from that same file. Otherwise, in **`--token-source auto`** (the default), a stale `STRATEGY_VALIDATOR_API_TOKEN` in your shell can override `--env-file` and cause authenticated checks to fail with `401 INVALID_MUTATION_TOKEN` even though the container has the correct secret. Auto mode prints a **stderr** warning (SHA256 fingerprints only, never raw tokens) if process env and env file disagree.
+
+PowerShell-friendly local Docker example:
+
+```powershell
+python -m strategy_validator.cli.single_tenant_api_smoke `
+  --base-url http://127.0.0.1:8000 `
+  --env-file deployment.env `
+  --token-source env-file `
+  --require-pass
+```
+
+The packaged smoke command emits `single_tenant_api_http_smoke/v1` and verifies `/healthz`, `/readyz`, `/ui/facade`, unauthenticated mutation rejection, and authenticated UI command journaling. Use **`--token-source`** (`auto`, `env`, or `env-file`) to make token resolution explicit; `--token` is retained only for compatibility because command-line bearer tokens can appear in shell history and process listings. When `--base-url` is omitted, smoke derives the target from `STRATEGY_VALIDATOR_BASE_URL` if present, otherwise from `STRATEGY_VALIDATOR_HOST_PORT` in the environment or deployment env file, matching the generated Compose and systemd loopback port binding. Using `--token-source env-file` without `--env-file` fails with JSON field `error_code` `SMOKE_TOKEN_SOURCE_ENV_FILE_REQUIRES_ENV_FILE`. Generated deployment bundles also carry `commands/api-smoke.py`, a standard-library fallback runner used by `commands/api-smoke.sh` when the package entrypoint is not installed on the target host. The source-tree `scripts/single_tenant_api_smoke.py` remains only a compatibility wrapper around the packaged console command.
 
 ## Readiness meaning
 

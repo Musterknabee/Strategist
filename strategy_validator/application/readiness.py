@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
 from strategy_validator.application.release_publication import publish_release_readiness_bundle
+from strategy_validator.providers.health import build_provider_research_spine_addon
 from strategy_validator.application.strategic_horizon_readiness import get_strategic_horizon_readiness_payload
 from strategy_validator.validator.services.integrity_gate_service import get_current_readiness
 from strategy_validator.validator.readiness import perform_deployment_readiness_check, perform_readiness_check
@@ -36,6 +38,10 @@ def get_readiness_health_payload() -> dict[str, Any]:
             else mutation_safety.dict()
             if mutation_safety is not None and hasattr(mutation_safety, 'dict')
             else None
+        ),
+        'provider_research_spine': build_provider_research_spine_addon(
+            env=os.environ,
+            repo_root=Path.cwd(),
         ),
     }
 

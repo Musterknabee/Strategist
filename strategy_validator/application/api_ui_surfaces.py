@@ -23,7 +23,11 @@ from strategy_validator.application.api_ui_runtime_queries import (
     build_ui_tribunal_query,
 )
 from strategy_validator.application.ui_command_actions import execute_ui_operator_command
-from strategy_validator.application.ui_public_facade import build_ui_public_facade_inventory
+from strategy_validator.application.ui_public_facade import (
+    build_ui_public_facade_inventory,
+    build_ui_provider_health_payload,
+)
+from strategy_validator.application.ui_research_compute import build_ui_research_compute_payload
 from strategy_validator.application.operator_action_projection import build_operator_action_event_index_payload
 from strategy_validator.application.ui_views import (
     build_ui_burnin_payload,
@@ -53,6 +57,8 @@ __all__ = [
     'build_ui_evidence_query',
     'build_ui_pack_detail_query',
     'build_ui_public_facade_inventory',
+    'build_ui_provider_health_payload',
+    'build_ui_research_compute_payload',
     'build_ui_export_entity_headers',
     'build_ui_export_options_response',
     'build_ui_export_response',

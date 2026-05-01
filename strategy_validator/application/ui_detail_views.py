@@ -37,6 +37,8 @@ from strategy_validator.validator.oracle_constitutional import (
 )
 from strategy_validator.validator.oracle_trust import trust_banner_for_lineage_verification
 
+from strategy_validator.application.ui_evidence_cockpit_summary import build_ui_evidence_cockpit_fields
+
 _utc_now = utc_now_iso
 _coerce_paths = coerce_paths
 _load_jsonl_records = load_jsonl_records
@@ -672,7 +674,8 @@ def build_ui_evidence_payload(
 
     latest_host = _load_json(host_paths[-1]) if host_paths else None
     latest_checklist = _load_json(checklist_paths[-1]) if checklist_paths else None
-    latest_review = _load_json(runtime_review_paths[-1]) if runtime_review_paths else None
+    disk_runtime_review = _load_json(runtime_review_paths[-1]) if runtime_review_paths else None
+    latest_review = disk_runtime_review
 
     verification_ok = verify_projection_snapshot(
         type('Snapshot', (), {'digest_sha256': registry['projection_digest_sha256']})(),
@@ -686,6 +689,13 @@ def build_ui_evidence_payload(
     ]
     if latest_review and latest_review.get('decision'):
         evidence_lines.append(f"Latest runtime review decision is {latest_review['decision']} with signoff {latest_review.get('signoff_status', 'UNKNOWN')}.")
+
+    projection_ts = _utc_now()
+    cockpit_fields = build_ui_evidence_cockpit_fields(
+        search_root=root,
+        projection_generated_at_utc=projection_ts,
+        disk_runtime_review=disk_runtime_review,
+    )
 
     if latest_checklist is None:
         latest_checklist = {
@@ -730,7 +740,7 @@ def build_ui_evidence_payload(
 
     return {
         'schema_version': 'ui_evidence_dashboard/v1',
-        'generated_at_utc': _utc_now(),
+        'generated_at_utc': projection_ts,
         'search_root': str(root),
         'registry': registry,
         'verification': {
@@ -788,6 +798,7 @@ def build_ui_evidence_payload(
         },
         'registry_table': registry['source_artifacts'],
         'operator_lines': evidence_lines,
+        **cockpit_fields,
     }
 
 

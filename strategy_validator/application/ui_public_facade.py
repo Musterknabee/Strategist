@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from strategy_validator.contracts.ui_public_facade import UiPublicFacadeInventory, UiPublicFacadeRoute
+from strategy_validator.providers.health import (
+    build_provider_health_snapshot,
+    provider_health_snapshot_public_payload,
+)
 
 UI_PUBLIC_FACADE_SCHEMA_VERSION = 'ui_public_facade_inventory/v1'
 UI_PUBLIC_FACADE_SURFACE = 'ui'
@@ -11,6 +16,12 @@ UI_COMMAND_MUTATION_ROUTE = '/ui/commands/{action}'
 
 
 def _frontend_status(repo_root: Path | None = None) -> tuple[bool, str]:
+    """Detect ``ui/strategist-web`` relative to *repo_root* (default: process cwd).
+
+    In API-only containers the working directory is typically ``/app`` without the
+    monorepo tree, so this returns absent even when a separate Next.js operator
+    console is running against the same API.
+    """
     root = repo_root or Path.cwd()
     package_json = root / UI_FRONTEND_EXPECTED_PACKAGE / 'package.json'
     package_lock = root / UI_FRONTEND_EXPECTED_PACKAGE / 'package-lock.json'
@@ -18,6 +29,15 @@ def _frontend_status(repo_root: Path | None = None) -> tuple[bool, str]:
     if package_present:
         return True, 'package_present_unverified'
     return False, 'absent'
+
+
+# Shown on GET /ui/facade; stable operator-facing copy (no readiness claim).
+_FRONTEND_OPERATOR_CONSOLE_HINT = (
+    'The API only scans its process working directory for ui/strategist-web. '
+    'frontend_package_present / frontend_package_detected_by_backend are false in typical API-only containers '
+    'even when the Next.js operator console runs separately; that is expected. '
+    'frontend_readiness_claimed stays false until formal frontend evidence gates pass.'
+)
 
 
 _UI_PUBLIC_FACADE_ROUTES: tuple[UiPublicFacadeRoute, ...] = (
@@ -39,6 +59,8 @@ _UI_PUBLIC_FACADE_ROUTES: tuple[UiPublicFacadeRoute, ...] = (
     UiPublicFacadeRoute('GET', '/ui/tribunal', 'read', False, 'ui_tribunal/v1'),
     UiPublicFacadeRoute('GET', '/ui/packs/detail', 'read', False, 'ui_pack_detail/v1'),
     UiPublicFacadeRoute('GET', '/ui/operator-actions', 'read', False, 'operator_action_event_projection_index/v1'),
+    UiPublicFacadeRoute('GET', '/ui/provider-health', 'read', False, 'provider_health_snapshot/v1'),
+    UiPublicFacadeRoute('GET', '/ui/research-compute', 'read', False, 'ui_research_compute/v1'),
     UiPublicFacadeRoute('POST', UI_COMMAND_MUTATION_ROUTE, 'mutation', True, 'ui_command_mutation/v1'),
 )
 
@@ -50,13 +72,23 @@ def build_ui_public_facade_inventory(repo_root: Path | None = None) -> dict[str,
         surface=UI_PUBLIC_FACADE_SURFACE,
         frontend_expected_package=UI_FRONTEND_EXPECTED_PACKAGE,
         frontend_package_present=frontend_present,
+        frontend_package_detected_by_backend=frontend_present,
         frontend_status=frontend_status,
         frontend_readiness_claimed=False,
+        frontend_runtime_reachable=None,
+        frontend_operator_console_hint=_FRONTEND_OPERATOR_CONSOLE_HINT,
         read_plane_only=True,
         mutation_route=UI_COMMAND_MUTATION_ROUTE,
         routes=_UI_PUBLIC_FACADE_ROUTES,
     )
     return inventory.to_payload()
+
+
+def build_ui_provider_health_payload(repo_root: Path | None = None) -> dict[str, object]:
+    """Read-plane provider health for operators (no secrets; uses process env + optional manifest env)."""
+    root = repo_root or Path.cwd()
+    snap = build_provider_health_snapshot(env=os.environ, repo_root=root)
+    return provider_health_snapshot_public_payload(snap)
 
 
 __all__ = [
@@ -65,4 +97,5 @@ __all__ = [
     'UI_PUBLIC_FACADE_SCHEMA_VERSION',
     'UI_PUBLIC_FACADE_SURFACE',
     'build_ui_public_facade_inventory',
+    'build_ui_provider_health_payload',
 ]

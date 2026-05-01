@@ -108,7 +108,9 @@ def _connect_readonly() -> sqlite3.Connection:
 def _connect() -> sqlite3.Connection:
     database_path = resolve_database_path()
     database_path.parent.mkdir(parents=True, exist_ok=True)
-    connection = sqlite3.connect(database_path)
+    # Busy timeout avoids flaky "database is locked" when many threads open the DB at
+    # once (e.g. operator-action journal under pytest on Windows).
+    connection = sqlite3.connect(database_path, timeout=30.0)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA journal_mode=WAL")
     apply_sqlite_migrations(connection)

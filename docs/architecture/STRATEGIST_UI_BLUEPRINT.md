@@ -20,7 +20,7 @@ Establish a governed web control surface for Strategist that:
 ## Delivery slices
 
 ### Slice 1 — contracts and shell
-- Add a bounded Next.js app under `ui/strategist-web`
+- Bounded Next.js app under `ui/strategist-web` (workboard read-plane slice; see `docs/deployment/FRONTEND_OPERATOR_CONSOLE.md`)
 - Add stable backend UI read-plane routes under `strategy_validator/api/routes/ui.py`
 - Add workboard and burn-in feature folders
 - Add projection polling with TanStack Query and a domain-boundary provider
@@ -84,8 +84,8 @@ This keeps the frontend bound to stable read-plane contracts instead of internal
 
 ## Backend facade contract snapshot
 
-The backend now publishes and snapshots the public UI facade before a real
-`ui/strategist-web` package exists:
+The backend publishes and snapshots the public UI facade; the `ui/strategist-web`
+package binds to this contract at runtime:
 
 - Runtime metadata endpoint: `/ui/facade`
 - Machine-readable snapshot: `docs/api/ui-public-facade.snapshot.json`

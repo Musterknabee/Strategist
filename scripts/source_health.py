@@ -64,6 +64,7 @@ HIGH_GRAVITY_ROOTS = (
     "scripts/ui_facade_contract_snapshot.py",
     "scripts/single_tenant_api_smoke.py",
     "scripts/ci_local_verify.py",
+    "scripts/verify_frontend.py",
     "tests/api/test_ui_public_facade_snapshot_contract.py",
     "tests/constitutional/test_ui_public_facade_snapshot_assets.py",
     "tests/constitutional/test_single_tenant_deployment_preflight.py",
@@ -72,6 +73,7 @@ HIGH_GRAVITY_ROOTS = (
     "tests/constitutional/test_single_tenant_deployment_bundle.py",
     "tests/constitutional/test_single_tenant_deployment_acceptance.py",
     "tests/constitutional/test_single_tenant_deployment_evidence.py",
+    "tests/constitutional/test_verify_frontend_script.py",
     "scripts/source_health.py",
 )
 DEFAULT_ROOTS = HIGH_GRAVITY_ROOTS

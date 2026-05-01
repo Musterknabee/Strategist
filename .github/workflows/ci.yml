@@ -95,6 +95,8 @@ jobs:
           cache-dependency-path: ui/strategist-web/package-lock.json
       - name: npm ci
         run: npm ci
+      - name: lint
+        run: npm run lint
       - name: typecheck
         run: npm run typecheck
       - name: test

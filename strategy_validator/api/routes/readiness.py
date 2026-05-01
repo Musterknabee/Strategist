@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
@@ -13,6 +16,10 @@ from strategy_validator.application.readiness import (
 )
 from strategy_validator.application.release_publication_paths import resolve_release_publication_paths
 from strategy_validator.core.path_guards import PathBoundaryError
+from strategy_validator.providers.health import (
+    build_provider_health_snapshot,
+    provider_health_snapshot_public_payload,
+)
 
 router = APIRouter(prefix="/readiness", tags=["readiness"])
 
@@ -29,6 +36,12 @@ class PublishReleaseBundleRequest(BaseModel):
 @router.get("/health")
 def readiness_health() -> dict[str, object]:
     return get_readiness_health_payload()
+
+
+@router.get("/provider-health")
+def readiness_provider_health() -> dict[str, object]:
+    snap = build_provider_health_snapshot(env=os.environ, repo_root=Path.cwd())
+    return provider_health_snapshot_public_payload(snap)
 
 
 @router.get("/deployment")

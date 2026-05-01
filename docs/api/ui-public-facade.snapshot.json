@@ -1,10 +1,13 @@
 {
   "frontend_expected_package": "ui/strategist-web",
+  "frontend_operator_console_hint": "The API only scans its process working directory for ui/strategist-web. frontend_package_present / frontend_package_detected_by_backend are false in typical API-only containers even when the Next.js operator console runs separately; that is expected. frontend_readiness_claimed stays false until formal frontend evidence gates pass.",
+  "frontend_package_detected_by_backend": true,
   "frontend_package_present": true,
   "frontend_readiness_claimed": false,
+  "frontend_runtime_reachable": null,
   "mutation_route": "/ui/commands/{action}",
   "read_plane_only": true,
-  "route_count": 19,
+  "route_count": 21,
   "routes": [
     {
       "auth_required": false,
@@ -68,6 +71,20 @@
       "method": "GET",
       "path": "/ui/packs/detail",
       "payload_schema": "ui_pack_detail/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/provider-health",
+      "payload_schema": "provider_health_snapshot/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/research-compute",
+      "payload_schema": "ui_research_compute/v1"
     },
     {
       "auth_required": false,
@@ -140,7 +157,7 @@
       "payload_schema": "ui_workboard_export_options/v1"
     }
   ],
-  "routes_sha256": "32a9b636b29361758c508899d11d1a55befa5dbd60c2da4681c33815c41b2526",
+  "routes_sha256": "64dc5319323476d1fc1e8a66521e0503eaa33959db4c2ed3bfd62ca7e8f36a64",
   "schema_version": "ui_public_facade_snapshot/v1",
   "source_endpoint": "/ui/facade",
   "source_schema_version": "ui_public_facade_inventory/v1",

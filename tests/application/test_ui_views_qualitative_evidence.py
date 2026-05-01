@@ -20,3 +20,6 @@ def test_build_ui_evidence_payload_includes_section_provenance() -> None:
     assert 'section_provenance' in payload
     assert payload['section_provenance']['registry']['verification_label']
     assert payload['section_provenance']['lineage']['projection_family'] == 'evidence'
+    assert 'deployment_status' in payload
+    assert payload['deployment_status'] in {'UNKNOWN', 'PASS', 'FAIL', 'DEGRADED'}
+    assert 'evidence_generated_at_utc' in payload

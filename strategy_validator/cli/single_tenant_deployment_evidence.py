@@ -34,6 +34,10 @@ _REQUIRED_FINAL_REPORT_SCHEMAS = {
 _OPTIONAL_REPORT_SCHEMAS = {
     "env_check": "single_tenant_deployment_env_check/v1",
     "bundle": "single_tenant_deployment_bundle/v1",
+    "ci_local_verify": "ci_local_verify/v1",
+    "provider_key_report": "check_provider_keys/v1",
+    "frontend_checkpoint": "deployment_frontend_checkpoint/v1",
+    "provider_evidence_manifest": "provider_evidence_manifest/v1",
 }
 
 _SECRET_FIELD_MARKERS = ("token", "secret", "password", "api_key", "private_key")
@@ -168,6 +172,8 @@ def _evaluate_report(name: str, path: Path, expected_schema: str | tuple[str, ..
         return EvidenceFile(name, str(path), True, digest, size, None, None, "FAIL", error or "invalid JSON")
 
     schema = payload.get("schema_version") if isinstance(payload.get("schema_version"), str) else None
+    if schema is None and isinstance(payload.get("manifest_version"), str):
+        schema = str(payload["manifest_version"])
     if expected_schema and not _schema_matches(schema, expected_schema):
         return EvidenceFile(
             name,
@@ -185,7 +191,7 @@ def _evaluate_report(name: str, path: Path, expected_schema: str | tuple[str, ..
         # The evidence pack accepts redacted secret metadata in deployment env
         # reports, but it should not include raw secret-bearing fields in final
         # go-live reports.  The redacted env report remains optional context.
-        if name not in {"env_check", "bundle"}:
+        if name not in {"env_check", "bundle", "provider_key_report", "provider_evidence_manifest"}:
             return EvidenceFile(
                 name,
                 str(path),
@@ -207,12 +213,26 @@ def _evaluate_report(name: str, path: Path, expected_schema: str | tuple[str, ..
 
 
 def _default_report_paths(evidence_dir: Path) -> dict[str, Path]:
+    """Map evidence report roles to on-disk JSON paths.
+
+    ``single_tenant_preflight`` / ``single_tenant_api_smoke`` alias the same files as
+    ``preflight`` / ``api_smoke`` because the schemas match and operators store one
+    canonical report per gate.
+    """
+    preflight_path = evidence_dir / "preflight.json"
+    api_smoke_path = evidence_dir / "api-smoke.json"
     return {
         "env_check": evidence_dir / "deployment-env-check.json",
         "bundle": evidence_dir / "deployment-bundle.json",
+        "ci_local_verify": evidence_dir / "ci-local-verify.json",
+        "provider_key_report": evidence_dir / "provider-keys.json",
+        "frontend_checkpoint": evidence_dir / "frontend-checkpoint.json",
+        "provider_evidence_manifest": evidence_dir / "provider-evidence-manifest.json",
         "acceptance": evidence_dir / "deployment-acceptance.json",
-        "preflight": evidence_dir / "preflight.json",
-        "api_smoke": evidence_dir / "api-smoke.json",
+        "preflight": preflight_path,
+        "single_tenant_preflight": preflight_path,
+        "api_smoke": api_smoke_path,
+        "single_tenant_api_smoke": api_smoke_path,
         "ledger_verify": evidence_dir / "ledger-verify.json",
         "ledger_backup": evidence_dir / "ledger-backup.json",
     }

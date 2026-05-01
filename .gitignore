@@ -15,6 +15,13 @@ build/
 dist/
 *.egg-info/
 
+# Private operator env (never commit real tokens)
+deployment.env
+.env
+.env.local
+*.secrets
+.keys/
+
 # Runtime state and generated artifacts
 *.sqlite
 *.sqlite3
@@ -24,6 +31,7 @@ dist/
 *.log
 *.jsonl
 artifacts/
+artifacts/provider_samples/raw_headers/
 scratch/**/*.log
 
 # Frontend/build caches

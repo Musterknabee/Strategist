@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import sys
 from dataclasses import asdict, dataclass
@@ -977,6 +978,10 @@ def _verify_repo_asset_manifest_payload(repo_assets: object) -> list[str]:
 
 def _verify_generated_command_modes(out: Path) -> list[str]:
     errors: list[str] = []
+    if os.name == "nt":
+        # Windows does not surface POSIX executable bits the way Linux bundle targets do.
+        # Generated helpers are still chmod 755 on Unix; CI and the target host enforce this.
+        return errors
     for relative in _REQUIRED_GENERATED_FILES:
         if not relative.startswith("commands/"):
             continue

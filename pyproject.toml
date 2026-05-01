@@ -28,6 +28,9 @@ dev = [
   "import-linter>=2.0",
   "click>=8.1",
 ]
+gpu = [
+  "torch",
+]
 
 [project.scripts]
 strategy-validator-api = "strategy_validator.cli.api:main"
@@ -44,10 +47,14 @@ strategy-validator-single-tenant-bundle = "strategy_validator.cli.single_tenant_
 strategy-validator-single-tenant-acceptance = "strategy_validator.cli.single_tenant_deployment_acceptance:main"
 strategy-validator-single-tenant-evidence = "strategy_validator.cli.single_tenant_deployment_evidence:main"
 strategy-validator-single-tenant-api-smoke = "strategy_validator.cli.single_tenant_api_smoke:main"
+strategy-validator-provider-capabilities = "strategy_validator.cli.provider_capabilities:main"
 
 [tool.setuptools.packages.find]
 include = ["strategy_validator*"]
 exclude = ["tests*", "docs*", "scratch*", "scripts*"]
+
+[tool.setuptools.package-data]
+strategy_validator = ["migrations/sqlite/*.sql"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

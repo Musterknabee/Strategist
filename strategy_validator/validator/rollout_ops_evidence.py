@@ -321,18 +321,20 @@ def build_daily_checklist(
     timeout = sum(int(s.get("timeout_signal_rounds") or 0) for s in analyze_summaries)
     retry = 0
     startup_ok = True
+    checklist_readiness_status = readiness.status
     if startup_json is not None:
-        readiness_status = (
+        snapshot_readiness_status = (
             startup_json.get("readiness", {}).get("status")
             or startup_json.get("heartbeat", {}).get("readiness_status")
             or startup_json.get("readiness_status")
             or "BLOCKED"
         )
         startup_ok = (
-            readiness_status == "READY"
+            snapshot_readiness_status == "READY"
             and not startup_json.get("http_market_data_connector_issues")
             and not startup_json.get("alpaca_market_data_connector_issues")
         )
+        checklist_readiness_status = snapshot_readiness_status
 
     policy_change_reasons: list[str] = []
     if stale >= max(rules.policy_change_stale_floor, total_rounds // rules.policy_change_stale_fraction_denominator if total_rounds else rules.policy_change_stale_floor):
@@ -348,7 +350,7 @@ def build_daily_checklist(
     return DailyOperationsChecklist(
         generated_at_utc=now_utc or _utc_now(),
         startup_check_passed=startup_ok,
-        readiness_status=readiness.status,
+        readiness_status=checklist_readiness_status,
         provider_availability_ok=provider_availability_ok,
         freshness_anomaly_count=stale,
         fallback_count=fallback,

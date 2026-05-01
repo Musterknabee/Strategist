@@ -1584,6 +1584,26 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/": {
+      "get": {
+        "operationId": "root_operator_banner__get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Root Operator Banner  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Root Operator Banner"
+      }
+    },
     "/adjudication/health": {
       "get": {
         "operationId": "adjudication_health_adjudication_health_get",
@@ -1734,6 +1754,29 @@
           }
         },
         "summary": "Readiness Health",
+        "tags": [
+          "readiness"
+        ]
+      }
+    },
+    "/readiness/provider-health": {
+      "get": {
+        "operationId": "readiness_provider_health_readiness_provider_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Readiness Provider Health Readiness Provider Health Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Readiness Provider Health",
         "tags": [
           "readiness"
         ]
@@ -6680,6 +6723,29 @@
           }
         },
         "summary": "Get Ui Pack Detail",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/provider-health": {
+      "get": {
+        "operationId": "get_ui_provider_health_ui_provider_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Ui Provider Health Ui Provider Health Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Ui Provider Health",
         "tags": [
           "ui"
         ]

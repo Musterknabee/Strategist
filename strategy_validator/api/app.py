@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
-from strategy_validator.api.probes import register_api_probes
+from strategy_validator.api.probes import register_api_probes, register_api_root_banner
 from strategy_validator.api.route_registry import register_api_routes
-from strategy_validator.api.security import install_security_envelope
+from strategy_validator.api.security import install_security_envelope, install_ui_cors_middleware_if_configured
 
 
 def create_app() -> FastAPI:
@@ -17,7 +17,9 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title='strategy-validator-api')
     install_security_envelope(app)
+    install_ui_cors_middleware_if_configured(app)
     register_api_probes(app)
+    register_api_root_banner(app)
     register_api_routes(app)
     return app
 

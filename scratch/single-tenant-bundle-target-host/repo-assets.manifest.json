@@ -1,0 +1,64 @@
+{
+  "asset_count": 9,
+  "assets": [
+    {
+      "exists": true,
+      "path": "Dockerfile",
+      "sha256": "fbb7c2db5221390f952d062e272192e96afb7f7df2860fb2ef1aaad595329b66",
+      "size_bytes": 1307
+    },
+    {
+      "exists": true,
+      "path": "deployment.env.sample",
+      "sha256": "0d73f7b8daf4f9247141f52351601e7139bab5cecd6c0fe00cc5b206816bdea2",
+      "size_bytes": 2532
+    },
+    {
+      "exists": true,
+      "path": "docs/deployment/SINGLE_TENANT_DEPLOYMENT_READINESS.md",
+      "sha256": "d9ab62303fa7293ec4a586abb374df7a2b3348b614b88cdfcf2f5a2365720667",
+      "size_bytes": 19615
+    },
+    {
+      "exists": true,
+      "path": "scripts/single_tenant_api_smoke.py",
+      "sha256": "9b0c5ab2e773ee3f05db8772b80da6df8eeba18f3c413157c53b2de5fc1e5c1a",
+      "size_bytes": 438
+    },
+    {
+      "exists": true,
+      "path": "strategy_validator/cli/single_tenant_preflight.py",
+      "sha256": "ef18f87df09862750c64df2d75c77330617e47717e87b0484ad57e0d3a043738",
+      "size_bytes": 13618
+    },
+    {
+      "exists": true,
+      "path": "strategy_validator/cli/deployment_env_check.py",
+      "sha256": "856f49d72660d96d211d54931b0c107245aca07ddc73a183a9116ddddcdd25d6",
+      "size_bytes": 14445
+    },
+    {
+      "exists": true,
+      "path": "strategy_validator/cli/single_tenant_deployment_bundle.py",
+      "sha256": "9b1df122fbd561aff27bca9be6c8fe8a8e837e3b54006243d01d48c7bc139d3d",
+      "size_bytes": 73911
+    },
+    {
+      "exists": true,
+      "path": "strategy_validator/cli/single_tenant_deployment_acceptance.py",
+      "sha256": "89466a829698eaefedf7c982442f9c60fce9d7e50de902dfbfb78e3bf4c4d163",
+      "size_bytes": 13517
+    },
+    {
+      "exists": true,
+      "path": "strategy_validator/cli/single_tenant_deployment_evidence.py",
+      "sha256": "dad938851cf483579ad6afcd59c0549f22d8dfe15f6b492df12a95914871f1f7",
+      "size_bytes": 14277
+    }
+  ],
+  "generated_at_utc": "2026-05-01T07:59:49Z",
+  "missing_asset_count": 0,
+  "missing_assets": [],
+  "repo_root": "C:\\Users\\jpkem\\OneDrive\\Desktop\\New folder (11)",
+  "schema_version": "single_tenant_repo_assets_manifest/v1"
+}

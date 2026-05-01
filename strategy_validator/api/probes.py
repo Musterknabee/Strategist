@@ -46,3 +46,27 @@ def register_api_probes(app: FastAPI) -> FastAPI:
     for path, handler in PROBE_ROUTES:
         app.get(path)(handler)
     return app
+
+
+def register_api_root_banner(app: FastAPI) -> FastAPI:
+    """Register GET / with a static operator banner (no readiness, auth, or secrets)."""
+
+    docs_path = app.docs_url
+
+    def root_operator_banner() -> dict[str, object]:
+        links: dict[str, str] = {
+            "healthz": "/healthz",
+            "livez": "/livez",
+            "readyz": "/readyz",
+            "ui_facade": "/ui/facade",
+        }
+        if docs_path:
+            links["docs"] = docs_path
+        return {
+            "service": "strategy-validator-api",
+            "schema_version": "api_root_banner/v1",
+            "links": links,
+        }
+
+    app.get("/")(root_operator_banner)
+    return app

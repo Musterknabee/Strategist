@@ -40,6 +40,8 @@ from strategy_validator.application.api_ui_surfaces import (
     build_ui_runtime_status_payload,
     build_operator_action_event_index_payload,
     build_ui_public_facade_inventory,
+    build_ui_provider_health_payload,
+    build_ui_research_compute_payload,
 )
 
 router = APIRouter(prefix='/ui', tags=['ui'])
@@ -154,6 +156,16 @@ def build_ui_workboard_export_index_options_response(
 @router.get('/facade')
 def get_ui_public_facade() -> dict[str, object]:
     return build_ui_public_facade_inventory()
+
+
+@router.get('/provider-health')
+def get_ui_provider_health() -> dict[str, object]:
+    return build_ui_provider_health_payload()
+
+
+@router.get('/research-compute')
+def get_ui_research_compute() -> dict[str, object]:
+    return build_ui_research_compute_payload()
 
 
 from strategy_validator.api.routes.ui_routes_workboard_export import router as workboard_export_router

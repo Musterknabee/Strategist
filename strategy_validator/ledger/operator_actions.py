@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+import threading
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -25,6 +26,7 @@ _CHAIN_COLUMN_DEFINITIONS = {
 }
 _WRITE_LOCK_RETRY_ATTEMPTS = 5
 _WRITE_LOCK_RETRY_DELAY_SECONDS = 0.05
+_SCHEMA_ENSURE_LOCK = threading.Lock()
 
 
 def _canonical_json(payload: dict[str, Any]) -> str:
@@ -99,40 +101,43 @@ def _operator_action_table_exists(connection: Any) -> bool:
     return row is not None
 
 def _ensure_operator_action_chain_schema() -> None:
-    with _connect() as connection:
-        rows = connection.execute(f'PRAGMA table_info({_TABLE_NAME})').fetchall()
-        existing = {row['name'] for row in rows}
-        for column_name, column_definition in _CHAIN_COLUMN_DEFINITIONS.items():
-            if column_name not in existing:
-                connection.execute(f'ALTER TABLE {_TABLE_NAME} ADD COLUMN {column_name} {column_definition}')
-        connection.execute(
-            f'''
-            CREATE INDEX IF NOT EXISTS idx_operator_action_events_sequence
-            ON {_TABLE_NAME} (sequence_number, created_at_utc, action_event_id)
-            '''
-        )
-        connection.execute(
-            f'''
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_operator_action_events_sequence_unique
-            ON {_TABLE_NAME} (sequence_number)
-            WHERE sequence_number IS NOT NULL
-            '''
-        )
-        connection.execute(
-            f'''
-            CREATE INDEX IF NOT EXISTS idx_operator_action_events_idempotency_key
-            ON {_TABLE_NAME} (json_extract(target_payload_json, '$.idempotency_key'))
-            '''
-        )
-        connection.execute(
-            f'''
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_operator_action_events_idempotency_key_unique
-            ON {_TABLE_NAME} (json_extract(target_payload_json, '$.idempotency_key'))
-            WHERE json_extract(target_payload_json, '$.idempotency_key') IS NOT NULL
-              AND json_extract(target_payload_json, '$.idempotency_key') != ''
-            '''
-        )
-        connection.commit()
+    # Serialize cold-start DDL so concurrent appends do not race PRAGMA journal_mode /
+    # WAL setup on Windows (sqlite "database is locked" on first open).
+    with _SCHEMA_ENSURE_LOCK:
+        with _connect() as connection:
+            rows = connection.execute(f'PRAGMA table_info({_TABLE_NAME})').fetchall()
+            existing = {row['name'] for row in rows}
+            for column_name, column_definition in _CHAIN_COLUMN_DEFINITIONS.items():
+                if column_name not in existing:
+                    connection.execute(f'ALTER TABLE {_TABLE_NAME} ADD COLUMN {column_name} {column_definition}')
+            connection.execute(
+                f'''
+                CREATE INDEX IF NOT EXISTS idx_operator_action_events_sequence
+                ON {_TABLE_NAME} (sequence_number, created_at_utc, action_event_id)
+                '''
+            )
+            connection.execute(
+                f'''
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_operator_action_events_sequence_unique
+                ON {_TABLE_NAME} (sequence_number)
+                WHERE sequence_number IS NOT NULL
+                '''
+            )
+            connection.execute(
+                f'''
+                CREATE INDEX IF NOT EXISTS idx_operator_action_events_idempotency_key
+                ON {_TABLE_NAME} (json_extract(target_payload_json, '$.idempotency_key'))
+                '''
+            )
+            connection.execute(
+                f'''
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_operator_action_events_idempotency_key_unique
+                ON {_TABLE_NAME} (json_extract(target_payload_json, '$.idempotency_key'))
+                WHERE json_extract(target_payload_json, '$.idempotency_key') IS NOT NULL
+                  AND json_extract(target_payload_json, '$.idempotency_key') != ''
+                '''
+            )
+            connection.commit()
 
 
 def _idempotency_key_from_target(target: dict[str, Any]) -> str | None:

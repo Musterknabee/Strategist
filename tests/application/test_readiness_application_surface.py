@@ -23,3 +23,7 @@ def test_readiness_payload_is_transport_neutral(monkeypatch) -> None:
     assert payload['ok'] is True
     assert payload['status'] == 'READY'
     assert payload['mutation_safety']['authorization_mode'] == 'TOKEN_PROTECTED'
+    spine = payload.get('provider_research_spine')
+    assert isinstance(spine, dict)
+    assert spine.get('schema_version') == 'provider_research_spine_addon/v1'
+    assert 'summary' in spine

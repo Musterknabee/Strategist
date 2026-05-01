@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
@@ -39,6 +40,15 @@ from strategy_validator.application.ui_workboard_views import (
 )
 
 
+def _resolve_ui_workboard_search_root(search_root: str | Path | None) -> Path:
+    if search_root is not None:
+        return Path(search_root)
+    artifact = os.environ.get("STRATEGY_VALIDATOR_ARTIFACT_ROOT", "").strip()
+    if artifact:
+        return Path(artifact)
+    return Path.cwd()
+
+
 def _build_ui_workboard_context(
     *,
     board_label: str = 'operator',
@@ -48,7 +58,7 @@ def _build_ui_workboard_context(
 ) -> dict[str, Any]:
     workboard = build_workboard_payload(board_label=board_label)
     workbench = build_operator_pack_workbench_payload(
-        search_root=search_root,
+        search_root=_resolve_ui_workboard_search_root(search_root),
         pack_kinds=list(pack_kinds),
         trust_statuses=list(trust_statuses),
     )

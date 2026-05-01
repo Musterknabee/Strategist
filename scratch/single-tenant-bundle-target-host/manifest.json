@@ -1,0 +1,96 @@
+{
+  "deployment_model": "single_tenant_backend_only",
+  "env_check_ok": true,
+  "env_file": "C:\\Users\\jpkem\\OneDrive\\Desktop\\New folder (11)\\deployment.env",
+  "errors": [],
+  "frontend_expected_package": "ui/strategist-web",
+  "frontend_package_present": true,
+  "frontend_readiness_claimed": false,
+  "generated_at_utc": "2026-05-01T07:59:49Z",
+  "generated_files": [
+    {
+      "path": "deployment.env.redacted.json",
+      "sha256": "e510e09b4968c6f3b1ba9455f5028b57c27a76e72b1f0f015c0b010376675658",
+      "size_bytes": 1911
+    },
+    {
+      "path": "repo-assets.manifest.json",
+      "sha256": "24468565a9c4ab9fd05ddbe386f191550a2ca8d5937cdb0bebb310673a413809",
+      "size_bytes": 2188
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "538fdd649c72bf3bd82c5c8b6fded8a08258778f926904265ce255d8e17906fc",
+      "size_bytes": 230
+    },
+    {
+      "path": "docker-compose.single-tenant.yml",
+      "sha256": "d8cd4b71cdf57d8831248f52b1a191b4f325c94dc3dcc9c875f3076ad22e7912",
+      "size_bytes": 1179
+    },
+    {
+      "path": "systemd/strategy-validator.service",
+      "sha256": "4672432d3e873b1718249cd8c3df47475f19c562975ae39e529a09224e82d5af",
+      "size_bytes": 1540
+    },
+    {
+      "path": "commands/compose-up.sh",
+      "sha256": "33c478d51688aeb7bd7a62b0afa5cdd75505a9070c022aee47d95f24531556be",
+      "size_bytes": 2213
+    },
+    {
+      "path": "commands/compose-down.sh",
+      "sha256": "22ce37b86bc0b6072061c5d34769e2ec2d867ac6ffa960640520d857abb0ef37",
+      "size_bytes": 1592
+    },
+    {
+      "path": "commands/preflight.sh",
+      "sha256": "b60c47f1b0e2db0c69a29aa52058d7e6e032fabdb2fe278ff8fcd650b1a0f175",
+      "size_bytes": 1191
+    },
+    {
+      "path": "commands/api-smoke.sh",
+      "sha256": "b7b92f69f3f1ca84b2342d3ffe5b80174ce5bf91b00364089e8d8e494de713ee",
+      "size_bytes": 1636
+    },
+    {
+      "path": "commands/api-smoke.py",
+      "sha256": "ba9f25845e4e3595d62502365ca650cf733dba27d16aee7812b5a73d1141055f",
+      "size_bytes": 18212
+    },
+    {
+      "path": "commands/verify-ledger.sh",
+      "sha256": "87f4b21c6e2abf1dd1ceb3f8112b6a74ffc5be1f3e5077e00fd9b0341f2d1573",
+      "size_bytes": 1093
+    },
+    {
+      "path": "commands/backup-ledger.sh",
+      "sha256": "17d80365b95379fd7727fb63bf4cc8f81b57f527b68c411a747f53fa717bb204",
+      "size_bytes": 1083
+    },
+    {
+      "path": "commands/restore-ledger.sh",
+      "sha256": "76524d76975dce1cd22c3787515653de59e688c77e6f5696433540e81a7a67bb",
+      "size_bytes": 2700
+    },
+    {
+      "path": "commands/acceptance.sh",
+      "sha256": "23e6351375119b3ef037eb7c6ebc6fecbc4d1d6713a9ca1d9f427f2ee5f12a27",
+      "size_bytes": 1961
+    },
+    {
+      "path": "commands/post-deploy-evidence.sh",
+      "sha256": "c78ba3f467f6ebc6f1404c041846c8084651092b6907790e8fd286792e543d62",
+      "size_bytes": 5081
+    },
+    {
+      "path": "README.md",
+      "sha256": "ec6e935d3b025ab0762f71b4f0f8c6302169fbc3acdd5a54b7220800f34c8ff6",
+      "size_bytes": 5693
+    }
+  ],
+  "ok": true,
+  "repo_asset_manifest_ok": true,
+  "repo_assets_manifest_schema_version": "single_tenant_repo_assets_manifest/v1",
+  "schema_version": "single_tenant_deployment_bundle/v1"
+}

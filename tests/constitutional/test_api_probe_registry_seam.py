@@ -11,11 +11,13 @@ from strategy_validator.api.probes import PROBE_ROUTES, register_api_probes
 def test_api_app_uses_probe_registry() -> None:
     app_text = Path('strategy_validator/api/app.py').read_text(encoding='utf-8')
 
-    assert 'from strategy_validator.api.probes import register_api_probes' in app_text
+    assert 'from strategy_validator.api.probes import register_api_probes, register_api_root_banner' in app_text
     assert 'register_api_probes(app)' in app_text
+    assert 'register_api_root_banner(app)' in app_text
     assert "@app.get('/healthz')" not in app_text
     assert "@app.get('/livez')" not in app_text
     assert "@app.get('/readyz')" not in app_text
+    assert "@app.get('/')" not in app_text
 
 
 def test_api_probe_registry_registers_expected_paths() -> None:

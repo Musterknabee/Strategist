@@ -18,6 +18,32 @@ def test_ui_workboard_route_uses_service(monkeypatch) -> None:
     assert payload['stats']['active_count'] == 3
 
 
+def test_ui_workboard_route_without_search_root_query_uses_artifact_env(monkeypatch, tmp_path) -> None:
+    """Regression: browser/smoke calls GET /ui/workboard without search_root; resolver uses artifact env."""
+    for key in (
+        'STRATEGY_VALIDATOR_MODE',
+        'STRATEGY_VALIDATOR_API_TOKEN',
+        'STRATEGY_VALIDATOR_API_TOKEN_SCOPES',
+        'STRATEGY_VALIDATOR_LEDGER_DB_PATH',
+        'STRATEGY_VALIDATOR_ARTIFACT_ROOT',
+        'STRATEGY_VALIDATOR_LEDGER_BACKUP_DIR',
+        'STRATEGY_VALIDATOR_RESEARCH_API_TOKEN',
+    ):
+        monkeypatch.delenv(key, raising=False)
+    artifact = tmp_path / 'artifacts'
+    artifact.mkdir()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv('STRATEGY_VALIDATOR_ARTIFACT_ROOT', str(artifact))
+    from strategy_validator.api.app import create_app
+
+    client = TestClient(create_app())
+    response = client.get('/ui/workboard', params={'board_label': 'operator'})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload['schema_version'] == 'ui_workboard_dashboard/v1'
+    assert 'stats' in payload
+
+
 def test_ui_workboard_export_route_uses_service(monkeypatch) -> None:
     monkeypatch.setattr(
         'strategy_validator.api.routes.ui.build_ui_workboard_export_payload',

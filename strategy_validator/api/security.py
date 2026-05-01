@@ -195,6 +195,33 @@ class SecurityEnvelopeMiddleware:
         await send({"type": "http.response.body", "body": body})
 
 
+_ENV_UI_CORS_ORIGINS = "STRATEGY_VALIDATOR_UI_CORS_ORIGINS"
+
+
+def install_ui_cors_middleware_if_configured(app: Any) -> None:
+    """Opt-in browser CORS for operator UI read-plane fetches (GET/HEAD/OPTIONS only).
+
+    When unset or empty, no CORS middleware is installed (fail-closed default).
+    Origins are comma-separated (e.g. ``http://127.0.0.1:3000,https://ops.example.com``).
+    """
+    raw = os.environ.get(_ENV_UI_CORS_ORIGINS, "").strip()
+    if not raw:
+        return
+    origins = [item.strip() for item in raw.split(",") if item.strip()]
+    if not origins:
+        return
+    from starlette.middleware.cors import CORSMiddleware
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=False,
+        allow_methods=["GET", "HEAD", "OPTIONS"],
+        allow_headers=["*"],
+        expose_headers=["x-request-id"],
+    )
+
+
 def install_security_envelope(app: Any) -> None:
     """Install the API hardening middleware on a FastAPI app."""
     app.add_middleware(SecurityEnvelopeMiddleware)
