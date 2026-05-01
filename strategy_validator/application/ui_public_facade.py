@@ -37,7 +37,8 @@ _FRONTEND_OPERATOR_CONSOLE_HINT = (
     'The API only scans its process working directory for ui/strategist-web. '
     'frontend_package_present / frontend_package_detected_by_backend are false in typical API-only containers '
     'even when the Next.js operator console runs separately; that is expected. '
-    'frontend_readiness_claimed stays false until formal frontend evidence gates pass.'
+    'frontend_readiness_claimed stays false unless STRATEGY_VALIDATOR_FRONTEND_READINESS_CLAIM_ENABLE is set '
+    'and a validated claim artifact is present (opt-in; not automatic production certification).'
 )
 
 

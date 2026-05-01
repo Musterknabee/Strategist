@@ -13,6 +13,7 @@ The Next.js app under `ui/strategist-web` is the **operator read-plane console**
 |----------|-------|---------|
 | `NEXT_PUBLIC_STRATEGIST_API_BASE_URL` | Browser / Next build | Public HTTP(S) origin of the API (e.g. `https://ops.example.com` or `http://127.0.0.1:8000`). **Never** put API tokens or `STRATEGY_VALIDATOR_API_TOKEN` in `NEXT_PUBLIC_*`. |
 | `STRATEGY_VALIDATOR_UI_CORS_ORIGINS` | API process | Optional comma-separated browser origins allowed for **GET / HEAD / OPTIONS** on `/ui/*` when the UI is served from a different origin than the API (typical local dev). Unset = no extra CORS (fail-closed). |
+| `STRATEGY_VALIDATOR_FRONTEND_READINESS_CLAIM_ENABLE` | API process | **Opt-in only.** When `true`/`1`/`on`, the API may set `frontend_readiness_claimed` from a validated file at `STRATEGY_VALIDATOR_FRONTEND_READINESS_CLAIM_PATH` or the default under `artifacts/frontend_readiness/`. **Unset = false**: claim artifacts on disk are ignored so backend smoke and bundles stay backend-only. Does **not** imply `DEPLOYMENT_APPROVED` or production UI certification by itself. |
 | `STRATEGIST_SMOKE_API_BASE_URL` | Smoke / verify scripts | Optional; base URL for `npm run smoke` or `scripts/verify_frontend.py --smoke-api-base`. |
 
 ### `GET /ui/facade` frontend fields (authority stays on the API)
@@ -114,13 +115,17 @@ npm run smoke -- --api-base-url http://127.0.0.1:8000 --json
 
 On **Windows**, do not pipe pytest through `findstr` to detect failures (`findstr` exits 1 when no lines match, which can mark a green suite as failed). Use pytest’s exit code or `ci_local_verify.py`; see [WINDOWS_PYTEST_VERIFICATION.md](../development/WINDOWS_PYTEST_VERIFICATION.md).
 
+## Formal claim artifact (opt-in on the API)
+
+`scripts/claim_single_tenant_frontend_readiness.py` may write evidence JSON under `artifacts/frontend_readiness/`. **The API does not surface `frontend_readiness_claimed: true` from that file unless** the deployment sets **`STRATEGY_VALIDATOR_FRONTEND_READINESS_CLAIM_ENABLE=true`** (or `1`/`on`/`yes`). This keeps **`python -m strategy_validator.cli.single_tenant_api_smoke`** aligned with a backend-only posture when the variable is unset.
+
 ## Future `frontend_readiness_claimed` bar (not automatic)
 
-A future release may set **`frontend_readiness_claimed`** only when all of the following are true and recorded in evidence:
+Product may define additional bars before treating the UI as production-ready. Evidence should still include:
 
 - Lint, typecheck, unit tests, and production build pass.
 - Frontend smoke passes against a **known-good** API instance.
 - No secrets in client bundles or `NEXT_PUBLIC_*`.
 - At least one real operator screen renders honest loading/degraded/error states from live `/ui/*` data.
 
-Until then, the backend continues to report **`frontend_readiness_claimed: false`**.
+Without **`STRATEGY_VALIDATOR_FRONTEND_READINESS_CLAIM_ENABLE`**, the backend continues to report **`frontend_readiness_claimed: false`** regardless of artifacts on disk.

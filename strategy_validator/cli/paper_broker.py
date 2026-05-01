@@ -14,6 +14,10 @@ from strategy_validator.brokers.alpaca_paper import (
     list_alpaca_paper_positions,
     submit_paper_order,
 )
+from strategy_validator.brokers.paper_broker_status_builder import (
+    build_paper_broker_status_artifact,
+    write_paper_broker_status_artifact,
+)
 from strategy_validator.cli.deployment_env_check import parse_env_file
 from strategy_validator.contracts.paper_broker import PaperBrokerOrderIntent
 def _paper_broker_artifact_root() -> Path:
@@ -34,6 +38,13 @@ def main(argv: list[str] | None = None) -> int:
 
     s_status = sub.add_parser("status", help="Account snapshot (paper endpoint only).")
     s_status.add_argument("--env-file", default="", type=Path)
+    s_status.add_argument("--output-root", default="", type=Path, help="Write paper_broker/latest/paper_broker_status.json")
+    s_status.add_argument(
+        "--allow-network",
+        action="store_true",
+        help="Query Alpaca account endpoint when policy is PAPER_READY (default: policy only).",
+    )
+    s_status.add_argument("--json", action="store_true")
 
     s_pos = sub.add_parser("positions", help="List paper positions.")
     s_pos.add_argument("--env-file", default="", type=Path)
@@ -58,8 +69,21 @@ def main(argv: list[str] | None = None) -> int:
     env = _merge_env(Path(raw_ef) if raw_ef else None)
 
     if ns.cmd == "status":
-        acct = get_alpaca_paper_account(env)
-        sys.stdout.write(json.dumps({"ok": True, "account": acct.model_dump(mode="json")}, indent=2) + "\n")
+        out_root = str(getattr(ns, "output_root", "") or "").strip()
+        allow_net = bool(getattr(ns, "allow_network", False))
+        want_json = bool(getattr(ns, "json", False))
+        if out_root:
+            art = build_paper_broker_status_artifact(env, allow_network=allow_net)
+            path = write_paper_broker_status_artifact(Path(out_root), art)
+            payload = {"ok": True, "artifact_path": str(path), "artifact": art.model_dump(mode="json")}
+            sys.stdout.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+            return 0
+        acct = get_alpaca_paper_account(env, allow_network=allow_net)
+        payload = {"ok": True, "account": acct.model_dump(mode="json")}
+        if want_json:
+            sys.stdout.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        else:
+            sys.stdout.write(json.dumps(payload, indent=2) + "\n")
         return 0
     if ns.cmd == "positions":
         pol, rows, notes = list_alpaca_paper_positions(env)

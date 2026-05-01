@@ -18,6 +18,7 @@ class StrategyPitSnapshotStatus(str, Enum):
 
 class StrategyDataSourceClassification(str, Enum):
     LOCAL_GOVERNED_BARS = "LOCAL_GOVERNED_BARS"
+    PROVIDER_GOVERNED_SNAPSHOT = "PROVIDER_GOVERNED_SNAPSHOT"
     SYNTHETIC_DETERMINISTIC = "SYNTHETIC_DETERMINISTIC"
     UNAVAILABLE = "UNAVAILABLE"
 
@@ -106,6 +107,15 @@ class LocalBarsDataSourceConfig(BaseModel):
     model_config = {"extra": "forbid"}
 
 
+class ProviderSnapshotDataSourceConfig(BaseModel):
+    """Load bars from a persisted provider snapshot manifest (no live provider calls in batch)."""
+
+    kind: Literal["provider_snapshot"] = "provider_snapshot"
+    manifest_path: str = Field(min_length=1)
+
+    model_config = {"extra": "forbid"}
+
+
 def snapshot_data_gates_promotion(snapshot: StrategyDataSnapshot) -> bool:
     """True when this snapshot alone should gate (block) live promotion."""
 
@@ -126,6 +136,7 @@ def snapshot_promotion_eligible_data_plane(snapshot: StrategyDataSnapshot) -> bo
 
 __all__ = [
     "LocalBarsDataSourceConfig",
+    "ProviderSnapshotDataSourceConfig",
     "StrategyBar",
     "StrategyDataRequirement",
     "StrategyDataSnapshot",

@@ -24,7 +24,32 @@ An **evidence-first research workflow**: batch gauntlet runs, paper tracking, li
 7. **Portfolio allocation** — Offline simulator from batch summary + run directory; **no orders** (see [PORTFOLIO_ALLOCATION.md](./PORTFOLIO_ALLOCATION.md)).
 8. **Compute / GPU** — Optional acceleration; API and tests must not require GPU (see [COMPUTE_ACCELERATION.md](./COMPUTE_ACCELERATION.md)).
 
-## Canonical local demo (no network, no keys)
+## Provider-backed paper loop
+
+For the **fixture-first** provider snapshot → gauntlet → paper tracking → broker policy path, see [PROVIDER_BACKED_PAPER_LOOP.md](./PROVIDER_BACKED_PAPER_LOOP.md). Key manifest: `provider_paper_loop/latest/provider_paper_loop_manifest.json`.
+
+## Canonical runtime evidence (Docker API + same artifact root)
+
+The API reads **`STRATEGY_VALIDATOR_ARTIFACT_ROOT`** (default in sample deploy: `/var/lib/strategy-validator/artifacts`). Strategy batch output, paper tracking, and `strategy_data` default under that root unless you set explicit overrides.
+
+**Inside the running API container** (paths align with the process):
+
+```powershell
+docker exec strategist-local-api strategy-validator-research-os-runtime-demo `
+  --artifact-root /var/lib/strategy-validator/artifacts `
+  --run-id runtime-demo `
+  --allow-synthetic-demo `
+  --skip-benchmark `
+  --overwrite `
+  --json
+```
+
+Or use `scripts/run_research_os_runtime_demo_in_container.ps1` from the repo.
+
+- Writes `research_os_runtime/latest/runtime_demo_manifest.json` under the artifact root (`research_os_runtime_demo_manifest/v1`).
+- `ok=true` means the pipeline machinery completed; individual gates may still be **BLOCKED**, **PENDING_KEY**, or **DO_NOT_PROMOTE** — those are honest outcomes, not API failures.
+
+## Legacy packaged demo (no network, no keys)
 
 From the repository root:
 
@@ -40,9 +65,20 @@ python scripts/run_research_os_demo.py \
 - Writes `artifacts/research_os_demo/latest/demo_manifest.json` and isolates demo paper/batch roots via environment for the run.
 - Optional steps (`--skip-portfolio`, benchmark) can be skipped; missing GPU or provider keys should **degrade** with warnings, not crash the core path.
 
+**Host-only runtime demo** (must use the same directory the API container mounts as `STRATEGY_VALIDATOR_ARTIFACT_ROOT`):
+
+```powershell
+python scripts/run_research_os_runtime_demo.py `
+  --artifact-root <host-path-matching-docker-volume> `
+  --run-id runtime-demo `
+  --overwrite `
+  --json
+```
+
 ## Inspecting artifacts
 
-- **Demo manifest:** `artifacts/research_os_demo/latest/demo_manifest.json`
+- **Runtime demo manifest:** `<artifact_root>/research_os_runtime/latest/runtime_demo_manifest.json`
+- **Legacy demo manifest:** `artifacts/research_os_demo/latest/demo_manifest.json`
 - **Batch summaries:** `**/batch_summary.json` under the strategy batch output root
 - **Paper tracking:** per-tracking directories under `STRATEGY_VALIDATOR_PAPER_TRACKING_ROOT`
 - **Daily runs:** `daily_runs/<date>/daily_run_manifest.json`
@@ -82,6 +118,7 @@ python scripts/run_research_os_demo.py \
 
 ## Related docs
 
+- [PROVIDER_BACKED_PAPER_LOOP.md](./PROVIDER_BACKED_PAPER_LOOP.md)
 - [MULTI_STRATEGY_BATCH_RUNNER.md](./MULTI_STRATEGY_BATCH_RUNNER.md)
 - [PAPER_TRACKING.md](./PAPER_TRACKING.md)
 - [CANDIDATE_LIFECYCLE.md](./CANDIDATE_LIFECYCLE.md)

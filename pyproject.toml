@@ -54,13 +54,15 @@ strategy-validator-provider-bars = "strategy_validator.cli.provider_bars:main"
 strategy-validator-paper-broker = "strategy_validator.cli.paper_broker:main"
 strategy-validator-portfolio-sim = "strategy_validator.cli.portfolio_sim:main"
 strategy-validator-gpu-probe = "strategy_validator.cli.gpu_probe:main"
+strategy-validator-research-os-runtime-demo = "strategy_validator.cli.research_os_runtime_demo:main"
+strategy-validator-provider-paper-loop = "strategy_validator.cli.provider_paper_loop:main"
 
 [tool.setuptools.packages.find]
 include = ["strategy_validator*"]
 exclude = ["tests*", "docs*", "scratch*", "scripts*"]
 
 [tool.setuptools.package-data]
-strategy_validator = ["migrations/sqlite/*.sql"]
+strategy_validator = ["migrations/sqlite/*.sql", "fixtures/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

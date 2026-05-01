@@ -11,12 +11,44 @@ vi.mock("@/hooks/useUiResearchOsStatus", () => ({
       generated_at_utc: "2026-05-01T00:00:00+00:00",
       degraded: ["NO_PORTFOLIO_ALLOCATION_ARTIFACT"],
       warnings: [],
-      gauntlet_latest: { batch_id: "b1", run_id: "r1", ok: true },
-      paper_tracking_latest: { latest: { lifecycle_state: "PAPER_TRACKING", promotion_review_ready: false } },
+      artifact_root_summary: {
+        artifact_root: "/var/lib/x/artifacts",
+        strategy_batch_scan_root: "/var/lib/x/artifacts/strategy_runs",
+        paper_tracking_scan_root: "/var/lib/x/artifacts/paper_tracking",
+        strategy_data_root: "/var/lib/x/artifacts/strategy_data",
+      },
+      runtime_demo_manifest: { status: "NOT_PRESENT", artifact_path: "/y" },
+      gauntlet_latest: {
+        batch_id: "b1",
+        run_id: "r1",
+        ok: true,
+        strategy_count: 2,
+        passed_count: 0,
+        paper_only_count: 2,
+      },
+      paper_tracking_latest: {
+        latest: {
+          tracking_id: "tid1",
+          lifecycle_state: "PAPER_TRACKING",
+          promotion_review_ready: false,
+        },
+      },
       promotion_packet_latest: { recommendation: "DO_NOT_PROMOTE" },
+      lifecycle_latest: { state: "PAPER_TRACKING" },
       paper_broker_status: { policy_status: "PENDING_KEY" },
       compute_status: { research_compute_readiness: "CPU_FALLBACK_READY", gpu_probe: { gpu_available: false } },
       demo_manifest: { status: "NOT_PRESENT", artifact_path: "/x" },
+      provider_ingestion_latest: { status: "ARTIFACT_PRESENT", provider_status: "PENDING_KEY" },
+      provider_paper_loop_latest: { status: "NOT_PRESENT", artifact_path: "/z" },
+      provider_historical_snapshot_latest: { status: "NOT_PRESENT" },
+      paper_broker_status_latest: { status: "NOT_PRESENT" },
+      provider_backed_gauntlet_latest: {
+        provider_snapshot_strategy_count: 0,
+        has_provider_strategies: false,
+      },
+      daily_tracking_latest: {},
+      cpcv_latest: { status: "NO_CPCV_FIELDS" },
+      portfolio_allocation_latest: null,
     },
     isLoading: false,
     isError: false,
@@ -38,7 +70,19 @@ describe("ResearchOsPage", () => {
     const { container } = render(<ResearchOsPage />);
     expect(screen.getByText(/Research OS/i)).toBeTruthy();
     expect(screen.getByText(/DEGRADED/i)).toBeTruthy();
-    expect(screen.getByText(/DO_NOT_PROMOTE/i)).toBeTruthy();
+    expect(screen.getAllByText(/DO_NOT_PROMOTE/i).length).toBeGreaterThan(0);
     expect(container.textContent?.includes("STRATEGY_VALIDATOR_API_TOKEN")).toBe(false);
+  });
+
+  it("renders provider PENDING_KEY and artifact scan copy", () => {
+    render(<ResearchOsPage />);
+    expect(screen.getAllByText(/PENDING_KEY/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Artifact roots/i).length).toBeGreaterThan(0);
+  });
+
+  it("renders provider-backed paper loop pane", () => {
+    render(<ResearchOsPage />);
+    expect(screen.getByText(/Provider-backed paper loop/i)).toBeTruthy();
+    expect(screen.getByText(/provider_paper_loop_manifest/i)).toBeTruthy();
   });
 });

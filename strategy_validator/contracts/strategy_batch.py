@@ -3,11 +3,14 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Literal
+from typing import Annotated, Any, Literal, Union
 
 from pydantic import BaseModel, Field, PrivateAttr, field_validator, model_validator
 
-from strategy_validator.contracts.strategy_data_snapshot import LocalBarsDataSourceConfig
+from strategy_validator.contracts.strategy_data_snapshot import (
+    LocalBarsDataSourceConfig,
+    ProviderSnapshotDataSourceConfig,
+)
 from strategy_validator.contracts.strategy_execution_realism import ExecutionRealismAssumptions
 from strategy_validator.contracts.strategy_robustness import RobustnessAssumptions, _ROBUSTNESS_SPEC_KEYS
 
@@ -25,6 +28,11 @@ _EXECUTION_REALISM_REQUIRED_KEYS = frozenset(
     }
 )
 StrategyTypeId = Literal["momentum", "mean_reversion", "volatility_breakout"]
+
+StrategyDataSourceConfig = Annotated[
+    Union[LocalBarsDataSourceConfig, ProviderSnapshotDataSourceConfig],
+    Field(discriminator="kind"),
+]
 
 
 class StrategyRunStatus(str, Enum):
@@ -51,7 +59,7 @@ class StrategyCandidateSpec(BaseModel):
     params: dict[str, Any] = Field(default_factory=dict)
     data_requirements: list[str] = Field(default_factory=list)
     provider_preferences: list[str] = Field(default_factory=list)
-    data_source: LocalBarsDataSourceConfig | None = None
+    data_source: StrategyDataSourceConfig | None = None
     execution_assumptions: dict[str, Any] = Field(default_factory=dict)
     execution_realism_assumptions: ExecutionRealismAssumptions | None = None
     robustness_assumptions: dict[str, Any] = Field(default_factory=dict)
@@ -199,6 +207,9 @@ class StrategyRunResult(BaseModel):
     data_snapshot_manifest_path: str | None = None
     data_snapshot_manifest_sha256: str | None = None
     data_snapshot_digest: str | None = None
+    provider_snapshot_manifest_sha256: str | None = None
+    provider_license_scope: str | None = None
+    provider_trust_level: str | None = None
     bars_row_count: int | None = None
     execution_realism_digest: str | None = None
     execution_realism_gate: str | None = None
@@ -310,6 +321,7 @@ class StrategyEvidenceManifest(BaseModel):
     promotion_eligible: bool = False
     data_snapshot_digest: str | None = None
     data_snapshot_manifest_sha256: str | None = None
+    provider_snapshot_manifest_sha256: str | None = None
     pit_snapshot_status: str | None = None
     bars_row_count: int | None = None
     execution_realism_evidence_sha256: str | None = None
@@ -352,6 +364,8 @@ __all__ = [
     "StrategyRunStatus",
     "StrategyTypeId",
     "LocalBarsDataSourceConfig",
+    "ProviderSnapshotDataSourceConfig",
+    "StrategyDataSourceConfig",
     "ExecutionRealismAssumptions",
     "RobustnessAssumptions",
 ]

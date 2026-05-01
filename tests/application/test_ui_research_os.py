@@ -21,7 +21,23 @@ def test_research_os_payload_empty_degraded(monkeypatch: pytest.MonkeyPatch, tmp
     p = build_ui_research_os_status_payload(repo_root=tmp_path)
     assert p["schema_version"] == "ui_research_os_status/v1"
     assert "NO_BATCH_ARTIFACTS" in p["gauntlet_latest"]["degraded"]
+    assert "NO_PROVIDER_PAPER_LOOP_ARTIFACT" in p["degraded"]
+    assert p["provider_paper_loop_latest"]["status"] == "NOT_PRESENT"
     assert "STRATEGY_VALIDATOR_API_TOKEN" not in str(p)
+
+
+def test_research_os_provider_paper_loop_fixture_present(tmp_path: Path) -> None:
+    root = tmp_path / "artifacts" / "provider_paper_loop" / "latest"
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "provider_paper_loop_manifest.json").write_text(
+        '{"schema_version":"provider_paper_loop_manifest/v1","ok":true,"run_id":"x",'
+        '"generated_at_utc":"2026-02-15T12:00:00+00:00","artifact_root":"/tmp",'
+        '"warnings":[],"blockers":[],"digests":{}}\n',
+        encoding="utf-8",
+    )
+    p = build_ui_research_os_status_payload(repo_root=tmp_path)
+    assert p["provider_paper_loop_latest"]["status"] == "PRESENT"
+    assert "NO_PROVIDER_PAPER_LOOP_ARTIFACT" not in p["degraded"]
 
 
 def test_research_os_route_returns_200(client: TestClient) -> None:

@@ -90,6 +90,8 @@ export default function StrategyLabPage() {
 
   const dataBadge = (r: SRow) => {
     const plane = asString(r.data_plane);
+    if (plane === "PROVIDER_SNAPSHOT")
+      return <span className="cockpit-nav-link active">PROVIDER</span>;
     if (plane === "REAL_LOCAL") return <span className="cockpit-nav-link active">REAL</span>;
     if (plane === "SYNTHETIC") return <span className="muted">PAPER_ONLY</span>;
     return <span className="muted">—</span>;
@@ -178,6 +180,15 @@ export default function StrategyLabPage() {
       cell: (r) => {
         const d = asString(r.data_snapshot_digest);
         return <code>{d ? d.slice(0, 12) : "—"}</code>;
+      },
+    },
+    {
+      key: "prov",
+      header: "Prov mfst",
+      width: "88px",
+      cell: (r) => {
+        const d = asString(r.provider_snapshot_manifest_sha256);
+        return <code>{d ? d.slice(0, 10) : "—"}</code>;
       },
     },
     {

@@ -12,12 +12,18 @@
 
 ```bash
 strategy-validator-paper-broker status --env-file deployment.env --json
+strategy-validator-paper-broker status --env-file deployment.env --output-root artifacts/paper_broker --json
+# Optional: authenticated account probe when policy is PAPER_READY (trusted host only):
+strategy-validator-paper-broker status --env-file deployment.env --output-root artifacts/paper_broker --allow-network --json
 strategy-validator-paper-broker positions --env-file deployment.env --json
 strategy-validator-paper-broker dry-run-order --tracking-id <id> --json
 strategy-validator-paper-broker submit-paper-order --tracking-id <id> --confirm-paper --env-file deployment.env --json
 ```
 
-Artifacts: `artifacts/paper_broker/{tracking_id}/paper_order_submission.json` (redacted fields only).
+Artifacts:
+
+- `artifacts/paper_broker/latest/paper_broker_status.json` — policy + optional redacted account summary (from `status --output-root`).
+- `artifacts/paper_broker/{tracking_id}/paper_order_submission.json` — CLI paper order evidence (redacted fields only).
 
 ## Read-plane / UI
 

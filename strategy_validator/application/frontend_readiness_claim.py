@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+"""Frontend readiness artifacts are opt-in at runtime (see FRONTEND_READINESS_CLAIM_ENABLE_ENV)."""
+
 import json
 import os
 from pathlib import Path
@@ -7,7 +9,13 @@ from typing import Any
 
 FRONTEND_READINESS_CLAIM_SCHEMA_VERSION = "single_tenant_frontend_readiness/v1"
 FRONTEND_READINESS_CLAIM_ENV = "STRATEGY_VALIDATOR_FRONTEND_READINESS_CLAIM_PATH"
+FRONTEND_READINESS_CLAIM_ENABLE_ENV = "STRATEGY_VALIDATOR_FRONTEND_READINESS_CLAIM_ENABLE"
 FRONTEND_EXPECTED_PACKAGE = "ui/strategist-web"
+
+
+def frontend_readiness_claim_enable_active() -> bool:
+    raw = os.environ.get(FRONTEND_READINESS_CLAIM_ENABLE_ENV, "").strip().lower()
+    return raw in ("1", "true", "yes", "on")
 
 
 def default_frontend_readiness_claim_path(repo_root: Path | None = None) -> Path:
@@ -32,6 +40,11 @@ def load_frontend_readiness_claim(repo_root: Path | None = None) -> dict[str, An
         "claim_status": "NOT_CLAIMED",
         "claim_reason": "CLAIM_ARTIFACT_MISSING",
     }
+    if not frontend_readiness_claim_enable_active():
+        payload["claim_reason"] = (
+            "CLAIM_OPT_IN_REQUIRED_ARTIFACT_PRESENT_BUT_IGNORED" if path.is_file() else "CLAIM_OPT_IN_REQUIRED"
+        )
+        return payload
     if not path.is_file():
         return payload
     try:
@@ -64,9 +77,11 @@ def load_frontend_readiness_claim(repo_root: Path | None = None) -> dict[str, An
 
 __all__ = [
     "FRONTEND_EXPECTED_PACKAGE",
+    "FRONTEND_READINESS_CLAIM_ENABLE_ENV",
     "FRONTEND_READINESS_CLAIM_ENV",
     "FRONTEND_READINESS_CLAIM_SCHEMA_VERSION",
     "default_frontend_readiness_claim_path",
+    "frontend_readiness_claim_enable_active",
     "frontend_readiness_claim_path",
     "load_frontend_readiness_claim",
 ]

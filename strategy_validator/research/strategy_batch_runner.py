@@ -25,6 +25,7 @@ from strategy_validator.contracts.strategy_batch import (
 )
 from strategy_validator.contracts.strategy_data_snapshot import (
     StrategyDataSnapshotManifest,
+    StrategyDataSourceClassification,
     StrategyPitSnapshotStatus,
 )
 from strategy_validator.contracts.strategy_execution_realism import ExecutionRealismGateStatus
@@ -45,7 +46,11 @@ from strategy_validator.research.strategy_batch_evaluators import (
     evaluate_momentum,
     evaluate_volatility_breakout,
 )
-from strategy_validator.research.strategy_data_loader import StrategyDataLoadError, load_local_bars_snapshot
+from strategy_validator.research.strategy_data_loader import (
+    StrategyDataLoadError,
+    load_local_bars_snapshot,
+    load_provider_snapshot_bars,
+)
 
 
 def _resolve_output_base(spec: StrategyBatchSpec) -> Path:
@@ -210,6 +215,7 @@ def run_single_strategy(
         data_snapshot_path: Path | None = None
         data_snapshot_sha: str | None = None
         bars_row_count: int | None = None
+        provider_snap = None
 
         if candidate.data_source is not None and candidate.data_source.kind == "local_bars":
             try:
@@ -242,7 +248,70 @@ def run_single_strategy(
             except StrategyDataLoadError as exc:
                 load_warnings = [f"LOCAL_BARS_LOAD:{b}" for b in exc.blockers]
 
+        if candidate.data_source is not None and candidate.data_source.kind == "provider_snapshot":
+            try:
+                loaded, provider_snap = load_provider_snapshot_bars(
+                    repo_root=repo_root,
+                    candidate=candidate,
+                    batch=batch,
+                    data_source=candidate.data_source,
+                    retrieved_at_utc=started,
+                )
+                local_snap = loaded.snapshot
+                loaded_bars = list(loaded.bars)
+                load_warnings = list(loaded.warnings)
+                prices = np.array([b.close for b in loaded.bars], dtype=np.float64)
+                bars_row_count = len(loaded.bars)
+                filt_path = strat_dir / "filtered_bars.csv"
+                _write_filtered_bars_csv(filt_path, loaded.bars)
+                dsm_extra = {
+                    "max_workers_declared": batch.max_workers,
+                    "worker_model": batch.worker_model,
+                    "provider_snapshot_manifest_sha256": provider_snap.manifest_sha256,
+                    "provider_snapshot_manifest_spec_path": candidate.data_source.manifest_path,
+                }
+                dsm = StrategyDataSnapshotManifest(
+                    strategy_id=candidate.strategy_id,
+                    batch_id=batch.batch_id,
+                    run_id=run_id,
+                    snapshot=local_snap,
+                    compute_backend="cpu",
+                    extra=dsm_extra,
+                )
+                dsm_body = dsm.model_dump(mode="json")
+                data_snapshot_sha = canonical_json_sha256(dsm_body)
+                data_snapshot_path = strat_dir / "data_snapshot_manifest.json"
+                _write_json(data_snapshot_path, {**dsm_body, "data_snapshot_manifest_sha256": data_snapshot_sha})
+            except StrategyDataLoadError as exc:
+                load_warnings = [f"PROVIDER_SNAPSHOT_LOAD:{b}" for b in exc.blockers]
+
         if prices is None:
+            if (
+                candidate.data_source is not None
+                and candidate.data_source.kind == "provider_snapshot"
+            ):
+                completed = datetime.now(timezone.utc)
+                dur = int((completed - started).total_seconds() * 1000)
+                gate.data_gate = "PROVIDER_SNAPSHOT_LOAD_FAILED"
+                gate.pit_gate = "BLOCKED"
+                blk = load_warnings or ["PROVIDER_SNAPSHOT_LOAD_FAILED"]
+                return StrategyRunResult(
+                    strategy_id=candidate.strategy_id,
+                    status=StrategyRunStatus.BLOCKED,
+                    started_at_utc=started,
+                    completed_at_utc=completed,
+                    duration_ms=dur,
+                    pit_status="BLOCKED",
+                    pit_snapshot_status=None,
+                    data_status="PROVIDER_SNAPSHOT",
+                    data_plane="NO_BARS",
+                    blockers=list(dict.fromkeys(blk)),
+                    warnings=[],
+                    gate_summary=gate,
+                    compute_backend="cpu",
+                    compute_worker_model="thread_pool",
+                    cuda_available=False,
+                )
             if batch.pit_policy == PitPolicy.STRICT:
                 completed = datetime.now(timezone.utc)
                 dur = int((completed - started).total_seconds() * 1000)
@@ -346,11 +415,19 @@ def run_single_strategy(
         pit_ok = not used_synthetic and (
             local_snap is None or local_snap.pit_status == StrategyPitSnapshotStatus.PIT_VERIFIED
         )
+        pit_classification = "LOCAL_GOVERNED_BARS"
+        if used_synthetic:
+            pit_classification = "SYNTHETIC_DEMO"
+        elif (
+            local_snap is not None
+            and local_snap.source_classification == StrategyDataSourceClassification.PROVIDER_GOVERNED_SNAPSHOT
+        ):
+            pit_classification = "PROVIDER_GOVERNED_SNAPSHOT"
         pit_context = {
             "as_of_utc": candidate.as_of_utc.isoformat(),
             "pit_available": pit_ok,
             "pit_policy": batch.pit_policy.value,
-            "classification": "SYNTHETIC_DEMO" if used_synthetic else "LOCAL_GOVERNED_BARS",
+            "classification": pit_classification,
             "pit_snapshot_status": None if local_snap is None else local_snap.pit_status.value,
         }
         pit_sha = canonical_json_sha256(pit_context)
@@ -422,7 +499,18 @@ def run_single_strategy(
             ds_label = "SYNTHETIC_DEMO"
         else:
             assert local_snap is not None
-            gate.data_gate = "LOCAL_HISTORICAL_BARS"
+            if local_snap.source_classification == StrategyDataSourceClassification.PROVIDER_GOVERNED_SNAPSHOT:
+                gate.data_gate = "PROVIDER_SNAPSHOT_BARS"
+                data_status = "PROVIDER_SNAPSHOT"
+                data_plane = "PROVIDER_SNAPSHOT"
+                ds_class = StrategyDataSourceClassification.PROVIDER_GOVERNED_SNAPSHOT.value
+                ds_label = "PROVIDER_SNAPSHOT"
+            else:
+                gate.data_gate = "LOCAL_HISTORICAL_BARS"
+                data_status = "LOCAL_BARS"
+                data_plane = "REAL_LOCAL"
+                ds_class = "LOCAL_GOVERNED_BARS"
+                ds_label = "LOCAL_FILE_BARS"
             gate.pit_gate = "PIT_VERIFIED" if local_snap.pit_status == StrategyPitSnapshotStatus.PIT_VERIFIED else local_snap.pit_status.value
             gate.execution_realism_gate = "PAPER_FRICTION_ASSUMED"
             gate.sample_count = int(prices.shape[0])
@@ -441,12 +529,8 @@ def run_single_strategy(
             if gate.sample_count < 30:
                 warnings.append("INSUFFICIENT_SAMPLE_FOR_ROBUSTNESS")
 
-            data_status = "LOCAL_BARS"
-            data_plane = "REAL_LOCAL"
             pit_status = local_snap.pit_status.value
             rob_status = "NOT_RUN"
-            ds_class = "LOCAL_GOVERNED_BARS"
-            ds_label = "LOCAL_FILE_BARS"
 
         er = evaluate_execution_realism(
             candidate=candidate,
@@ -683,6 +767,7 @@ def run_single_strategy(
             promotion_eligible=gate.promotion_eligible,
             data_snapshot_digest=ds_digest,
             data_snapshot_manifest_sha256=data_snapshot_sha,
+            provider_snapshot_manifest_sha256=provider_snap.manifest_sha256 if provider_snap else None,
             pit_snapshot_status=pit_snap_s,
             bars_row_count=bars_row_count,
             execution_realism_evidence_sha256=er_sha,
@@ -793,6 +878,9 @@ def run_single_strategy(
             data_snapshot_manifest_path=str(data_snapshot_path.resolve()) if data_snapshot_path else None,
             data_snapshot_manifest_sha256=data_snapshot_sha,
             data_snapshot_digest=ds_digest,
+            provider_snapshot_manifest_sha256=provider_snap.manifest_sha256 if provider_snap else None,
+            provider_license_scope=provider_snap.license_scope if provider_snap else None,
+            provider_trust_level=provider_snap.trust_level if provider_snap else None,
             bars_row_count=bars_row_count,
             metrics=metrics_payload,
             gate_summary=gate,

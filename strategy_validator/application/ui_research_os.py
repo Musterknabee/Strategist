@@ -7,13 +7,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from strategy_validator.application.research_os_paths import (
+    artifact_root_directory,
+    paper_broker_status_artifact_path,
+    provider_historical_snapshot_run_path,
+    provider_paper_loop_manifest_path,
+    research_os_runtime_manifest_path,
+    strategy_data_directory,
+)
 from strategy_validator.application.ui_paper_broker import build_ui_paper_broker_status_payload
 from strategy_validator.application.ui_paper_tracking import build_ui_paper_tracking_latest_payload
 from strategy_validator.application.ui_research_compute import build_ui_research_compute_payload
-from strategy_validator.application.ui_strategy_batch import (
-    build_ui_strategy_batch_latest_payload,
-    discover_latest_batch_summary,
-)
+from strategy_validator.application.ui_strategy_batch import build_ui_strategy_batch_latest_payload
 
 _SCHEMA = "ui_research_os_status/v1"
 
@@ -33,8 +38,7 @@ def _newest_glob(root: Path, pattern: str, limit: int = 1) -> list[Path]:
 
 
 def _provider_ingestion_hint(*, repo_root: Path | None = None) -> dict[str, Any]:
-    root = repo_root or Path.cwd()
-    data_root = root / "artifacts" / "strategy_data"
+    data_root = strategy_data_directory(repo_root)
     manifests = _newest_glob(data_root, "*_manifest.json", 3)
     if not manifests:
         return {
@@ -80,6 +84,81 @@ def _demo_manifest_hint(*, repo_root: Path | None = None) -> dict[str, Any]:
     }
 
 
+def _provider_historical_snapshot_run_hint(*, repo_root: Path | None = None) -> dict[str, Any]:
+    p = provider_historical_snapshot_run_path(repo_root)
+    if not p.is_file():
+        return {"status": "NOT_PRESENT", "artifact_path": str(p)}
+    raw = _safe_read(p)
+    if raw is None:
+        return {"status": "UNREADABLE", "artifact_path": str(p)}
+    return {
+        "status": "PRESENT",
+        "artifact_path": str(p),
+        "ok": raw.get("ok"),
+        "network_used": raw.get("network_used"),
+        "fixture_path": raw.get("fixture_path"),
+        "snapshot_count": len(raw.get("snapshots") or []) if isinstance(raw.get("snapshots"), list) else None,
+        "manifest_sha256": raw.get("manifest_sha256"),
+    }
+
+
+def _provider_paper_loop_manifest_hint(*, repo_root: Path | None = None) -> dict[str, Any]:
+    p = provider_paper_loop_manifest_path(repo_root)
+    if not p.is_file():
+        return {"status": "NOT_PRESENT", "artifact_path": str(p)}
+    raw = _safe_read(p)
+    if raw is None:
+        return {"status": "UNREADABLE", "artifact_path": str(p)}
+    return {
+        "status": "PRESENT",
+        "artifact_path": str(p),
+        "ok": raw.get("ok"),
+        "run_id": raw.get("run_id"),
+        "generated_at_utc": str(raw.get("generated_at_utc", "")),
+        "warnings": raw.get("warnings"),
+        "blockers": raw.get("blockers"),
+        "digests": raw.get("digests"),
+    }
+
+
+def _paper_broker_artifact_hint(*, repo_root: Path | None = None) -> dict[str, Any]:
+    p = paper_broker_status_artifact_path(repo_root)
+    if not p.is_file():
+        return {"status": "NOT_PRESENT", "artifact_path": str(p)}
+    raw = _safe_read(p)
+    if raw is None:
+        return {"status": "UNREADABLE", "artifact_path": str(p)}
+    return {
+        "status": "PRESENT",
+        "artifact_path": str(p),
+        "policy_status": raw.get("policy_status"),
+        "key_configured": raw.get("key_configured"),
+        "endpoint_classification": raw.get("endpoint_classification"),
+        "manifest_sha256": raw.get("manifest_sha256"),
+    }
+
+
+def _runtime_demo_manifest_hint(*, repo_root: Path | None = None) -> dict[str, Any]:
+    p = research_os_runtime_manifest_path(repo_root)
+    if not p.is_file():
+        return {"status": "NOT_PRESENT", "artifact_path": str(p)}
+    raw = _safe_read(p)
+    if raw is None:
+        return {"status": "UNREADABLE", "artifact_path": str(p)}
+    dig = raw.get("manifest_sha256") or raw.get("digests", {}).get("full_manifest_sha256")
+    return {
+        "status": "PRESENT",
+        "artifact_path": str(p),
+        "run_id": raw.get("run_id"),
+        "generated_at_utc": raw.get("generated_at_utc"),
+        "ok": raw.get("ok"),
+        "artifact_root": raw.get("artifact_root"),
+        "manifest_sha256": dig,
+        "blockers": raw.get("blockers"),
+        "warnings": raw.get("warnings"),
+    }
+
+
 def _cpcv_from_batch(latest_batch: dict[str, Any] | None) -> dict[str, Any]:
     if not latest_batch:
         return {"status": "NO_BATCH", "summary": None}
@@ -113,6 +192,7 @@ def build_ui_research_os_status_payload(*, repo_root: Path | None = None) -> dic
     root = repo_root or Path.cwd()
     warnings: list[str] = []
     degraded: list[str] = []
+    art_base = artifact_root_directory(repo_root)
 
     batch_payload = build_ui_strategy_batch_latest_payload(repo_root=root)
     batch_latest = batch_payload.get("latest")
@@ -130,8 +210,9 @@ def build_ui_research_os_status_payload(*, repo_root: Path | None = None) -> dic
         degraded.append("NO_PROVIDER_INGESTION_ARTIFACTS")
 
     demo = _demo_manifest_hint(repo_root=root)
-    if demo.get("status") != "PRESENT":
-        degraded.append("RESEARCH_OS_DEMO_MANIFEST_ABSENT")
+    runtime_demo = _runtime_demo_manifest_hint(repo_root=root)
+    if demo.get("status") != "PRESENT" and runtime_demo.get("status") != "PRESENT":
+        degraded.append("RESEARCH_OS_OPERATOR_MANIFEST_ABSENT")
 
     cpcv = _cpcv_from_batch(batch_rec)
     if cpcv.get("status") in ("NO_BATCH", "NO_STRATEGIES", "NO_CPCV_FIELDS"):
@@ -140,22 +221,56 @@ def build_ui_research_os_status_payload(*, repo_root: Path | None = None) -> dic
     alloc = batch_payload.get("portfolio_allocation")
     if alloc is None:
         degraded.append("NO_PORTFOLIO_ALLOCATION_ARTIFACT")
+    elif isinstance(alloc, dict):
+        gate = alloc.get("allocation_gate_status")
+        if gate == "BLOCKED":
+            warnings.append("PORTFOLIO_ALLOCATION_GATE_BLOCKED")
 
     if batch_payload.get("degraded"):
         degraded.extend(str(x) for x in batch_payload["degraded"])
+
+    portfolio_corr = batch_rec.get("portfolio_correlation_summary") if batch_rec else None
+
+    prov_loop_warns: list[str] = []
+    if isinstance(provider_paper_loop.get("warnings"), list):
+        prov_loop_warns.extend(str(x) for x in provider_paper_loop["warnings"] if x is not None)
+    if isinstance(provider_paper_loop.get("blockers"), list):
+        prov_loop_warns.extend(f"BLOCKER:{x}" for x in provider_paper_loop["blockers"] if x is not None)
 
     return {
         "schema_version": _SCHEMA,
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "read_plane_only": True,
         "no_live_trading": True,
+        "artifact_root_summary": {
+            "artifact_root": str(art_base),
+            "strategy_batch_scan_root": batch_payload.get("scan_root"),
+            "paper_tracking_scan_root": paper_payload.get("scan_root"),
+            "strategy_data_root": str(strategy_data_directory(repo_root)),
+        },
+        "runtime_demo_manifest": runtime_demo,
+        "provider_historical_snapshot_latest": provider_hist_run,
+        "provider_paper_loop_latest": provider_paper_loop,
+        "paper_broker_status_latest": paper_broker_art,
+        "provider_backed_gauntlet_latest": batch_payload.get("provider_backed_gauntlet"),
+        "provider_loop_warnings": prov_loop_warns,
+        "provider_loop_blockers": list(provider_paper_loop.get("blockers") or [])
+        if isinstance(provider_paper_loop.get("blockers"), list)
+        else [],
         "gauntlet_latest": {
             "degraded": list(batch_payload.get("degraded") or []),
             "summary_path": batch_payload.get("summary_path"),
             "batch_id": batch_rec.get("batch_id") if batch_rec else None,
             "run_id": batch_rec.get("run_id") if batch_rec else None,
             "strategy_count": batch_rec.get("strategy_count") if batch_rec else None,
+            "passed_count": batch_rec.get("passed_count") if batch_rec else None,
+            "paper_only_count": batch_rec.get("paper_only_count") if batch_rec else None,
+            "blocked_count": batch_rec.get("blocked_count") if batch_rec else None,
+            "failed_count": batch_rec.get("failed_count") if batch_rec else None,
             "ok": batch_rec.get("ok") if batch_rec else None,
+            "top_candidate": batch_rec.get("top_candidate") if batch_rec else None,
+            "portfolio_correlation_summary": portfolio_corr,
+            "batch_warnings": batch_rec.get("warnings") if batch_rec else None,
         },
         "paper_tracking_latest": {
             "degraded": list(paper_payload.get("degraded") or []),
@@ -173,6 +288,12 @@ def build_ui_research_os_status_payload(*, repo_root: Path | None = None) -> dic
                 if isinstance(paper_payload.get("latest"), dict)
                 else None,
                 "assessment_artifact": (paper_payload.get("latest") or {}).get("lifecycle_assessment_artifact")
+                if isinstance(paper_payload.get("latest"), dict)
+                else None,
+                "kill_rule_posture": (paper_payload.get("latest") or {}).get("lifecycle_kill_rule_posture")
+                if isinstance(paper_payload.get("latest"), dict)
+                else None,
+                "lifecycle_blockers": (paper_payload.get("latest") or {}).get("lifecycle_blockers")
                 if isinstance(paper_payload.get("latest"), dict)
                 else None,
             }
@@ -194,4 +315,4 @@ def build_ui_research_os_status_payload(*, repo_root: Path | None = None) -> dic
     }
 
 
-__all__ = ["build_ui_research_os_status_payload", "_demo_manifest_hint"]
+__all__ = ["build_ui_research_os_status_payload", "_demo_manifest_hint", "_runtime_demo_manifest_hint"]

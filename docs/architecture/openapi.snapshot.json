@@ -6728,6 +6728,96 @@
         ]
       }
     },
+    "/ui/paper-broker/status": {
+      "get": {
+        "operationId": "get_paper_broker_status_ui_paper_broker_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Paper Broker Status Ui Paper Broker Status Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Paper Broker Status",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/paper-tracking/latest": {
+      "get": {
+        "operationId": "get_paper_tracking_latest_ui_paper_tracking_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Paper Tracking Latest Ui Paper Tracking Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Paper Tracking Latest",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/paper-tracking/{tracking_id}": {
+      "get": {
+        "operationId": "get_paper_tracking_detail_ui_paper_tracking__tracking_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tracking_id",
+            "required": true,
+            "schema": {
+              "title": "Tracking Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Paper Tracking Detail Ui Paper Tracking  Tracking Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Paper Tracking Detail",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
     "/ui/provider-health": {
       "get": {
         "operationId": "get_ui_provider_health_ui_provider_health_get",
@@ -6746,6 +6836,52 @@
           }
         },
         "summary": "Get Ui Provider Health",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/research-compute": {
+      "get": {
+        "operationId": "get_ui_research_compute_ui_research_compute_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Ui Research Compute Ui Research Compute Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Ui Research Compute",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/research-os/status": {
+      "get": {
+        "operationId": "get_research_os_status_ui_research_os_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Research Os Status Ui Research Os Status Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Research Os Status",
         "tags": [
           "ui"
         ]
@@ -6791,6 +6927,96 @@
           }
         },
         "summary": "Get Ui Runtime",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/strategy-batches": {
+      "get": {
+        "operationId": "get_strategy_batches_ui_strategy_batches_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Strategy Batches Ui Strategy Batches Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Strategy Batches",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/strategy-batches/latest": {
+      "get": {
+        "operationId": "get_strategy_batches_latest_ui_strategy_batches_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Strategy Batches Latest Ui Strategy Batches Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Strategy Batches Latest",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/strategy-batches/{run_id}": {
+      "get": {
+        "operationId": "get_strategy_batch_by_run_ui_strategy_batches__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Strategy Batch By Run Ui Strategy Batches  Run Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Strategy Batch By Run",
         "tags": [
           "ui"
         ]

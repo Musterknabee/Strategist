@@ -70,6 +70,33 @@ class PaperBrokerOrderResult(BaseModel):
         return v
 
 
+class PaperBrokerStatusArtifact(BaseModel):
+    """Durable paper broker policy / account hints (no secrets; digest-linked)."""
+
+    schema_version: Literal["paper_broker_status_manifest/v1"] = "paper_broker_status_manifest/v1"
+    generated_at_utc: datetime
+    broker_id: str = "alpaca_paper"
+    mode: str | None = None
+    endpoint_classification: Literal["PAPER_HOST", "LIVE_HOST_BLOCKED", "UNKNOWN", "UNSET"] = "UNKNOWN"
+    key_configured: bool = False
+    policy_status: str
+    paper_trading_only: bool = True
+    live_trading_blocked: bool = True
+    account_summary: dict[str, Any] | None = None
+    warnings: list[str] = Field(default_factory=list)
+    blockers: list[str] = Field(default_factory=list)
+    manifest_sha256: str = ""
+
+    model_config = {"extra": "forbid"}
+
+    @field_validator("generated_at_utc")
+    @classmethod
+    def _tz(cls, v: datetime) -> datetime:
+        if v.tzinfo is None:
+            raise ValueError("generated_at_utc must be timezone-aware")
+        return v
+
+
 class PaperBrokerPositionSnapshot(BaseModel):
     schema_version: Literal["paper_broker_position_snapshot/v1"] = "paper_broker_position_snapshot/v1"
     symbol: str
@@ -81,6 +108,7 @@ class PaperBrokerPositionSnapshot(BaseModel):
 
 
 __all__ = [
+    "PaperBrokerStatusArtifact",
     "PaperBrokerAccountStatus",
     "PaperBrokerOrderIntent",
     "PaperBrokerOrderResult",

@@ -58,6 +58,7 @@ def get_alpaca_paper_account(
     env: dict[str, str],
     *,
     transport: Transport | None = None,
+    allow_network: bool = True,
 ) -> PaperBrokerAccountStatus:
     transport = transport or _default_transport
     pol, warns, blocks = evaluate_alpaca_paper_policy(env)
@@ -67,6 +68,14 @@ def get_alpaca_paper_account(
             policy_status=pol,
             trading_blocked_reason=blocks[0] if blocks else None,
             warnings=warns + blocks,
+            retrieved_at_utc=now,
+        )
+    if not allow_network:
+        base = (env.get("ALPACA_BASE_URL") or "").strip().lower()
+        return PaperBrokerAccountStatus(
+            policy_status=PaperBrokerPolicyStatus.PAPER_READY,
+            paper_endpoint_verified="paper-api" in base,
+            warnings=warns + ["ACCOUNT_PROBE_SKIPPED_ALLOW_NETWORK_FALSE"],
             retrieved_at_utc=now,
         )
     key = env["ALPACA_API_KEY"].strip()

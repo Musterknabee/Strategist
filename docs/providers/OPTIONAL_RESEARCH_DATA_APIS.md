@@ -151,6 +151,26 @@ If signup requires email verification, CAPTCHA, 2FA, phone, payment, or identity
 
 Use `recommended_priority` from the registry JSON (ascending: **lower number = wire first** for research breadth). Official macro and filings sources are typically prioritized before freemium aggregators.
 
+### Historical bars snapshot CLI
+
+Multi-symbol ingest (offline unless `--allow-network` and keys are configured):
+
+```bash
+strategy-validator-provider-bars ingest --provider tiingo --symbol SPY --symbol QQQ \
+  --timeframe 1d --start 2024-01-02 --end 2024-06-30 --as-of 2024-06-30T16:00:00Z \
+  --output-root artifacts/provider_historical_snapshots --json
+```
+
+Deterministic fixture mode:
+
+```bash
+strategy-validator-provider-bars ingest --provider demo_provider --symbol SPY --symbol QQQ \
+  --timeframe 1d --start 2026-01-02 --end 2026-02-15 --as-of 2026-02-15T12:00:00Z \
+  --output-root artifacts/provider_historical_snapshots \
+  --fixture tests/fixtures/provider_snapshots/demo_provider_bars_manifest.json \
+  --json
+```
+
 ## Commands reference
 
 ```bash

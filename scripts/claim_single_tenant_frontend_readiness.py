@@ -129,7 +129,22 @@ def main(argv: list[str] | None = None) -> int:
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
-    print(json.dumps({"ok": ok, "output": str(args.output), "checks": checks}, indent=2, sort_keys=True))
+    print(
+        json.dumps(
+            {
+                "ok": ok,
+                "output": str(args.output),
+                "checks": checks,
+                "runtime_note": (
+                    "The API ignores this artifact for /ui/facade unless "
+                    "STRATEGY_VALIDATOR_FRONTEND_READINESS_CLAIM_ENABLE is set to true/1/on for that process "
+                    "(backend-only default; not production certification)."
+                ),
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
     return 0 if ok else 1
 
 

@@ -1,0 +1,14 @@
+{
+  "description": "Example provider historical snapshot request (CLI uses flags; this is documentation-only shape).",
+  "provider_id": "tiingo",
+  "symbols": ["SPY", "QQQ"],
+  "timeframe": "1d",
+  "start": "2024-01-02",
+  "end": "2024-06-30",
+  "as_of": "2024-06-30T16:00:00Z",
+  "output_root": "artifacts/provider_historical_snapshots",
+  "notes": [
+    "Default CLI posture is offline unless --allow-network and keys are configured.",
+    "Use --fixture path/to/manifest.json for deterministic tests."
+  ]
+}

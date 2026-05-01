@@ -75,6 +75,11 @@ def build_ui_strategy_batch_latest_payload(*, repo_root: Path | None = None) -> 
     if path is None:
         degraded.append("NO_BATCH_ARTIFACTS")
     run_dir = path.parent if path else None
+    provider_rows = 0
+    if summary:
+        for s in summary.strategies:
+            if getattr(s, "data_plane", None) == "PROVIDER_SNAPSHOT":
+                provider_rows += 1
     return {
         "schema_version": _SCHEMA,
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -83,6 +88,10 @@ def build_ui_strategy_batch_latest_payload(*, repo_root: Path | None = None) -> 
         "degraded": degraded,
         "latest": summary.model_dump(mode="json") if summary else None,
         "portfolio_allocation": _read_portfolio_allocation(run_dir),
+        "provider_backed_gauntlet": {
+            "provider_snapshot_strategy_count": provider_rows,
+            "has_provider_strategies": provider_rows > 0,
+        },
     }
 
 

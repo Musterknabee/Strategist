@@ -7,6 +7,7 @@ import { Pane } from "@/components/terminal/Pane";
 import { TermKV } from "@/components/terminal/TermKV";
 import { useTerminalPageBind } from "@/hooks/useTerminalPageBind";
 import { useUiProviderHealth } from "@/hooks/useUiProviderHealth";
+import { useUiResearchOsStatus } from "@/hooks/useUiResearchOsStatus";
 import { tryGetPublicStrategistApiBaseUrl } from "@/lib/config/public-config";
 import {
   classifyProviderClassifiedStatus,
@@ -85,6 +86,13 @@ export default function ProvidersPage() {
   const config = tryGetPublicStrategistApiBaseUrl();
   const { openInspector } = useTerminalCockpit();
   const health = useUiProviderHealth();
+  const ros = useUiResearchOsStatus();
+  const rosRoot = ros.data != null ? asRecord(ros.data) : null;
+  const snapRun =
+    rosRoot?.provider_historical_snapshot_latest != null
+      ? asRecord(rosRoot.provider_historical_snapshot_latest as object)
+      : null;
+  const snapManifest = rosRoot?.provider_ingestion_latest != null ? asRecord(rosRoot.provider_ingestion_latest as object) : null;
   const [pf, setPf] = useState<Pf>("all");
   const [sel, setSel] = useState<string | null>(null);
 
@@ -186,6 +194,28 @@ export default function ProvidersPage() {
       {root && (
         <>
           {alpaca && <AlpacaExecutionCard alpaca={alpaca} openInspector={openInspector} />}
+          <Pane
+            title="Historical snapshot run (Research OS scan)"
+            dense
+            onInspect={() => openInspector({ title: "Provider historical snapshot", rawJson: snapRun ?? {} })}
+          >
+            <p className="muted" style={{ fontSize: "10px", marginBottom: "6px" }}>
+              From <code>/ui/research-os/status</code> · PENDING_KEY is a normal offline posture · no keys shown.
+            </p>
+            <TermKV
+              rows={[
+                { k: "run_artifact", v: <StatusBadge raw={asString(snapRun?.status as string) ?? "—"} /> },
+                { k: "strategy_data_manifest", v: <StatusBadge raw={asString(snapManifest?.status as string) ?? "—"} /> },
+                {
+                  k: "provider_status",
+                  v: <StatusBadge raw={asString(snapManifest?.provider_status as string) ?? "—"} />,
+                },
+                { k: "pit_status", v: asString(snapManifest?.pit_status as string) ?? "—" },
+                { k: "row_count", v: String(snapManifest?.row_count ?? "—") },
+                { k: "manifest_sha256", v: asString(snapManifest?.manifest_sha256 as string)?.slice(0, 18) ?? "—" },
+              ]}
+            />
+          </Pane>
           {!alpaca && execBlockers.length > 0 && (
             <Pane title="Execution policy blockers (no alpaca row)" dense>
               <TermKV

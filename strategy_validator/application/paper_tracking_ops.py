@@ -35,12 +35,9 @@ from strategy_validator.research.strategy_batch_digests import canonical_json_sh
 
 
 def _paper_tracking_root(repo_root: Path | None = None) -> Path:
-    raw = os.environ.get("STRATEGY_VALIDATOR_PAPER_TRACKING_ROOT", "").strip()
-    if raw:
-        p = Path(raw)
-        return p if p.is_absolute() else (Path.cwd() / p).resolve()
-    root = repo_root or Path.cwd()
-    return (root / "artifacts" / "paper_tracking").resolve()
+    from strategy_validator.application.research_os_paths import paper_tracking_root_directory
+
+    return paper_tracking_root_directory(repo_root)
 
 
 def _write_json(path: Path, obj: Any) -> None:
