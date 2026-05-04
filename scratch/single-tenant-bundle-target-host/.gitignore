@@ -1,0 +1,12 @@
+# Generated single-tenant handoff bundle local guardrails.
+# Keep real secrets and deployment evidence out of source control.
+deployment.env
+.env
+*.env
+evidence/
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+backups/
+pre-restore/
