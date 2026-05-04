@@ -428,6 +428,14 @@ def run_repository_truth_check(repo_root: str | Path | None = None) -> Repositor
         )
         checks.append(
             _check(
+                "python scripts/purge_repo_transients.py --json" in ci_text,
+                "ci_purge_repo_transients_dry_run_gate_present",
+                "CI includes scripts/purge_repo_transients.py --json (dry-run plan)",
+                "CI does not include scripts/purge_repo_transients.py --json transient purge plan",
+            )
+        )
+        checks.append(
+            _check(
                 "python scripts/repository_truth_check.py" in ci_text,
                 "ci_repository_truth_gate_present",
                 "CI includes scripts/repository_truth_check.py",

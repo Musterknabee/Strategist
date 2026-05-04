@@ -48,6 +48,7 @@ Or use `scripts/run_research_os_runtime_demo_in_container.ps1` from the repo.
 
 - Writes `research_os_runtime/latest/runtime_demo_manifest.json` under the artifact root (`research_os_runtime_demo_manifest/v1`).
 - `ok=true` means the pipeline machinery completed; individual gates may still be **BLOCKED**, **PENDING_KEY**, or **DO_NOT_PROMOTE** — those are honest outcomes, not API failures.
+- **`--full-research-os-cycle`** (same CLI) also runs **thesis to Oracle mutation proposals to proposed next batch spec** after the gauntlet: see `thesis_mutation_loop` in the manifest and files under `<artifact_root>/research_os_runtime/` (`next_batch_spec_proposed.json`, `thesis_mutation_loop_report.json`). Offline follow-up: `strategy-validator-thesis-mutation-batch-loop` (`strategy_validator/cli/thesis_mutation_batch_loop.py`).
 
 ## Legacy packaged demo (no network, no keys)
 

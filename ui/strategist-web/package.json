@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "smoke": "node ./scripts/smoke-frontend.mjs",
-    "validate": "npm run lint && npm run typecheck && npm run test && npm run build"
+    "validate": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "certify": "npm run validate"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.8",

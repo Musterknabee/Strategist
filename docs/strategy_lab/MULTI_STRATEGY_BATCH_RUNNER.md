@@ -56,6 +56,8 @@ Options:
 | `--overwrite` | Delete an existing `{output_root}/{batch_id}/{run_id}/` tree before running (paths validated; no traversal) |
 | `--worker-model` | `thread_pool` (default) or `process_pool` for CPU-heavy evaluation |
 | (per candidate) `robustness_mode` | `walk_forward`, `cpcv`, or `both` (default `both`) |
+| (per candidate) `oos_holdout_bars` | Optional positive int: reserve a **tail** window as out-of-sample; compares a simple Sharpe-like statistic in-sample vs OOS (`strategy_validator/research/strategy_holdout_gate.py`). |
+| (per candidate) `oos_min_sharpe` | Optional float (default **-0.75**): OOS Sharpe-like floor; below it sets `oos_holdout_gate=BLOCKED` and blocks the run. |
 
 If the run directory already exists and `--overwrite` is not set, the runner raises **`FileExistsError`** with message **`RUN_DIRECTORY_EXISTS:`** and the resolved path. With **`--json`**, the CLI prints a parseable object: `{"error":"RUN_DIRECTORY_EXISTS","ok":false,"path":"..."}` and exits **2**.
 
@@ -75,6 +77,7 @@ Nothing in this path is **live trading**, **broker execution**, or a **profitabi
 {output_root}/{batch_id}/{run_id}/
   batch_manifest.json
   batch_summary.json              # includes portfolio_correlation_summary, top_candidate, promotion_blocked_counts
+  batch_provider_historical_evidence.json   # present when any strategy uses provider_snapshot data_source; lists spec manifest paths + digests per strategy
   portfolio_correlation_summary.json
   strategies/{strategy_id}/
     input_manifest.json
@@ -93,7 +96,7 @@ Nothing in this path is **live trading**, **broker execution**, or a **profitabi
     fold_performance.json
     trade_markers.json            # toy path: empty markers + explanation
     strategy_scorecard.json
-    data_snapshot_manifest.json   # when local_bars data_source is used
+    data_snapshot_manifest.json   # when local_bars or provider_snapshot data_source is used
     filtered_bars.csv
     evidence_manifest.json        # digests for gauntlet layers
     adjudication_result.json      # if --adjudicate

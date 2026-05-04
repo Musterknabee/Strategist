@@ -35,8 +35,12 @@ EXCLUDED_DIR_NAMES = {
     "node_modules",
     "dist",
     "build",
+    "htmlcov",
+    ".hypothesis",
+    ".nox",
 }
-EXCLUDED_SUFFIXES = {".pyc", ".pyo", ".zip", ".tar", ".gz", ".tgz", ".sqlite", ".sqlite3", ".db", ".db-wal", ".db-shm", ".log", ".jsonl"}
+EXCLUDED_SUFFIXES = {".pyc", ".pyo", ".zip", ".tar", ".gz", ".tgz", ".sqlite", ".sqlite3", ".db", ".db-wal", ".db-shm", ".log", ".jsonl", ".coverage"}
+EXCLUDED_TOP_LEVEL_NAMES = frozenset({".coverage", "coverage.xml"})
 
 
 class UnsafeArchiveOutputError(ValueError):
@@ -104,6 +108,8 @@ def include_in_clean_repo_archive(path: Path, *, repo_root: Path) -> bool:
     if parts[0] in EXCLUDED_TOP_LEVEL:
         return False
     if any(part in EXCLUDED_DIR_NAMES for part in parts):
+        return False
+    if rel.name in EXCLUDED_TOP_LEVEL_NAMES:
         return False
     if path.suffix in EXCLUDED_SUFFIXES:
         return False

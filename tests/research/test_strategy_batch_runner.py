@@ -8,7 +8,11 @@ from pathlib import Path
 import pytest
 
 from strategy_validator.contracts.strategy_batch import PitPolicy, StrategyBatchSpec, StrategyCandidateSpec, StrategyRunStatus
-from strategy_validator.contracts.strategy_data_snapshot import LocalBarsDataSourceConfig, StrategyPitSnapshotStatus
+from strategy_validator.contracts.strategy_data_snapshot import (
+    LocalBarsDataSourceConfig,
+    ProviderSnapshotDataSourceConfig,
+    StrategyPitSnapshotStatus,
+)
 from strategy_validator.research.strategy_batch_digests import canonical_json_sha256
 from strategy_validator.research.strategy_batch_runner import run_single_strategy, run_strategy_batch
 
@@ -329,3 +333,44 @@ def test_insufficient_sample_warns_on_short_local_window(tmp_path: Path, monkeyp
     assert any("INSUFFICIENT_SAMPLE" in w for w in r.warnings)
     assert r.gate_summary.promotion_eligible is False
     assert any("ROBUSTNESS:BLOCKED" in x for x in r.gate_summary.promotion_blocked_reasons)
+
+
+def test_provider_snapshot_batch_writes_batch_provider_evidence(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("STRATEGY_VALIDATOR_TEST_STRATEGY_RUN_ID", "prov-batch-evidence")
+    monkeypatch.chdir(REPO)
+    manifest_rel = "tests/fixtures/provider_snapshots/demo_provider_bars_manifest.json"
+    spec = StrategyBatchSpec(
+        batch_id="prov-ev-batch",
+        as_of_utc=datetime(2026, 2, 15, 12, 0, 0, tzinfo=timezone.utc),
+        mode="paper",
+        output_root=str(tmp_path / "runs"),
+        strategies=[
+            StrategyCandidateSpec(
+                strategy_id="ps-momo",
+                strategy_type="momentum",
+                universe="SPY",
+                timeframe="1d",
+                as_of_utc=datetime(2026, 2, 15, 12, 0, 0, tzinfo=timezone.utc),
+                lookback_days=45,
+                params={"signal_window": 12},
+                data_source=ProviderSnapshotDataSourceConfig(manifest_path=manifest_rel),
+                execution_assumptions={"paper_only": True, **_execution_realism_assumptions_base()},
+            ),
+        ],
+    )
+    summary = run_strategy_batch(spec, allow_synthetic=False, overwrite=True)
+    assert summary.failed_count == 0, summary.strategies[0].blockers
+    r0 = summary.strategies[0]
+    assert r0.provider_snapshot_source_manifest_path == manifest_rel
+    assert r0.provider_snapshot_manifest_sha256
+    run_dir = Path(summary.output_dir)
+    ev_path = run_dir / "batch_provider_historical_evidence.json"
+    assert ev_path.is_file()
+    batch_ev = json.loads(ev_path.read_text(encoding="utf-8"))
+    assert batch_ev["schema_version"] == "batch_provider_historical_evidence/v1"
+    assert batch_ev["batch_id"] == "prov-ev-batch"
+    assert len(batch_ev["strategies"]) == 1
+    assert batch_ev["strategies"][0]["strategy_id"] == "ps-momo"
+    assert batch_ev["strategies"][0]["provider_snapshot_source_manifest_path"] == manifest_rel
+    ev = json.loads((run_dir / "strategies" / "ps-momo" / "evidence_manifest.json").read_text(encoding="utf-8"))
+    assert ev.get("provider_snapshot_source_manifest_path") == manifest_rel

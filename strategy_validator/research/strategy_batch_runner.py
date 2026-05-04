@@ -24,6 +24,7 @@ from strategy_validator.contracts.strategy_batch import (
     StrategyRunStatus,
 )
 from strategy_validator.contracts.strategy_data_snapshot import (
+    ProviderSnapshotDataSourceConfig,
     StrategyDataSnapshotManifest,
     StrategyDataSourceClassification,
     StrategyPitSnapshotStatus,
@@ -171,6 +172,8 @@ def _promotion_state(
         reasons.append("PARAMETER_SENSITIVITY:FRAGILE")
     if not synthetic and gate.regime_analysis_gate == "BLOCKED":
         reasons.append("REGIME_ANALYSIS:BLOCKED")
+    if not synthetic and gate.oos_holdout_gate == "BLOCKED":
+        reasons.append("OOS_HOLDOUT:BLOCKED")
     eligible = len(reasons) == 0
     return eligible, reasons
 
@@ -201,6 +204,7 @@ def run_single_strategy(
         parameter_sensitivity_gate="NOT_RUN",
         regime_analysis_gate="NOT_RUN",
         data_coverage_gate="NOT_RUN",
+        oos_holdout_gate="NOT_RUN",
     )
 
     try:
@@ -222,6 +226,7 @@ def run_single_strategy(
         data_snapshot_sha: str | None = None
         bars_row_count: int | None = None
         provider_snap = None
+        provider_snapshot_source_manifest_path: str | None = None
 
         if candidate.data_source is not None and candidate.data_source.kind == "local_bars":
             try:
@@ -278,6 +283,8 @@ def run_single_strategy(
                 bars_row_count = len(loaded.bars)
                 filt_path = strat_dir / "filtered_bars.csv"
                 _write_filtered_bars_csv(filt_path, loaded.bars)
+                if isinstance(candidate.data_source, ProviderSnapshotDataSourceConfig):
+                    provider_snapshot_source_manifest_path = candidate.data_source.manifest_path
                 dsm_extra = {
                     "max_workers_declared": batch.max_workers,
                     "worker_model": batch.worker_model,
@@ -509,6 +516,27 @@ def run_single_strategy(
         )
 
         metrics_payload = _enrich_metrics(metrics, prices, candidate, synthetic=used_synthetic)
+        hb = int(candidate.params.get("oos_holdout_bars", 0) or 0)
+        if hb > 0:
+            from strategy_validator.research.strategy_holdout_gate import evaluate_oos_holdout
+
+            ho = evaluate_oos_holdout(
+                strategy_type=candidate.strategy_type,
+                prices=prices,
+                params=candidate.params,
+                holdout_bars=hb,
+                opens=opens,
+                highs=highs,
+                lows=lows,
+                volumes=volumes,
+            )
+            gate.oos_holdout_gate = str(ho.get("oos_holdout_gate", "NOT_RUN"))
+            for key in ("oos_sharpe_like", "is_sharpe_like", "oos_holdout_bars", "oos_min_sharpe"):
+                if key in ho and isinstance(ho[key], (int, float)):
+                    metrics_payload[key] = float(ho[key])
+            if gate.oos_holdout_gate == "BLOCKED":
+                blockers.append("OOS_HOLDOUT_SHARPE_BELOW_THRESHOLD")
+                status = StrategyRunStatus.BLOCKED
         metrics_sha = canonical_json_sha256(metrics_payload)
         _write_json(strat_dir / "strategy_metrics.json", {"metrics": metrics_payload, "metrics_sha256": metrics_sha})
 
@@ -828,6 +856,7 @@ def run_single_strategy(
             data_snapshot_digest=ds_digest,
             data_snapshot_manifest_sha256=data_snapshot_sha,
             provider_snapshot_manifest_sha256=provider_snap.manifest_sha256 if provider_snap else None,
+            provider_snapshot_source_manifest_path=provider_snapshot_source_manifest_path,
             pit_snapshot_status=pit_snap_s,
             bars_row_count=bars_row_count,
             execution_realism_evidence_sha256=er_sha,
@@ -945,6 +974,7 @@ def run_single_strategy(
             data_snapshot_manifest_sha256=data_snapshot_sha,
             data_snapshot_digest=ds_digest,
             provider_snapshot_manifest_sha256=provider_snap.manifest_sha256 if provider_snap else None,
+            provider_snapshot_source_manifest_path=provider_snapshot_source_manifest_path,
             provider_license_scope=provider_snap.license_scope if provider_snap else None,
             provider_trust_level=provider_snap.trust_level if provider_snap else None,
             bars_row_count=bars_row_count,
@@ -1114,6 +1144,27 @@ def run_strategy_batch(
             key = reason.split(":", 1)[0] if ":" in reason else reason
             ctr[key] += 1
     promo_counts = dict(ctr)
+
+    provider_rows: list[dict[str, str | None]] = []
+    for r in results:
+        if r.provider_snapshot_source_manifest_path:
+            provider_rows.append(
+                {
+                    "strategy_id": r.strategy_id,
+                    "provider_snapshot_source_manifest_path": r.provider_snapshot_source_manifest_path,
+                    "provider_snapshot_manifest_sha256": r.provider_snapshot_manifest_sha256,
+                }
+            )
+    if provider_rows:
+        _write_json(
+            run_dir / "batch_provider_historical_evidence.json",
+            {
+                "schema_version": "batch_provider_historical_evidence/v1",
+                "batch_id": spec.batch_id,
+                "run_id": run_id_final,
+                "strategies": provider_rows,
+            },
+        )
 
     passed = sum(1 for r in results if r.status == StrategyRunStatus.PASSED)
     blocked = sum(1 for r in results if r.status == StrategyRunStatus.BLOCKED)

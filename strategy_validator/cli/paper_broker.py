@@ -940,6 +940,12 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         help="Explicit paper_execution_evidence_bundle_retention_custody_closeout.json path. Defaults to latest custody closeout.",
     )
+    s_verify_retention_custody_closeout.add_argument(
+        "--output-root",
+        default="",
+        type=Path,
+        help="Read/write retention custody closeout verification evidence under this paper_broker root (default: artifacts/paper_broker).",
+    )
     s_archive_retention_custody = sub.add_parser(
         "archive-evidence-bundle-retention-custody-closeout",
         help="Write a read-only archive record for a verified paper evidence-chain retention custody closeout.",
@@ -2649,6 +2655,7 @@ def main(argv: list[str] | None = None) -> int:
             "schedule_status": artifact.schedule_status,
             "trust_banner": artifact.trust_banner,
             "custody_schedule_id": artifact.custody_schedule_id,
+            "schedule_start_at_utc": artifact.schedule_start_at_utc,
             "next_renewal_due_at_utc": artifact.next_renewal_due_at_utc,
             "renewal_interval_days": artifact.renewal_interval_days,
             "reminder_days_before_due": artifact.reminder_days_before_due,

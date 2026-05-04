@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import stat
 import sys
 from pathlib import Path
@@ -104,8 +105,11 @@ def test_setup_local_deployment_writes_secret_env_with_owner_only_permissions(tm
     rc = mod.main(["--dev", "--force", "--skip-migrate"])
 
     assert rc == 0
-    mode = stat.S_IMODE((tmp_path / "deployment.env").stat().st_mode)
-    assert mode & (stat.S_IRWXG | stat.S_IRWXO) == 0
+    env_path = tmp_path / "deployment.env"
+    assert env_path.is_file()
+    if os.name != "nt":
+        mode = stat.S_IMODE(env_path.stat().st_mode)
+        assert mode & (stat.S_IRWXG | stat.S_IRWXO) == 0
 
 
 def test_run_local_api_rejects_symlinked_deployment_env(tmp_path: Path, capsys) -> None:  # noqa: ANN001

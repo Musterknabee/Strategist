@@ -390,7 +390,7 @@ def test_ui_workboard_export_document_route_returns_canonical_json(monkeypatch) 
 
 def test_ui_burnin_route_uses_service(monkeypatch) -> None:
     monkeypatch.setattr(
-        'strategy_validator.api.routes.ui.build_ui_burnin_payload',
+        'strategy_validator.api.routes.ui_routes_detail_runtime.build_ui_burnin_payload',
         lambda **_: {'schema_version': 'ui_burnin_dashboard/v1', 'metrics': {'providerPaths': []}},
     )
     client = TestClient(app)
@@ -403,7 +403,7 @@ def test_ui_burnin_route_uses_service(monkeypatch) -> None:
 
 def test_ui_pack_detail_route_uses_service(monkeypatch) -> None:
     monkeypatch.setattr(
-        'strategy_validator.api.routes.ui.build_ui_pack_detail_payload',
+        'strategy_validator.api.routes.ui_routes_detail_runtime.build_ui_pack_detail_payload',
         lambda **_: {'schema_version': 'ui_pack_detail/v1', 'pack': {'pack_kind': 'status_pack'}},
     )
     client = TestClient(app)
@@ -441,7 +441,7 @@ def test_ui_command_route_returns_journaled_receipt(monkeypatch, tmp_path) -> No
 
 def test_ui_tribunal_route_is_blindness_safe(monkeypatch) -> None:
     monkeypatch.setattr(
-        'strategy_validator.api.routes.ui.build_ui_tribunal_payload',
+        'strategy_validator.api.routes.ui_routes_detail_runtime.build_ui_tribunal_payload',
         lambda **_: {
             'schema_version': 'ui_tribunal_workspace/v1',
             'blindness': {'quantitative_payloads_present': False},
@@ -465,7 +465,7 @@ def test_ui_tribunal_route_is_blindness_safe(monkeypatch) -> None:
 
 def test_ui_evidence_route_uses_service(monkeypatch) -> None:
     monkeypatch.setattr(
-        'strategy_validator.api.routes.ui.build_ui_evidence_payload',
+        'strategy_validator.api.routes.ui_routes_detail_runtime.build_ui_evidence_payload',
         lambda **_: {'schema_version': 'ui_evidence_dashboard/v1', 'verification': {'trust_status': 'TRUST_RESTRICTED'}, 'registry': {'source_artifact_count': 2}, 'section_provenance': {'registry': {'projection_family': 'ui'}}},
     )
     client = TestClient(app)
@@ -479,7 +479,7 @@ def test_ui_evidence_route_uses_service(monkeypatch) -> None:
 
 def test_ui_runtime_route_uses_service(monkeypatch) -> None:
     monkeypatch.setattr(
-        'strategy_validator.api.routes.ui.build_ui_runtime_status_payload',
+        'strategy_validator.api.routes.ui_routes_detail_runtime.build_ui_runtime_status_payload',
         lambda **_: {'schema_version': 'ui_runtime_status/v1', 'environment': 'TEST', 'backend': {'status': 'CONFIGURED'}},
     )
     client = TestClient(app)
@@ -493,7 +493,7 @@ def test_ui_runtime_route_uses_service(monkeypatch) -> None:
 
 def test_ui_runtime_route_honors_role_query(monkeypatch) -> None:
     monkeypatch.setattr(
-        'strategy_validator.api.routes.ui.build_ui_runtime_status_payload',
+        'strategy_validator.api.routes.ui_routes_detail_runtime.build_ui_runtime_status_payload',
         lambda **kwargs: {'schema_version': 'ui_runtime_status/v1', 'persona': {'active_role': kwargs.get('role', 'operator')}, 'policy': {'allowed_domains': ['tribunal'], 'allowed_actions': []}},
     )
     client = TestClient(app)

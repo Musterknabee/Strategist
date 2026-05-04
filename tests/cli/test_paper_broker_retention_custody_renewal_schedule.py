@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from strategy_validator.cli.paper_broker import main
@@ -32,7 +32,12 @@ def test_cli_retention_custody_renewal_schedule_round_trip(tmp_path: Path, capsy
     assert rc == 0
     schedule_payload = json.loads(capsys.readouterr().out)
     assert schedule_payload["schedule_status"] == "SCHEDULED"
-    assert schedule_payload["next_renewal_due_at_utc"].startswith("2026-06-17")
+    start_s = str(schedule_payload.get("schedule_start_at_utc") or "").strip()
+    due_s = str(schedule_payload.get("next_renewal_due_at_utc") or "").strip()
+    assert start_s and due_s
+    d0 = datetime.fromisoformat(start_s.replace("Z", "+00:00"))
+    d1 = datetime.fromisoformat(due_s.replace("Z", "+00:00"))
+    assert d1 - d0 == timedelta(days=int(schedule_payload["renewal_interval_days"]))
 
     rc = main(["verify-evidence-bundle-retention-custody-schedule", "--retention-custody-schedule-artifact", schedule_payload["artifact"], "--output-root", str(output_root)])
     assert rc == 0

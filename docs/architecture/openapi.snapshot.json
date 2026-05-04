@@ -8040,6 +8040,29 @@
         ]
       }
     },
+    "/ui/strategy-thesis/generation/latest": {
+      "get": {
+        "operationId": "get_strategy_thesis_generation_latest_ui_strategy_thesis_generation_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Strategy Thesis Generation Latest Ui Strategy Thesis Generation Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Strategy Thesis Generation Latest",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
     "/ui/strategy-thesis/latest": {
       "get": {
         "operationId": "get_strategy_thesis_latest_ui_strategy_thesis_latest_get",

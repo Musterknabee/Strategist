@@ -51,3 +51,11 @@ exit $pytestExit
 ```
 
 Or write pytest output to a file with **`subprocess`/shell redirection** while still checking **`$LASTEXITCODE`** from the pytest process (not from a filter).
+
+## CLI `--help` and legacy Windows consoles (cp1252)
+
+`argparse` prints the module docstring and per-flag `help=` strings to **stderr** (or stdout) using the process encoding. On some Windows setups the active code page is **cp1252**, which **cannot encode** every Unicode character.
+
+If a CLI’s description or `help=` text contains characters outside that page (for example Unicode arrows), **`python -m … --help` can raise `UnicodeEncodeError` and exit non-zero** even though the command is otherwise fine.
+
+**Convention for this repository:** keep CLI docstrings and argparse `help=` strings in the **`strategy_validator/cli/`** tree limited to **ASCII** (use plain words like `to` instead of arrow symbols). `scripts/ci_local_verify.py` runs **`--help` smoke steps** for selected CLIs so this failure is caught locally before CI.

@@ -191,6 +191,7 @@ class StrategyGateSummary(BaseModel):
     regime_analysis_gate: str = Field(default="NOT_RUN")
     adjudication_gate: str = Field(default="NOT_INVOKED")
     data_coverage_gate: str = Field(default="NOT_RUN")
+    oos_holdout_gate: str = Field(default="NOT_RUN")
     promotion_eligible: bool = False
     promotion_blocked_reasons: list[str] = Field(default_factory=list)
     sample_count: int | None = None
@@ -233,6 +234,10 @@ class StrategyRunResult(BaseModel):
     data_snapshot_manifest_sha256: str | None = None
     data_snapshot_digest: str | None = None
     provider_snapshot_manifest_sha256: str | None = None
+    provider_snapshot_source_manifest_path: str | None = Field(
+        default=None,
+        description="Batch spec path to provider snapshot manifest when data_source is provider_snapshot.",
+    )
     provider_license_scope: str | None = None
     provider_trust_level: str | None = None
     bars_row_count: int | None = None
@@ -351,6 +356,10 @@ class StrategyEvidenceManifest(BaseModel):
     data_snapshot_digest: str | None = None
     data_snapshot_manifest_sha256: str | None = None
     provider_snapshot_manifest_sha256: str | None = None
+    provider_snapshot_source_manifest_path: str | None = Field(
+        default=None,
+        description="Operator-resolved path to the provider snapshot manifest ingested into this batch run.",
+    )
     pit_snapshot_status: str | None = None
     bars_row_count: int | None = None
     execution_realism_evidence_sha256: str | None = None

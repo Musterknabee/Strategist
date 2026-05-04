@@ -84,6 +84,7 @@ _UI_PUBLIC_FACADE_ROUTES: tuple[UiPublicFacadeRoute, ...] = (
     UiPublicFacadeRoute('GET', '/ui/strategy-intake/latest', 'read', False, 'ui_strategy_intake/v1'),
     UiPublicFacadeRoute('POST', '/ui/strategy-intake', 'mutation', True, 'strategy_intake_receipt/v1'),
     UiPublicFacadeRoute('GET', '/ui/strategy-thesis/latest', 'read', False, 'ui_strategy_thesis/v1'),
+    UiPublicFacadeRoute('GET', '/ui/strategy-thesis/generation/latest', 'read', False, 'ui_strategy_thesis_generation/v1'),
     UiPublicFacadeRoute('GET', '/ui/shadow-book/latest', 'read', False, 'ui_shadow_book/v1'),
     UiPublicFacadeRoute('GET', '/ui/research-os/status', 'read', False, 'ui_research_os_status/v1'),
     UiPublicFacadeRoute('GET', '/ui/research-os/closure/latest', 'read', False, 'ui_research_os_closure/v1'),

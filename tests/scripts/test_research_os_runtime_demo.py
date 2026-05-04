@@ -17,6 +17,32 @@ from strategy_validator.contracts.strategy_batch import StrategyBatchRunSummary
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
+def test_runtime_demo_full_research_os_cycle_writes_loop_artifacts(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    art = tmp_path / "art2"
+    monkeypatch.chdir(REPO_ROOT)
+    monkeypatch.setenv("STRATEGY_VALIDATOR_ARTIFACT_ROOT", str(art))
+    rc = runtime_main(
+        [
+            "--artifact-root",
+            str(art),
+            "--run-id",
+            "pytest-runtime-os-full",
+            "--overwrite",
+            "--allow-synthetic-demo",
+            "--skip-benchmark",
+            "--skip-portfolio",
+            "--full-research-os-cycle",
+            "--json",
+        ]
+    )
+    assert rc == 0
+    man_path = art / "research_os_runtime" / "latest" / "runtime_demo_manifest.json"
+    raw = json.loads(man_path.read_text(encoding="utf-8"))
+    loop = raw.get("thesis_mutation_loop") or {}
+    assert loop.get("ok") is True
+    assert (art / "research_os_runtime" / "next_batch_spec_proposed.json").is_file()
+
+
 def test_runtime_demo_writes_manifest_and_ui_sees_it(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     art = tmp_path / "art"
     monkeypatch.chdir(REPO_ROOT)

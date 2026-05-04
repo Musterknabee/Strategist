@@ -278,7 +278,17 @@ def mark_to_market(
     total_mv = sum(p.market_value for p in positions)
     nlv = cash + total_mv
     weighted = [p.model_copy(update={"weight": 0.0 if nlv == 0 else p.market_value / nlv}) for p in positions]
-    risk = compute_risk_summary(book_id, as_of_date=as_of_date, positions=weighted, cash=cash, repo_root=repo_root)
+    # Peak equity for drawdown must reflect cost basis / last mark before this price fixture, not
+    # only the stressed nlv (otherwise peak collapses to nlv and drawdown reads as zero).
+    pre_mark_peak = book.starting_capital - spent + sum(f.quantity * f.price for f in fills)
+    risk = compute_risk_summary(
+        book_id,
+        as_of_date=as_of_date,
+        positions=weighted,
+        cash=cash,
+        previous_equity_peak=pre_mark_peak,
+        repo_root=repo_root,
+    )
     snapshot = _finalize_snapshot(
         ShadowBookDailySnapshot(
             book_id=book_id,

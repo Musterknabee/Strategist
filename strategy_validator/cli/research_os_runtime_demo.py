@@ -58,6 +58,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     p.add_argument("--skip-benchmark", action="store_true")
     p.add_argument("--skip-portfolio", action="store_true")
+    p.add_argument(
+        "--full-research-os-cycle",
+        action="store_true",
+        help="After a successful gauntlet run, emit thesis-to-mutation-to-next-batch artifacts under the artifact root.",
+    )
     p.add_argument("--json", action="store_true")
     ns = p.parse_args(argv)
 
@@ -129,6 +134,21 @@ def main(argv: list[str] | None = None) -> int:
         manifest["digests"]["batch_summary_sha256"] = _digest_obj(
             json.loads((run_dir / "batch_summary.json").read_text(encoding="utf-8"))
         )
+
+        if ns.full_research_os_cycle:
+            from strategy_validator.research.thesis_mutation_batch_loop import run_thesis_mutation_batch_cycle
+
+            loop_dir = art / "research_os_runtime"
+            loop_dir.mkdir(parents=True, exist_ok=True)
+            summ_path = run_dir / "batch_summary.json"
+            if summ_path.is_file():
+                manifest["thesis_mutation_loop"] = run_thesis_mutation_batch_cycle(
+                    batch_summary_path=summ_path,
+                    next_batch_spec_output=loop_dir / "next_batch_spec_proposed.json",
+                    loop_report_output=loop_dir / "thesis_mutation_loop_report.json",
+                )
+            else:
+                manifest["thesis_mutation_loop"] = {"ok": False, "error": "MISSING_BATCH_SUMMARY"}
 
         enrolled = enroll_strategies_from_batch_run(
             run_dir,

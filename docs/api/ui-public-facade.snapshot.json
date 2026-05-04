@@ -7,7 +7,7 @@
   "frontend_runtime_reachable": null,
   "mutation_route": "/ui/commands/{action}",
   "read_plane_only": true,
-  "route_count": 58,
+  "route_count": 59,
   "routes": [
     {
       "auth_required": false,
@@ -349,6 +349,13 @@
       "auth_required": false,
       "kind": "read",
       "method": "GET",
+      "path": "/ui/strategy-thesis/generation/latest",
+      "payload_schema": "ui_strategy_thesis_generation/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
       "path": "/ui/strategy-thesis/latest",
       "payload_schema": "ui_strategy_thesis/v1"
     },
@@ -416,7 +423,7 @@
       "payload_schema": "ui_workboard_export_options/v1"
     }
   ],
-  "routes_sha256": "80bf7bad8efb4a05a22fbde554e3a45af45c3fd9be88bd80f3ac44f12339c11b",
+  "routes_sha256": "8746e001a864db3152e605c7b16f8e808e4e7afe01147e6b3a292f2feffa148a",
   "schema_version": "ui_public_facade_snapshot/v1",
   "source_endpoint": "/ui/facade",
   "source_schema_version": "ui_public_facade_inventory/v1",
