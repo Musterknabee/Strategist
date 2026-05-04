@@ -84,20 +84,30 @@ jobs:
 
   strategist-web:
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('ui/strategist-web/package-lock.json') != '' }}
     defaults:
       run:
         working-directory: ui/strategist-web
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Detect Strategist web package lock
+        id: strategist_web_lock
+        run: |
+          if [ -f ui/strategist-web/package-lock.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.strategist_web_lock.outputs.present == 'true'
+        uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: npm
           cache-dependency-path: ui/strategist-web/package-lock.json
-      - name: npm ci
+      - if: steps.strategist_web_lock.outputs.present == 'true'
+        name: npm ci
         run: npm ci
-      - name: frontend production certification (lint, typecheck, test, build)
+      - if: steps.strategist_web_lock.outputs.present == 'true'
+        name: frontend production certification (lint, typecheck, test, build)
         run: npm run certify
 
   confidence-sweeps:
