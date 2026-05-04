@@ -22,7 +22,7 @@ export default function StrategyMemoryPage() {
 
   const root = q.data ? asRecord(q.data) : null;
   const latest = root?.latest ? asRecord(root.latest) : null;
-  const degraded = root ? asStringArray(root.degraded) : [];
+  const degraded = useMemo(() => (root ? asStringArray(root.degraded) : []), [root]);
   const records = useMemo(() => {
     const raw = Array.isArray(latest?.memory_records) ? latest?.memory_records : [];
     return raw

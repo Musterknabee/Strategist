@@ -23,7 +23,7 @@ export default function ShadowBookPage() {
   const latest = root?.latest ? asRecord(root.latest) : null;
   const snapshot = root?.latest_snapshot ? asRecord(root.latest_snapshot) : null;
   const risk = root?.latest_risk_summary ? asRecord(root.latest_risk_summary) : null;
-  const degraded = root ? asStringArray(root.degraded) : [];
+  const degraded = useMemo(() => (root ? asStringArray(root.degraded) : []), [root]);
 
   const positions = useMemo(() => {
     const raw = Array.isArray(snapshot?.positions) ? snapshot.positions : [];
