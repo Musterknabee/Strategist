@@ -409,7 +409,13 @@ def run_repository_truth_check(repo_root: str | Path | None = None) -> Repositor
                 "missing CI pytest paths: " + ", ".join(missing),
             )
         )
-        frontend_guard_ok = "ui/strategist-web/package-lock.json" not in ci_text or "hashFiles('ui/strategist-web/package-lock.json') != ''" in ci_text
+        # Job-level `if: hashFiles(...)` is invalid on GitHub Actions; use step-level hashFiles or a
+        # checkout-time lockfile probe (e.g. strategist_web_lock) so npm steps stay optional.
+        frontend_guard_ok = (
+            "ui/strategist-web/package-lock.json" not in ci_text
+            or "hashFiles('ui/strategist-web/package-lock.json') != ''" in ci_text
+            or "strategist_web_lock" in ci_text
+        )
         checks.append(
             _check(
                 frontend_guard_ok,
