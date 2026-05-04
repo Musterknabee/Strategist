@@ -297,6 +297,8 @@ def _ignore_file_missing_patterns(path: Path, required_patterns: tuple[str, ...]
             alternatives.add("*.py[cod]")
         if normalized == "artifacts":
             alternatives.add("artifacts/**")
+            # Root-scoped only (so `docs/artifacts/` can stay tracked for classification MANIFEST.json).
+            alternatives.add("/artifacts")
         if not alternatives.intersection(lines):
             missing.append(pattern)
     return missing

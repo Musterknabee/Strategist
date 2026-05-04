@@ -1,0 +1,14 @@
+{
+  "schema_version": "docs_artifacts_classification/v1",
+  "default_classification": "historical_release_evidence",
+  "roots": [
+    {
+      "path": "docs/artifacts",
+      "classification": "historical_release_evidence",
+      "policy": "Documentation-adjacent evidence fixtures only; never store private signing keys or live secrets here."
+    }
+  ],
+  "notes": [
+    "This manifest classifies documentation artifact examples and historical release evidence. Runtime artifacts belong under the configured STRATEGY_VALIDATOR_ARTIFACT_ROOT."
+  ]
+}

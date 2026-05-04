@@ -33,8 +33,7 @@ deployment.env
 *.db-shm
 *.log
 *.jsonl
-artifacts/
-artifacts/provider_samples/raw_headers/
+/artifacts/
 scratch/**/*.log
 
 # Frontend/build caches
