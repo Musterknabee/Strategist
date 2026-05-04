@@ -212,14 +212,14 @@ jobs:
         run: pip install -e ".[dev]"
       - name: Dependency environment gate
         run: python scripts/environment_check.py --include-extra dev
-      - uses: actions/setup-node@v4
-        if: ${{ hashFiles('ui/strategist-web/package-lock.json') != '' }}
+      - if: ${{ hashFiles('ui/strategist-web/package-lock.json') != '' }}
+        uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: npm
           cache-dependency-path: ui/strategist-web/package-lock.json
-      - name: Install Strategist web dependencies (validate)
-        if: ${{ hashFiles('ui/strategist-web/package-lock.json') != '' }}
+      - if: ${{ hashFiles('ui/strategist-web/package-lock.json') != '' }}
+        name: Install Strategist web dependencies (validate)
         working-directory: ui/strategist-web
         run: npm ci
       - name: Release candidate chain (generate -> assess -> verify bundle)
