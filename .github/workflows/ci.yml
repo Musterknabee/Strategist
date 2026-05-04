@@ -33,6 +33,7 @@ jobs:
           STRATEGY_VALIDATOR_LEDGER_BACKUP_DIR=/var/backups/strategy-validator
           STRATEGY_VALIDATOR_ARTIFACT_ROOT=/var/lib/strategy-validator/artifacts
           ENV
+          chmod 600 "$RUNNER_TEMP/strategy-validator-deployment.env"
           python -m strategy_validator.cli.deployment_env_check "$RUNNER_TEMP/strategy-validator-deployment.env" --require-valid --json
       - name: Single-tenant deployment bundle gate
         run: |
@@ -45,6 +46,7 @@ jobs:
           STRATEGY_VALIDATOR_LEDGER_BACKUP_DIR=/var/backups/strategy-validator
           STRATEGY_VALIDATOR_ARTIFACT_ROOT=/var/lib/strategy-validator/artifacts
           ENV
+          chmod 600 "$RUNNER_TEMP/strategy-validator-deployment.env"
           python -m strategy_validator.cli.single_tenant_deployment_bundle --env-file "$RUNNER_TEMP/strategy-validator-deployment.env" --output-dir "$RUNNER_TEMP/single-tenant-bundle" --force --require-ready --json
           python -m strategy_validator.cli.single_tenant_deployment_bundle --output-dir "$RUNNER_TEMP/single-tenant-bundle" --check --require-ready --json
       - name: Single-tenant deployment acceptance gate
