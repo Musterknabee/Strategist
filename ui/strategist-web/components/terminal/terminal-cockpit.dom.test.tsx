@@ -93,7 +93,7 @@ describe("TerminalShell", () => {
     expect(screen.getByLabelText(/quick nav/i)).toBeTruthy();
     expect(screen.getByTitle("Overview").textContent).toContain("Overview");
     expect(screen.getByTestId("page").textContent).toBe("page");
-    expect(screen.getByText(/G\+O\/W\/R\/E\/L\/P\/T nav/i)).toBeTruthy();
+    expect(screen.getByText(/G\+O\/W\/R\/E\/L\/P\/T\/U nav/i)).toBeTruthy();
     expect(document.getElementById("terminal-status-rail")).toBeTruthy();
     expect(document.getElementById("terminal-event-tape")).toBeTruthy();
   });

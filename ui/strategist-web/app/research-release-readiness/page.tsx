@@ -18,7 +18,9 @@ export default function ResearchReleaseReadinessPage() {
   const q = useUiResearchOsReleaseReadinessLatest();
   const root = q.data ? asRecord(q.data) : null;
   const latest = root?.latest ? asRecord(root.latest) : null;
-  const criteria = Array.isArray(latest?.criteria) ? latest.criteria.map((x) => asRecord(x)) : [];
+  const criteria = Array.isArray(latest?.criteria)
+    ? latest.criteria.map((x) => asRecord(x)).filter((r): r is Record<string, unknown> => r !== null)
+    : [];
   const degraded = root ? asStringArray(root.degraded) : [];
   const blockers = latest ? asStringArray(latest.blockers) : [];
   const warnings = latest ? asStringArray(latest.warnings) : [];

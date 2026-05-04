@@ -402,7 +402,10 @@ export default function ResearchOsPage() {
           onInspect={() => openInspector({ title: "Research OS exception", rawJson: researchException ?? {} })}
         >
           {!exceptionLatest ? (
-            <p className="muted">No exception record detected — run <code className="json-preview">strategy-validator-research-os-exception request --rationale "..." --overwrite --json</code>.</p>
+            <p className="muted">
+              No exception record detected — run{" "}
+              <code className="json-preview">{`strategy-validator-research-os-exception request --rationale "..." --overwrite --json`}</code>.
+            </p>
           ) : (
             <TermKV
               rows={[

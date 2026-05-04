@@ -161,8 +161,8 @@ export default function LedgerPage() {
             </Pane>
             <Pane title="Stream health" onInspect={() => openInspector({ title: "Evidence streams", rawJson: streams ?? {} })}>
               <div className="stack-sm">
-                <StatusBadge label="decision ledger" status={asBool(summary?.decision_ledger_chain_ok) ? "ok" : "warn"} />
-                <StatusBadge label="operator journal" status={asBool(summary?.operator_action_chain_ok) ? "ok" : "warn"} />
+                <StatusBadge label="decision ledger" raw={asBool(summary?.decision_ledger_chain_ok) ? "OK" : "WARN"} />
+                <StatusBadge label="operator journal" raw={asBool(summary?.operator_action_chain_ok) ? "OK" : "WARN"} />
               </div>
             </Pane>
           </PaneGrid>

@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { OperatorCommandPanel } from "./OperatorCommandPanel";
 
@@ -60,8 +60,13 @@ describe("OperatorCommandPanel", () => {
   });
 
   it("blocks submission until a governed target identity is selected", () => {
-    render(<OperatorCommandPanel target={{ status: "READY" }} />);
-    expect((screen.getByRole("button", { name: /journal claim-item/i }) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText(/select a queue row/i)).toBeTruthy();
+    render(
+      <section aria-label="operator-command-panel-test">
+        <OperatorCommandPanel target={{ status: "READY" }} />
+      </section>,
+    );
+    const panel = screen.getByLabelText("operator-command-panel-test");
+    expect((within(panel).getByRole("button", { name: /journal claim-item/i }) as HTMLButtonElement).disabled).toBe(true);
+    expect(within(panel).getByText(/select a queue row/i)).toBeTruthy();
   });
 });

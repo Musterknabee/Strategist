@@ -28,7 +28,7 @@ function buildIdempotencyKey(strategyName: string, operatorId: string): string {
 
 function formatMutationError(err: unknown): string {
   if (err instanceof StrategistApiError) {
-    return `${err.message}${err.status ? ` · HTTP ${err.status}` : ""}`;
+    return `${err.message}${err.httpStatus != null ? ` · HTTP ${err.httpStatus}` : ""}`;
   }
   if (err instanceof Error) return err.message;
   return String(err);

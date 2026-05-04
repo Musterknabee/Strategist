@@ -63,7 +63,10 @@ export default function ResearchExceptionPage() {
         <Pane title="Latest exception" dense onInspect={() => openInspector({ title: "Research exception", rawJson: q.data ?? {} })}>
           {q.isError && <p className="term-page__banner">Could not load /ui/research-os/exceptions/latest</p>}
           {!latest ? (
-            <p className="muted">No exception record — run <code className="json-preview">strategy-validator-research-os-exception request --rationale "..." --overwrite --json</code>.</p>
+            <p className="muted">
+              No exception record — run{" "}
+              <code className="json-preview">{`strategy-validator-research-os-exception request --rationale "..." --overwrite --json`}</code>.
+            </p>
           ) : (
             <TermKV
               rows={[
@@ -81,7 +84,7 @@ export default function ResearchExceptionPage() {
             />
           )}
           <pre className="json-preview" style={{ marginTop: "0.75rem", fontSize: "10px" }}>
-            strategy-validator-research-os-exception request --rationale "Paper-only restricted evidence acknowledged" --ttl-hours 24 --overwrite --json
+            {`strategy-validator-research-os-exception request --rationale "Paper-only restricted evidence acknowledged" --ttl-hours 24 --overwrite --json`}
           </pre>
         </Pane>
 

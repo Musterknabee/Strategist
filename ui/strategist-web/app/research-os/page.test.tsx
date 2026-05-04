@@ -68,7 +68,7 @@ vi.mock("@/lib/terminal/cockpit-context", () => ({
 describe("ResearchOsPage", () => {
   it("renders degraded rail and promotion recommendation without tokens", () => {
     const { container } = render(<ResearchOsPage />);
-    expect(screen.getByText(/Research OS/i)).toBeTruthy();
+    expect(screen.getAllByText(/Research OS/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/DEGRADED/i)).toBeTruthy();
     expect(screen.getAllByText(/DO_NOT_PROMOTE/i).length).toBeGreaterThan(0);
     expect(container.textContent?.includes("STRATEGY_VALIDATOR_API_TOKEN")).toBe(false);
@@ -82,7 +82,7 @@ describe("ResearchOsPage", () => {
 
   it("renders provider-backed paper loop pane", () => {
     render(<ResearchOsPage />);
-    expect(screen.getByText(/Provider-backed paper loop/i)).toBeTruthy();
-    expect(screen.getByText(/provider_paper_loop_manifest/i)).toBeTruthy();
+    expect(screen.getAllByText(/Provider-backed paper loop/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/provider_paper_loop_manifest/i).length).toBeGreaterThan(0);
   });
 });

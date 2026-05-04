@@ -94,7 +94,8 @@ jobs:
       - name: Detect Strategist web package lock
         id: strategist_web_lock
         run: |
-          if [ -f ui/strategist-web/package-lock.json ]; then
+          # Job default cwd is ui/strategist-web; probe lockfile there (not ui/strategist-web/... twice).
+          if [ -f package-lock.json ]; then
             echo "present=true" >> "$GITHUB_OUTPUT"
           else
             echo "present=false" >> "$GITHUB_OUTPUT"

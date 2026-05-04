@@ -44,9 +44,9 @@ vi.mock("@/lib/terminal/cockpit-context", () => ({
 describe("StrategyMemoryPage", () => {
   it("renders memory, graveyard, duplicate warnings, and no token copy", () => {
     const { container } = render(<StrategyMemoryPage />);
-    expect(screen.getByText(/Strategy Memory/i)).toBeTruthy();
+    expect(screen.getAllByText(/Strategy Memory/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Candidate graveyard/i)).toBeTruthy();
-    expect(screen.getByText(/Duplicate warnings/i)).toBeTruthy();
+    expect(screen.getAllByText(/Duplicate warnings/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/mom-spy/i)).toBeTruthy();
     expect(container.textContent?.includes("STRATEGY_VALIDATOR_API_TOKEN")).toBe(false);
   });

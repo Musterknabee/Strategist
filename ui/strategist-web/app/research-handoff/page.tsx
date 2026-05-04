@@ -18,8 +18,12 @@ export default function ResearchHandoffPage() {
   const q = useUiResearchOsHandoffLatest();
   const root = q.data ? asRecord(q.data) : null;
   const latest = root?.latest ? asRecord(root.latest) : null;
-  const checklist = Array.isArray(latest?.checklist) ? latest.checklist.map((x) => asRecord(x)) : [];
-  const refs = Array.isArray(latest?.source_refs) ? latest.source_refs.map((x) => asRecord(x)) : [];
+  const checklist = Array.isArray(latest?.checklist)
+    ? latest.checklist.map((x) => asRecord(x)).filter((r): r is Record<string, unknown> => r !== null)
+    : [];
+  const refs = Array.isArray(latest?.source_refs)
+    ? latest.source_refs.map((x) => asRecord(x)).filter((r): r is Record<string, unknown> => r !== null)
+    : [];
   const blockers = latest ? asStringArray(latest.blockers) : [];
   const warnings = latest ? asStringArray(latest.warnings) : [];
   const constraints = latest ? asStringArray(latest.handoff_constraints) : [];
@@ -133,11 +137,11 @@ export default function ResearchHandoffPage() {
         </Pane>
 
         <Pane title="Constraints / followups / commands" dense>
-          <JsonDetails title="Constraints" value={constraints} />
-          <JsonDetails title="Remaining followups" value={followups} />
-          <JsonDetails title="Required operator commands" value={commands} />
-          <JsonDetails title="Warnings" value={warnings} />
-          <JsonDetails title="Blockers" value={blockers} />
+          <JsonDetails summary="constraints" data={constraints} />
+          <JsonDetails summary="remaining_followups" data={followups} />
+          <JsonDetails summary="required_operator_commands" data={commands} />
+          <JsonDetails summary="warnings" data={warnings} />
+          <JsonDetails summary="blockers" data={blockers} />
         </Pane>
       </div>
     </main>

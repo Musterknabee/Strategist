@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import ResearchCatalogPage from "./page";
 
@@ -57,6 +57,7 @@ describe("ResearchCatalogPage", () => {
     expect(screen.getByText(/Research Catalog/i)).toBeTruthy();
     expect(screen.getByText(/catalog-demo/i)).toBeTruthy();
     expect(screen.getAllByText(/OPERATOR_RUN/i).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: /warnings/i }));
     expect(screen.getByText(/NO_PROVIDER_PAPER_LOOP/i)).toBeTruthy();
     expect(container.textContent?.includes("STRATEGY_VALIDATOR_API_TOKEN")).toBe(false);
   });

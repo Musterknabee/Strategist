@@ -19,7 +19,9 @@ export default function ResearchHandoffSignoffPage() {
   const root = q.data ? asRecord(q.data) : null;
   const verification = root?.latest_verification ? asRecord(root.latest_verification) : null;
   const signoff = root?.latest_signoff ? asRecord(root.latest_signoff) : null;
-  const checks = Array.isArray(verification?.source_digest_checks) ? verification.source_digest_checks.map((x) => asRecord(x)) : [];
+  const checks = Array.isArray(verification?.source_digest_checks)
+    ? verification.source_digest_checks.map((x) => asRecord(x)).filter((r): r is Record<string, unknown> => r !== null)
+    : [];
   const blockers = [...(verification ? asStringArray(verification.blockers) : []), ...(signoff ? asStringArray(signoff.blockers) : [])];
   const warnings = [...(verification ? asStringArray(verification.warnings) : []), ...(signoff ? asStringArray(signoff.warnings) : [])];
 
@@ -129,10 +131,10 @@ export default function ResearchHandoffSignoffPage() {
         </Pane>
 
         <Pane title="Constraints / followups / warnings" dense>
-          <JsonDetails title="Constraints" value={signoff ? asStringArray(signoff.constraints) : []} />
-          <JsonDetails title="Required followups" value={signoff ? asStringArray(signoff.required_followups) : []} />
-          <JsonDetails title="Warnings" value={warnings} />
-          <JsonDetails title="Blockers" value={blockers} />
+          <JsonDetails summary="constraints" data={signoff ? asStringArray(signoff.constraints) : []} />
+          <JsonDetails summary="required_followups" data={signoff ? asStringArray(signoff.required_followups) : []} />
+          <JsonDetails summary="warnings" data={warnings} />
+          <JsonDetails summary="blockers" data={blockers} />
         </Pane>
       </div>
     </main>

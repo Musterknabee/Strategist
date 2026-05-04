@@ -18,7 +18,9 @@ export default function ResearchReviewJournalPage() {
   const q = useUiResearchOsReviewJournalLatest();
   const root = q.data ? asRecord(q.data) : null;
   const latest = root?.latest ? asRecord(root.latest) : null;
-  const entries = Array.isArray(latest?.entries) ? latest.entries.map((x) => asRecord(x)) : [];
+  const entries = Array.isArray(latest?.entries)
+    ? latest.entries.map((x) => asRecord(x)).filter((r): r is Record<string, unknown> => r !== null)
+    : [];
   const warnings = latest ? asStringArray(latest.warnings) : [];
   const blockers = latest ? asStringArray(latest.blockers) : [];
 
@@ -100,10 +102,10 @@ export default function ResearchReviewJournalPage() {
         </Pane>
 
         <Pane title="Decision summary / warnings" dense>
-          <JsonDetails title="Decision summary" value={latest?.latest_decision_summary ?? {}} />
-          <JsonDetails title="Source counts" value={latest?.source_counts ?? {}} />
-          <JsonDetails title="Warnings" value={warnings} />
-          <JsonDetails title="Blockers" value={blockers} />
+          <JsonDetails summary="latest_decision_summary" data={latest?.latest_decision_summary ?? {}} />
+          <JsonDetails summary="source_counts" data={latest?.source_counts ?? {}} />
+          <JsonDetails summary="warnings" data={warnings} />
+          <JsonDetails summary="blockers" data={blockers} />
         </Pane>
       </div>
     </main>
