@@ -1,0 +1,170 @@
+{
+  "batch_id": "market-structure-demo-001",
+  "created_at_utc": "2026-05-03T12:00:00+00:00",
+  "as_of_utc": "2026-05-03T00:00:00+00:00",
+  "mode": "paper",
+  "max_workers": 4,
+  "pit_policy": "DEGRADE_TO_PAPER_ONLY",
+  "output_root": "artifacts/strategy_runs",
+  "strategies": [
+    {
+      "universe": "DEMO",
+      "timeframe": "1d",
+      "as_of_utc": "2026-05-03T00:00:00+00:00",
+      "lookback_days": 130,
+      "data_source": {
+        "kind": "local_bars",
+        "path": "tests/fixtures/strategy_data/market_structure_bars.csv",
+        "pit_status": "PIT_VERIFIED"
+      },
+      "execution_assumptions": {
+        "friction_bps": 6.0,
+        "paper_only": true,
+        "starting_capital": 25000,
+        "max_participation_rate": 0.12,
+        "fee_bps": 1.0,
+        "slippage_bps": 5.0,
+        "min_average_daily_volume": 50000,
+        "allow_short": false,
+        "borrow_required": false
+      },
+      "robustness_assumptions": {
+        "fold_count": 3,
+        "min_train_bars": 12,
+        "min_test_bars": 6,
+        "min_positive_fold_ratio": 0.34,
+        "max_worst_fold_return": -0.35,
+        "max_pbo_like_score": 0.95,
+        "min_dsr_like_score": -0.35
+      },
+      "strategy_id": "market-donchian-channel-breakout-1",
+      "strategy_type": "donchian_channel_breakout",
+      "params": {
+        "entry_lookback": 24,
+        "exit_lookback": 10,
+        "atr_window": 14,
+        "volume_window": 16,
+        "breakout_buffer": 0.001,
+        "min_volume_ratio": 0.75,
+        "min_atr_pct": 0.001,
+        "exposure": 0.85
+      },
+      "data_requirements": [
+        "local_csv_bars",
+        "ohlcv",
+        "donchian_channel",
+        "atr_filter",
+        "volume_confirmation"
+      ],
+      "tags": [
+        "market_structure",
+        "donchian",
+        "trend_following"
+      ]
+    },
+    {
+      "universe": "DEMO",
+      "timeframe": "1d",
+      "as_of_utc": "2026-05-03T00:00:00+00:00",
+      "lookback_days": 130,
+      "data_source": {
+        "kind": "local_bars",
+        "path": "tests/fixtures/strategy_data/market_structure_bars.csv",
+        "pit_status": "PIT_VERIFIED"
+      },
+      "execution_assumptions": {
+        "friction_bps": 6.0,
+        "paper_only": true,
+        "starting_capital": 25000,
+        "max_participation_rate": 0.12,
+        "fee_bps": 1.0,
+        "slippage_bps": 5.0,
+        "min_average_daily_volume": 50000,
+        "allow_short": false,
+        "borrow_required": false
+      },
+      "robustness_assumptions": {
+        "fold_count": 3,
+        "min_train_bars": 12,
+        "min_test_bars": 6,
+        "min_positive_fold_ratio": 0.34,
+        "max_worst_fold_return": -0.35,
+        "max_pbo_like_score": 0.95,
+        "min_dsr_like_score": -0.35
+      },
+      "strategy_id": "market-atr-trailing-trend-1",
+      "strategy_type": "atr_trailing_trend",
+      "params": {
+        "atr_window": 14,
+        "trend_window": 28,
+        "atr_multiplier": 2.4,
+        "min_atr_pct": 0.001,
+        "exposure": 0.8
+      },
+      "data_requirements": [
+        "local_csv_bars",
+        "ohlcv",
+        "atr",
+        "trailing_stop",
+        "trend_following"
+      ],
+      "tags": [
+        "market_structure",
+        "atr",
+        "trailing_stop"
+      ]
+    },
+    {
+      "universe": "DEMO",
+      "timeframe": "1d",
+      "as_of_utc": "2026-05-03T00:00:00+00:00",
+      "lookback_days": 130,
+      "data_source": {
+        "kind": "local_bars",
+        "path": "tests/fixtures/strategy_data/market_structure_bars.csv",
+        "pit_status": "PIT_VERIFIED"
+      },
+      "execution_assumptions": {
+        "friction_bps": 6.0,
+        "paper_only": true,
+        "starting_capital": 25000,
+        "max_participation_rate": 0.12,
+        "fee_bps": 1.0,
+        "slippage_bps": 5.0,
+        "min_average_daily_volume": 50000,
+        "allow_short": false,
+        "borrow_required": false
+      },
+      "robustness_assumptions": {
+        "fold_count": 3,
+        "min_train_bars": 12,
+        "min_test_bars": 6,
+        "min_positive_fold_ratio": 0.34,
+        "max_worst_fold_return": -0.35,
+        "max_pbo_like_score": 0.95,
+        "min_dsr_like_score": -0.35
+      },
+      "strategy_id": "market-macd-volume-momentum-1",
+      "strategy_type": "macd_volume_momentum",
+      "params": {
+        "fast_window": 8,
+        "slow_window": 21,
+        "signal_window": 7,
+        "volume_window": 16,
+        "min_volume_ratio": 0.75,
+        "exposure": 0.75
+      },
+      "data_requirements": [
+        "local_csv_bars",
+        "ohlcv",
+        "macd",
+        "volume_confirmation"
+      ],
+      "tags": [
+        "market_structure",
+        "macd",
+        "momentum"
+      ]
+    }
+  ]
+}

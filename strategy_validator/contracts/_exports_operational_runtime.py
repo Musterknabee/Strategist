@@ -1,0 +1,30 @@
+"""Grouped lazy exports for operational and runtime contract surfaces."""
+from __future__ import annotations
+
+EXPORTS_OPERATIONAL_RUNTIME = {
+    'MutationSafetyStatus': 'strategy_validator.contracts.operational',
+    'ClosureReleaseAttestation': 'strategy_validator.contracts.operational',
+    'ClosureSnapshotManifest': 'strategy_validator.contracts.operational',
+    'ClosureSnapshotVerification': 'strategy_validator.contracts.operational',
+    'GovernedExceptionMemo': 'strategy_validator.contracts.operational',
+    'GovernedExceptionVerification': 'strategy_validator.contracts.operational',
+    'ControlledRolloutBundle': 'strategy_validator.contracts.operational',
+    'ControlledRolloutRules': 'strategy_validator.contracts.operational',
+    'DailyOperationsChecklist': 'strategy_validator.contracts.operational',
+    'RuntimeEvidenceReview': 'strategy_validator.contracts.operational',
+    'KeyedHostFingerprint': 'strategy_validator.contracts.operational',
+    'RolloutScope': 'strategy_validator.contracts.operational',
+    'TemporalSourceRecord': 'strategy_validator.contracts.oracle_temporal_semantics',
+    'TemporalSemanticExtractionDayRequest': 'strategy_validator.contracts.oracle_temporal_semantics',
+    'TemporalSemanticExtractionBatchRequest': 'strategy_validator.contracts.oracle_temporal_semantics',
+    'TemporalSemanticBatchManifest': 'strategy_validator.contracts.oracle_temporal_semantics',
+    'TemporalSemanticBatchVerification': 'strategy_validator.contracts.oracle_temporal_semantics',
+    'TemporalProviderArtifactManifest': 'strategy_validator.contracts.oracle_temporal_semantics',
+    'TemporalEventLogAppendDayResult': 'strategy_validator.contracts.oracle_temporal_results',
+    'TemporalEventLogAppendBatchResult': 'strategy_validator.contracts.oracle_temporal_results',
+    'TemporalCanonicalizationBatchResult': 'strategy_validator.contracts.oracle_temporal_results',
+    'TemporalCanonicalizationDayResult': 'strategy_validator.contracts.oracle_temporal_results',
+    'TemporalLaneStatus': 'strategy_validator.contracts.oracle_temporal_results',
+    'OpenBBTemporalSensorIngressDayResult': 'strategy_validator.contracts.oracle_temporal_semantics',
+    'OpenBBTemporalSensorIngressBatchResult': 'strategy_validator.contracts.oracle_temporal_semantics',
+}

@@ -1,0 +1,65 @@
+name: production-smoke-diagnostics
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      enforce:
+        description: 'Fail the workflow on production smoke failures'
+        required: false
+        default: 'false'
+
+jobs:
+  production-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Prepare diagnostics output directory
+        run: mkdir -p scratch
+      - name: Runtime readiness smoke with operator diagnostics
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' || inputs.enforce != 'true' }}
+        run: |
+          python scripts/production_smoke_check.py \
+            --verify-operator-action-chain \
+            --operator-action-index-output-path scratch/operator-action-event-index.from-smoke.json \
+            --summary-markdown-output-path scratch/production-smoke-summary.md \
+            > scratch/production-smoke-readiness.json
+      - name: Deployment-tier readiness smoke
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' || inputs.enforce != 'true' }}
+        run: |
+          python scripts/production_smoke_check.py \
+            --deployment-tier \
+            --repo-root . \
+            --summary-markdown-output-path scratch/production-smoke-deployment-summary.md \
+            > scratch/production-smoke-deployment-readiness.json
+      - name: Operator action chain smoke (artifact-only diagnostic)
+        continue-on-error: true
+        run: |
+          python -m strategy_validator.cli.ledger_ops verify-operator-actions \
+            --json > scratch/operator-action-chain-verify.json
+      - name: Operator action projection smoke (artifact-only diagnostic)
+        continue-on-error: true
+        run: |
+          python -m strategy_validator.cli.ledger_ops index-operator-actions \
+            --output-path scratch/operator-action-event-index.json \
+            --json > scratch/operator-action-event-index.stdout.json
+      - name: Upload production smoke diagnostics artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: production-smoke-diagnostics
+          path: |
+            scratch/production-smoke-summary.md
+            scratch/production-smoke-deployment-summary.md
+            scratch/production-smoke-readiness.json
+            scratch/production-smoke-deployment-readiness.json
+            scratch/operator-action-chain-verify.json
+            scratch/operator-action-event-index.json
+            scratch/operator-action-event-index.stdout.json
+            scratch/operator-action-event-index.from-smoke.json
+          if-no-files-found: ignore

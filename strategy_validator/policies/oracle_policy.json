@@ -1,0 +1,41 @@
+{
+  "schema_version": "oracle_policy_artifact/v1",
+  "policy_family": "oracle",
+  "policy_version": "oracle-default-v1",
+  "generated_at_utc": "2026-04-14T00:00:00Z",
+  "strategic_posture_weights": {
+    "research_freeze_doctrine_stress_threshold": 0.75,
+    "defensive_research_caution_threshold": 0.7,
+    "defensive_research_doctrine_threshold": 0.72,
+    "opportunity_biased_threshold": 0.65,
+    "caution_biased_threshold": 0.52
+  },
+  "doctrine_stress_weights": {
+    "tribunal_belief_conflict": 0.3,
+    "narrative_contradiction_count": 0.2,
+    "regime_ambiguity": 0.2,
+    "regime_mismatch_ratio": 0.15,
+    "liquidity_thinning": 0.15,
+    "exact_support_offset": -0.06
+  },
+  "caution_score_weights": {
+    "epistemic_score": 0.28,
+    "liquidity_thinning": 0.22,
+    "cross_asset_correlation_stress": 0.18,
+    "realized_volatility_zscore": 0.12,
+    "strategy_pressure": 0.1,
+    "regime_mismatch_ratio": 0.1,
+    "exact_support_offset": -0.05
+  },
+  "opportunity_score_weights": {
+    "dominant_regime": 0.42,
+    "sharpe_excess": 0.25,
+    "recent_win_rate": 0.2,
+    "inverse_caution": 0.13,
+    "exact_support_bonus": 0.04
+  },
+  "notes": [
+    "Canonical Oracle heuristics artifact for strategist posture reports.",
+    "Digest this artifact into operator-facing outputs so posture logic is replayable."
+  ]
+}

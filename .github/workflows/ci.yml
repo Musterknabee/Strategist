@@ -1,0 +1,237 @@
+name: ci
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  syntax-health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Python source syntax gate
+        run: python scripts/source_health.py
+      - name: Repository truth gate
+        run: python scripts/repository_truth_check.py
+      - name: Migration truth gate
+        run: python scripts/migration_truth_check.py
+      - name: Single-tenant deployment env check
+        run: |
+          cat > "$RUNNER_TEMP/strategy-validator-deployment.env" <<'ENV'
+          STRATEGY_VALIDATOR_MODE=PRODUCTION
+          STRATEGY_VALIDATOR_API_TOKEN=abcdefghijklmnopqrstuvwxyz1234567890
+          STRATEGY_VALIDATOR_API_TOKEN_SCOPES=operator:command:write,operator:projection:read
+          STRATEGY_VALIDATOR_RESEARCH_API_TOKEN=researchabcdefghijklmnopqrstuvwxyz1234567890
+          STRATEGY_VALIDATOR_LEDGER_DB_PATH=/var/lib/strategy-validator/ledger.sqlite3
+          STRATEGY_VALIDATOR_LEDGER_BACKUP_DIR=/var/backups/strategy-validator
+          STRATEGY_VALIDATOR_ARTIFACT_ROOT=/var/lib/strategy-validator/artifacts
+          ENV
+          python -m strategy_validator.cli.deployment_env_check "$RUNNER_TEMP/strategy-validator-deployment.env" --require-valid --json
+      - name: Single-tenant deployment bundle gate
+        run: |
+          cat > "$RUNNER_TEMP/strategy-validator-deployment.env" <<'ENV'
+          STRATEGY_VALIDATOR_MODE=PRODUCTION
+          STRATEGY_VALIDATOR_API_TOKEN=abcdefghijklmnopqrstuvwxyz1234567890
+          STRATEGY_VALIDATOR_API_TOKEN_SCOPES=operator:command:write,operator:projection:read
+          STRATEGY_VALIDATOR_RESEARCH_API_TOKEN=researchabcdefghijklmnopqrstuvwxyz1234567890
+          STRATEGY_VALIDATOR_LEDGER_DB_PATH=/var/lib/strategy-validator/ledger.sqlite3
+          STRATEGY_VALIDATOR_LEDGER_BACKUP_DIR=/var/backups/strategy-validator
+          STRATEGY_VALIDATOR_ARTIFACT_ROOT=/var/lib/strategy-validator/artifacts
+          ENV
+          python -m strategy_validator.cli.single_tenant_deployment_bundle --env-file "$RUNNER_TEMP/strategy-validator-deployment.env" --output-dir "$RUNNER_TEMP/single-tenant-bundle" --force --require-ready --json
+          python -m strategy_validator.cli.single_tenant_deployment_bundle --output-dir "$RUNNER_TEMP/single-tenant-bundle" --check --require-ready --json
+      - name: Single-tenant deployment acceptance gate
+        run: |
+          python -m strategy_validator.cli.single_tenant_deployment_acceptance \
+            --env-file "$RUNNER_TEMP/strategy-validator-deployment.env" \
+            --bundle-dir "$RUNNER_TEMP/single-tenant-bundle" \
+            --repo-root . \
+            --summary-markdown-output-path "$RUNNER_TEMP/single-tenant-acceptance.md" \
+            --require-ready \
+            --json
+      - name: Single-tenant deployment evidence pack gate
+        run: |
+          mkdir -p "$RUNNER_TEMP/single-tenant-evidence"
+          python -m strategy_validator.cli.deployment_env_check "$RUNNER_TEMP/strategy-validator-deployment.env" --require-valid --json > "$RUNNER_TEMP/single-tenant-evidence/deployment-env-check.json"
+          python -m strategy_validator.cli.single_tenant_deployment_bundle --output-dir "$RUNNER_TEMP/single-tenant-bundle" --check --require-ready --json > "$RUNNER_TEMP/single-tenant-evidence/deployment-bundle.json"
+          python -m strategy_validator.cli.single_tenant_deployment_acceptance \
+            --env-file "$RUNNER_TEMP/strategy-validator-deployment.env" \
+            --bundle-dir "$RUNNER_TEMP/single-tenant-bundle" \
+            --repo-root . \
+            --summary-markdown-output-path "$RUNNER_TEMP/single-tenant-acceptance.md" \
+            --require-ready \
+            --json > "$RUNNER_TEMP/single-tenant-evidence/deployment-acceptance.json"
+          python -m strategy_validator.cli.single_tenant_deployment_evidence \
+            --evidence-dir "$RUNNER_TEMP/single-tenant-evidence" \
+            --repo-root . \
+            --manifest-output-path "$RUNNER_TEMP/single-tenant-evidence/deployment-evidence.json" \
+            --summary-markdown-output-path "$RUNNER_TEMP/single-tenant-evidence/deployment-evidence.md" \
+            --require-pass \
+            --json
+      - name: Clean archive selection gate
+        run: python scripts/package_repo.py --check
+      - name: Clean archive build smoke
+        run: python scripts/package_repo.py --output "$RUNNER_TEMP/strategy-validator-clean.zip" --json
+      - name: Clean archive verification smoke
+        run: python scripts/verify_repo_archive.py "$RUNNER_TEMP/strategy-validator-clean.zip" --json
+
+  strategist-web:
+    runs-on: ubuntu-latest
+    if: ${{ hashFiles('ui/strategist-web/package-lock.json') != '' }}
+    defaults:
+      run:
+        working-directory: ui/strategist-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: ui/strategist-web/package-lock.json
+      - name: npm ci
+        run: npm ci
+      - name: lint
+        run: npm run lint
+      - name: typecheck
+        run: npm run typecheck
+      - name: test
+        run: npm run test
+      - name: build
+        run: npm run build
+
+  confidence-sweeps:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        suite:
+          - tests/constitutional
+          - tests/application
+          - tests/api
+          - tests/boundary
+          - tests/integration
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+      - name: Install full runtime and dev tools
+        run: pip install -e ".[dev]"
+      - name: Dependency environment gate
+        run: python scripts/environment_check.py --include-extra dev
+      - name: Confidence sweep (${{ matrix.suite }})
+        run: python -m pytest ${{ matrix.suite }} -q
+
+  package-minimal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Repo hygiene gate (fail-closed)
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python -c "from strategy_validator.cli.hygiene_check import main; raise SystemExit(main([]))"
+      - name: Install base package only
+        run: pip install -e .
+      - name: Dependency environment gate
+        run: python scripts/environment_check.py
+      - name: Base import smoke
+        run: |
+          python - <<'PY'
+          import strategy_validator
+          import strategy_validator.core.config
+          import strategy_validator.contracts.operational
+          import strategy_validator.ledger._append_only
+          print("base install smoke passed")
+          PY
+
+  container-production-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production container
+        run: docker build -t strategy-validator:ci-smoke .
+      - name: Run container ledger migration smoke
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/strategy-validator-ledger"
+          chmod 0777 "$RUNNER_TEMP/strategy-validator-ledger"
+          docker run --rm \
+            -e STRATEGY_VALIDATOR_API_TOKEN=ci-single-tenant-token-1234567890 \
+            -e STRATEGY_VALIDATOR_API_TOKEN_SCOPES=operator:command:write,operator:projection:read \
+            -v "$RUNNER_TEMP/strategy-validator-ledger:/var/lib/strategy-validator" \
+            strategy-validator:ci-smoke \
+            strategy-validator-migrate --json
+      - name: Run container single-tenant deployment preflight
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/strategy-validator-backups"
+          chmod 0777 "$RUNNER_TEMP/strategy-validator-backups"
+          docker run --rm \
+            -e STRATEGY_VALIDATOR_API_TOKEN=ci-single-tenant-token-1234567890 \
+            -e STRATEGY_VALIDATOR_API_TOKEN_SCOPES=operator:command:write,operator:projection:read \
+            -v "$RUNNER_TEMP/strategy-validator-ledger:/var/lib/strategy-validator" \
+            -v "$RUNNER_TEMP/strategy-validator-backups:/var/backups/strategy-validator" \
+            strategy-validator:ci-smoke \
+            strategy-validator-single-tenant-preflight --prepare --verify-backup-restore --require-ready --repo-root /app --json
+      - name: Run container API startup/auth smoke
+        run: |
+          set -euo pipefail
+          CONTAINER_ID="$(docker run -d \
+            -e STRATEGY_VALIDATOR_API_TOKEN=ci-single-tenant-token-12345678900 \
+            -e STRATEGY_VALIDATOR_API_TOKEN_SCOPES=operator:command:write,operator:projection:read \
+            -v "$RUNNER_TEMP/strategy-validator-ledger:/var/lib/strategy-validator" \
+            -p 127.0.0.1:8000:8000 \
+            strategy-validator:ci-smoke)"
+          trap 'docker logs "$CONTAINER_ID" || true; docker rm -f "$CONTAINER_ID" >/dev/null 2>&1 || true' EXIT
+          python3 scripts/single_tenant_api_smoke.py \
+            --base-url http://127.0.0.1:8000 \
+            --token ci-single-tenant-token-12345678900 \
+            --operator-id ci \
+            --wait-seconds 30 \
+            --require-pass \
+            --json
+
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Repo hygiene gate (fail-closed)
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python -c "from strategy_validator.cli.hygiene_check import main; raise SystemExit(main([]))"
+      - name: Install full runtime and dev tools
+        run: pip install -e ".[dev]"
+      - name: Dependency environment gate
+        run: python scripts/environment_check.py --include-extra dev
+      - name: Release candidate chain (generate -> assess -> verify bundle)
+        run: |
+          set -euo pipefail
+          OUT_DIR="$(python -c "from strategy_validator.cli.release_candidate import main; raise SystemExit(main(['generate']))")"
+          CANDIDATE="$(basename "$OUT_DIR")"
+          python -c "from strategy_validator.cli.release_candidate import main; raise SystemExit(main(['assess','--candidate','$CANDIDATE','--skip-frontend']))"
+          python -c "from strategy_validator.cli.release_candidate import main; raise SystemExit(main(['verify-bundle','--candidate','$CANDIDATE']))"
+      - name: Import boundaries (import-linter)
+        env:
+          PYTHONIOENCODING: utf-8
+        run: python -c "from click.testing import CliRunner; from importlinter.cli import lint_imports_command; r=CliRunner().invoke(lint_imports_command, []); import sys; sys.stdout.buffer.write((r.output or '').encode('utf-8','replace')); raise SystemExit(r.exit_code)"
+      - name: OpenAPI contract snapshot gate
+        run: python scripts/openapi_contract_snapshot.py --check
+      - name: UI facade contract snapshot gate
+        run: python scripts/ui_facade_contract_snapshot.py --check --no-static-fallback
+      - name: Full test suite
+        run: pytest -v
+      - name: Anti-regression invariants (fast constitutional gate)
+        run: pytest tests/constitutional/test_anti_regression_invariants.py -v

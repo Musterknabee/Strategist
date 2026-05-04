@@ -1,0 +1,139 @@
+{
+  "batch_id": "price-volume-demo-001",
+  "created_at_utc": "2026-05-01T12:00:00+00:00",
+  "as_of_utc": "2026-05-01T00:00:00+00:00",
+  "mode": "paper",
+  "max_workers": 4,
+  "pit_policy": "DEGRADE_TO_PAPER_ONLY",
+  "output_root": "artifacts/strategy_runs",
+  "strategies": [
+    {
+      "strategy_id": "pv-moving-average-trend-1",
+      "strategy_type": "moving_average_trend",
+      "universe": "DEMO",
+      "timeframe": "1d",
+      "as_of_utc": "2026-05-01T00:00:00+00:00",
+      "lookback_days": 90,
+      "params": {
+        "fast_window": 10,
+        "slow_window": 30,
+        "volume_window": 20,
+        "min_volume_ratio": 0.75,
+        "exposure": 0.75
+      },
+      "data_requirements": ["local_csv_bars", "ohlcv", "volume_confirmation"],
+      "data_source": {
+        "kind": "local_bars",
+        "path": "tests/fixtures/strategy_data/price_volume_breakout_bars.csv",
+        "pit_status": "PIT_VERIFIED"
+      },
+      "execution_assumptions": {
+        "friction_bps": 5.0,
+        "paper_only": true,
+        "starting_capital": 80000,
+        "max_participation_rate": 0.12,
+        "fee_bps": 1.0,
+        "slippage_bps": 5.0,
+        "min_average_daily_volume": 50000,
+        "allow_short": false,
+        "borrow_required": false
+      },
+      "robustness_assumptions": {
+        "fold_count": 3,
+        "min_train_bars": 8,
+        "min_test_bars": 4,
+        "min_positive_fold_ratio": 0.5,
+        "max_worst_fold_return": -0.25,
+        "max_pbo_like_score": 0.8,
+        "min_dsr_like_score": -0.1
+      },
+      "tags": ["price_volume", "trend_following", "moving_average"]
+    },
+    {
+      "strategy_id": "pv-diagonal-trendline-breakout-1",
+      "strategy_type": "trendline_volume_breakout",
+      "universe": "DEMO",
+      "timeframe": "1d",
+      "as_of_utc": "2026-05-01T00:00:00+00:00",
+      "lookback_days": 90,
+      "params": {
+        "lookback": 30,
+        "pivot_window": 3,
+        "min_touches": 2,
+        "breakout_buffer": 0.001,
+        "volume_window": 20,
+        "min_volume_ratio": 0.75,
+        "exposure": 0.85
+      },
+      "data_requirements": ["local_csv_bars", "ohlcv", "swing_highs", "volume_confirmation"],
+      "data_source": {
+        "kind": "local_bars",
+        "path": "tests/fixtures/strategy_data/price_volume_breakout_bars.csv",
+        "pit_status": "PIT_VERIFIED"
+      },
+      "execution_assumptions": {
+        "friction_bps": 5.0,
+        "paper_only": true,
+        "starting_capital": 80000,
+        "max_participation_rate": 0.12,
+        "fee_bps": 1.0,
+        "slippage_bps": 5.0,
+        "min_average_daily_volume": 50000,
+        "allow_short": false,
+        "borrow_required": false
+      },
+      "robustness_assumptions": {
+        "fold_count": 3,
+        "min_train_bars": 8,
+        "min_test_bars": 4,
+        "min_positive_fold_ratio": 0.5,
+        "max_worst_fold_return": -0.25,
+        "max_pbo_like_score": 0.8,
+        "min_dsr_like_score": -0.1
+      },
+      "tags": ["price_volume", "trendline", "breakout"]
+    },
+    {
+      "strategy_id": "pv-obv-accumulation-breakout-1",
+      "strategy_type": "obv_accumulation_breakout",
+      "universe": "DEMO",
+      "timeframe": "1d",
+      "as_of_utc": "2026-05-01T00:00:00+00:00",
+      "lookback_days": 90,
+      "params": {
+        "lookback": 30,
+        "breakout_buffer": 0.001,
+        "volume_window": 20,
+        "min_volume_ratio": 0.75,
+        "exposure": 0.8
+      },
+      "data_requirements": ["local_csv_bars", "ohlcv", "on_balance_volume", "volume_confirmation"],
+      "data_source": {
+        "kind": "local_bars",
+        "path": "tests/fixtures/strategy_data/price_volume_breakout_bars.csv",
+        "pit_status": "PIT_VERIFIED"
+      },
+      "execution_assumptions": {
+        "friction_bps": 5.0,
+        "paper_only": true,
+        "starting_capital": 80000,
+        "max_participation_rate": 0.12,
+        "fee_bps": 1.0,
+        "slippage_bps": 5.0,
+        "min_average_daily_volume": 50000,
+        "allow_short": false,
+        "borrow_required": false
+      },
+      "robustness_assumptions": {
+        "fold_count": 3,
+        "min_train_bars": 8,
+        "min_test_bars": 4,
+        "min_positive_fold_ratio": 0.5,
+        "max_worst_fold_return": -0.25,
+        "max_pbo_like_score": 0.8,
+        "min_dsr_like_score": -0.1
+      },
+      "tags": ["price_volume", "obv", "accumulation"]
+    }
+  ]
+}

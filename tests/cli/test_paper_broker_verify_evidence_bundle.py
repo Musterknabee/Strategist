@@ -1,0 +1,102 @@
+from __future__ import annotations
+
+import json
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+from strategy_validator.application.paper_execution_cockpit import build_ui_paper_execution_cockpit_payload
+from strategy_validator.application.paper_execution_evidence_bundle import write_paper_execution_evidence_bundle_artifact
+from strategy_validator.application.paper_execution_intent_selection import write_paper_execution_intent_selection_artifact
+from strategy_validator.application.paper_execution_journal import write_paper_order_dry_run_artifact
+from strategy_validator.application.paper_execution_order_status import write_paper_order_status_artifact
+from strategy_validator.application.paper_execution_reconciliation import write_paper_account_position_snapshot_artifact
+from strategy_validator.application.paper_execution_submission_guard import build_paper_submission_guard_snapshot, write_paper_order_submission_artifact
+from strategy_validator.cli import paper_broker
+from strategy_validator.contracts.paper_broker import (
+    PaperBrokerAccountStatus,
+    PaperBrokerOrderIntent,
+    PaperBrokerOrderResult,
+    PaperBrokerPolicyStatus,
+    PaperBrokerPositionSnapshot,
+)
+from strategy_validator.contracts.paper_execution import PaperExecutionTimelineEntry, PaperExecutionTimelineSummary
+
+
+def _paper_env(monkeypatch) -> dict[str, str]:
+    env = {
+        "ALPACA_TRADING_MODE": "paper",
+        "ALPACA_BASE_URL": "https://paper-api.alpaca.markets",
+        "ALPACA_API_KEY": "paper-key",
+        "ALPACA_API_SECRET": "paper-secret",
+    }
+    for key, value in env.items():
+        monkeypatch.setenv(key, value)
+    return env
+
+
+def _materialize_bundle(tmp_path: Path, output_root: Path, env: dict[str, str]) -> Path:
+    t0 = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(minutes=5)
+    intent = PaperBrokerOrderIntent(tracking_id="track-cli-verify", symbol="SPY", side="buy", qty=1.0)
+    _, _, selection = write_paper_execution_intent_selection_artifact(intent, output_root=output_root, generated_at_utc=t0)
+    _, _, dry = write_paper_order_dry_run_artifact(
+        intent,
+        PaperBrokerOrderResult(ok=True, policy_status=PaperBrokerPolicyStatus.PAPER_READY, dry_run=True, retrieved_at_utc=t0 + timedelta(minutes=1)),
+        output_root=output_root,
+        generated_at_utc=t0 + timedelta(minutes=1),
+        source_selection_artifact_sha256=selection.artifact_sha256,
+    )
+    guard = build_paper_submission_guard_snapshot(intent=intent, env=env, output_root=output_root, evaluated_at_utc=t0 + timedelta(minutes=2))
+    _, _, submission = write_paper_order_submission_artifact(
+        intent=intent,
+        result=PaperBrokerOrderResult(ok=True, policy_status=PaperBrokerPolicyStatus.PAPER_READY, dry_run=False, broker_order_id="paper-order-cli-verify", status="accepted", retrieved_at_utc=t0 + timedelta(minutes=2)),
+        guard_snapshot=guard,
+        output_root=output_root,
+        generated_at_utc=t0 + timedelta(minutes=2),
+    )
+    assert submission.submission_guard.linked_dry_run_artifact_sha256 == dry.artifact_sha256
+    write_paper_order_status_artifact(
+        tracking_id="track-cli-verify",
+        broker_order_id="paper-order-cli-verify",
+        result=PaperBrokerOrderResult(ok=True, policy_status=PaperBrokerPolicyStatus.PAPER_READY, dry_run=False, broker_order_id="paper-order-cli-verify", status="filled", filled_qty=1.0, evidence_redacted={"id": "paper-order-cli-verify", "status": "filled", "symbol": "SPY", "side": "buy"}, retrieved_at_utc=t0 + timedelta(minutes=3)),
+        source_submission_artifact_sha256=submission.artifact_sha256,
+        output_root=output_root,
+        generated_at_utc=t0 + timedelta(minutes=3),
+    )
+    write_paper_account_position_snapshot_artifact(
+        account_status=PaperBrokerAccountStatus(policy_status=PaperBrokerPolicyStatus.PAPER_READY, account_id="paper-account-cli-verify", equity=10000.0, buying_power=9000.0, currency="USD", paper_endpoint_verified=True, retrieved_at_utc=t0 + timedelta(minutes=4)),
+        positions=[PaperBrokerPositionSnapshot(symbol="SPY", qty=1.0)],
+        output_root=output_root,
+        generated_at_utc=t0 + timedelta(minutes=4),
+    )
+    cockpit = build_ui_paper_execution_cockpit_payload(repo_root=tmp_path)
+    latest_path, _, _ = write_paper_execution_evidence_bundle_artifact(
+        timeline=[PaperExecutionTimelineEntry.model_validate(row) for row in cockpit["execution_timeline"]],
+        timeline_summary=PaperExecutionTimelineSummary.model_validate(cockpit["execution_timeline_summary"]),
+        output_root=output_root,
+    )
+    return latest_path
+
+
+def test_verify_evidence_bundle_cli_writes_verification_artifact(monkeypatch, tmp_path: Path, capsys) -> None:
+    env = _paper_env(monkeypatch)
+    monkeypatch.setenv("STRATEGY_VALIDATOR_ARTIFACT_ROOT", str(tmp_path / "artifacts"))
+    output_root = tmp_path / "artifacts" / "paper_broker"
+    bundle_path = _materialize_bundle(tmp_path, output_root, env)
+
+    rc = paper_broker.main(["verify-evidence-bundle", "--bundle-artifact", str(bundle_path), "--output-root", str(output_root)])
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ok"] is True
+    assert payload["verification_status"] == "PASS"
+    assert payload["trust_banner"] == "TRUSTED"
+    assert payload["bundle_hash_valid"] is True
+    assert payload["timeline_source_link_valid"] is True
+    assert payload["verified_source_artifact_count"] == payload["source_artifact_count"]
+    artifact_path = Path(payload["artifact"])
+    assert artifact_path.exists()
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    assert artifact["schema_version"] == "paper_execution_evidence_bundle_verification/v1"
+    assert artifact["artifact_sha256"] == payload["artifact_sha256"]
+    assert "paper-secret" not in artifact_path.read_text(encoding="utf-8")
+    assert Path(payload["history_artifact"]).exists()

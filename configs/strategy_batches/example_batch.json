@@ -1,0 +1,50 @@
+{
+  "batch_id": "demo-batch-001",
+  "created_at_utc": "2026-05-01T12:00:00+00:00",
+  "as_of_utc": "2026-05-01T00:00:00+00:00",
+  "mode": "paper",
+  "max_workers": 4,
+  "pit_policy": "DEGRADE_TO_PAPER_ONLY",
+  "output_root": "artifacts/strategy_runs",
+  "strategies": [
+    {
+      "strategy_id": "demo-momentum-1",
+      "strategy_type": "momentum",
+      "universe": "SYNTHETIC_DEMO_UNIVERSE",
+      "timeframe": "1d",
+      "as_of_utc": "2026-05-01T00:00:00+00:00",
+      "lookback_days": 180,
+      "params": {"signal_window": 20, "hold_window": 5},
+      "data_requirements": ["synthetic_price_panel"],
+      "provider_preferences": [],
+      "execution_assumptions": {"friction_bps": 5.0, "paper_only": true},
+      "tags": ["demo", "momentum"]
+    },
+    {
+      "strategy_id": "demo-mean-rev-1",
+      "strategy_type": "mean_reversion",
+      "universe": "SYNTHETIC_DEMO_UNIVERSE",
+      "timeframe": "1d",
+      "as_of_utc": "2026-05-01T00:00:00+00:00",
+      "lookback_days": 120,
+      "params": {"z_entry": 1.5, "z_exit": 0.25},
+      "data_requirements": ["synthetic_price_panel"],
+      "provider_preferences": [],
+      "execution_assumptions": {"friction_bps": 5.0, "paper_only": true},
+      "tags": ["demo", "mean_reversion"]
+    },
+    {
+      "strategy_id": "demo-vol-breakout-1",
+      "strategy_type": "volatility_breakout",
+      "universe": "SYNTHETIC_DEMO_UNIVERSE",
+      "timeframe": "1d",
+      "as_of_utc": "2026-05-01T00:00:00+00:00",
+      "lookback_days": 90,
+      "params": {"vol_window": 20, "breakout_k": 1.25},
+      "data_requirements": ["synthetic_price_panel"],
+      "provider_preferences": [],
+      "execution_assumptions": {"friction_bps": 5.0, "paper_only": true},
+      "tags": ["demo", "volatility_breakout"]
+    }
+  ]
+}

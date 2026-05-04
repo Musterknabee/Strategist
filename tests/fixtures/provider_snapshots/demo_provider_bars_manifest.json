@@ -1,0 +1,27 @@
+{
+  "access_type": "FIXTURE",
+  "as_of_utc": "2026-02-15T12:00:00Z",
+  "bars_path": "demo_provider_bars.csv",
+  "bars_sha256": "945cfc1e7ae9bf2aa59ef419757795d12ebf5ed3925b24a5424fa200e870043e",
+  "blockers": [],
+  "end_utc": "2026-02-15T00:00:00Z",
+  "extra": {},
+  "key_configured": true,
+  "key_required": false,
+  "license_scope": "fixture_research_only",
+  "manifest_sha256": "f01d67bdd7c7c07c672d4f6d63e5031f0abb1d4fa94fce588d44cdca70ebc115",
+  "pit_status": "PIT_VERIFIED",
+  "provider_id": "demo_provider",
+  "provider_status": "OK",
+  "retrieved_at_utc": "2026-02-15T12:00:00Z",
+  "row_count": 90,
+  "schema_version": "provider_historical_snapshot_manifest/v1",
+  "start_utc": "2026-01-02T00:00:00Z",
+  "symbols": [
+    "SPY",
+    "QQQ"
+  ],
+  "timeframe": "1d",
+  "trust_level": "fixture_deterministic",
+  "warnings": []
+}
