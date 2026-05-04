@@ -11,14 +11,16 @@ import argparse
 import hashlib
 import json
 import sys
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
 
 from strategy_validator.cli.deployment_env_check import (
     EnvCheckReport,
+    absolute_path_preserving_symlink,
     build_single_tenant_deployment_env_check,
+    symlink_components_preserving_path,
 )
 from strategy_validator.cli.single_tenant_deployment_bundle import (
     DeploymentBundleReport,
@@ -146,6 +148,16 @@ def _required_repo_asset_checks(repo_root: Path, *, bundle_dir: Path | None = No
         manifest_digest = manifest_item.get("sha256") if manifest_item else None
         manifest_size = manifest_item.get("size_bytes") if manifest_item else None
 
+        if path.is_symlink():
+            checks.append(
+                AcceptanceCheck(
+                    name=f"repo_asset:{relative}",
+                    status="FAIL",
+                    detail=f"{relative} is a symlink; deployment source assets must be regular files",
+                )
+            )
+            continue
+
         if path.is_file():
             if manifest_item and manifest_item.get("exists") is True and manifest_digest:
                 actual_digest = _sha256_file(path)
@@ -198,17 +210,27 @@ def _bundle_file_checks(bundle_dir: Path) -> tuple[AcceptanceCheck, ...]:
     for relative in _REQUIRED_BUNDLE_FILES:
         checks.append(
             _check(
-                (bundle_dir / relative).exists(),
+                (bundle_dir / relative).is_file() and not (bundle_dir / relative).is_symlink(),
                 f"bundle_file:{relative}",
-                f"{relative} exists in generated deployment bundle",
-                f"{relative} is missing from generated deployment bundle",
+                f"{relative} exists as a regular generated deployment bundle file",
+                f"{relative} is missing, non-regular, or symlinked in generated deployment bundle",
             )
         )
     return tuple(checks)
 
 
+def _path_symlink_detail(path: str | Path, *, label: str) -> str | None:
+    symlinks = symlink_components_preserving_path(path)
+    if not symlinks:
+        return None
+    return f"{label} contains symlink component(s): " + ", ".join(str(item) for item in symlinks)
+
+
 def _write_markdown(path: str | Path, report: DeploymentAcceptanceReport) -> None:
-    target = Path(path)
+    target = absolute_path_preserving_symlink(path)
+    detail = _path_symlink_detail(target, label="summary markdown output path")
+    if detail is not None:
+        raise ValueError(detail)
     target.parent.mkdir(parents=True, exist_ok=True)
     rows = "\n".join(
         f"| {check.status} | `{check.name}` | {check.detail} |" for check in report.checks
@@ -246,7 +268,7 @@ def build_single_tenant_deployment_acceptance(
     repo_root: str | Path = ".",
 ) -> DeploymentAcceptanceReport:
     repo = Path(repo_root).expanduser().resolve()
-    env_path = Path(env_file).expanduser().resolve()
+    env_path = absolute_path_preserving_symlink(env_file)
     env_report: EnvCheckReport = build_single_tenant_deployment_env_check(env_path)
     bundle_report: DeploymentBundleReport | None = None
     checks: list[AcceptanceCheck] = []
@@ -261,21 +283,31 @@ def build_single_tenant_deployment_acceptance(
     )
     bundle_path: Path | None = None
     if bundle_dir:
-        bundle_path = Path(bundle_dir).expanduser().resolve()
+        bundle_path = absolute_path_preserving_symlink(bundle_dir)
 
     checks.extend(_required_repo_asset_checks(repo, bundle_dir=bundle_path))
 
     if bundle_path is not None:
-        bundle_report = check_single_tenant_deployment_bundle(bundle_path)
-        checks.append(
-            _check(
-                bundle_report.ok,
-                "deployment_bundle_valid",
-                "deployment bundle manifest and generated files verify",
-                "deployment bundle is missing required files or has invalid manifest metadata",
+        bundle_path_symlink_detail = _path_symlink_detail(bundle_path, label="deployment bundle directory")
+        if bundle_path_symlink_detail is not None:
+            checks.append(
+                AcceptanceCheck(
+                    name="deployment_bundle_path_not_symlinked",
+                    status="FAIL",
+                    detail=bundle_path_symlink_detail,
+                )
             )
-        )
-        checks.extend(_bundle_file_checks(bundle_path))
+        else:
+            bundle_report = check_single_tenant_deployment_bundle(bundle_path)
+            checks.append(
+                _check(
+                    bundle_report.ok,
+                    "deployment_bundle_valid",
+                    "deployment bundle manifest and generated files verify",
+                    "deployment bundle is missing required files or has invalid manifest metadata",
+                )
+            )
+            checks.extend(_bundle_file_checks(bundle_path))
     else:
         checks.append(
             _check(
@@ -336,7 +368,22 @@ def main(argv: list[str] | None = None) -> int:
         repo_root=ns.repo_root,
     )
     if ns.summary_markdown_output_path:
-        _write_markdown(ns.summary_markdown_output_path, report)
+        markdown_detail = _path_symlink_detail(ns.summary_markdown_output_path, label="summary markdown output path")
+        if markdown_detail is not None:
+            report = replace(
+                report,
+                ok=False,
+                checks=report.checks
+                + (
+                    AcceptanceCheck(
+                        name="summary_markdown_output_path_not_symlinked",
+                        status="FAIL",
+                        detail=markdown_detail,
+                    ),
+                ),
+            )
+        else:
+            _write_markdown(ns.summary_markdown_output_path, report)
     sys.stdout.write(json.dumps(report.to_payload(), indent=2, sort_keys=True) + "\n")
     return 2 if ns.require_ready and not report.ok else 0
 

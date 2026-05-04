@@ -1,6 +1,7 @@
 """Build digest-linked paper broker status artifacts (read-plane evidence)."""
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 from strategy_validator.brokers.alpaca_paper import evaluate_alpaca_paper_policy, get_alpaca_paper_account
@@ -68,7 +69,7 @@ def write_paper_broker_status_artifact(output_root: Path, art: PaperBrokerStatus
     latest = output_root.resolve() / "latest"
     latest.mkdir(parents=True, exist_ok=True)
     path = latest / "paper_broker_status.json"
-    path.write_text(art.model_dump_json(indent=2, sort_keys=True), encoding="utf-8")
+    path.write_text(json.dumps(art.model_dump(mode="json"), indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return path
 
 

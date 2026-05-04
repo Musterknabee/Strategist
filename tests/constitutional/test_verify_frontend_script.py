@@ -23,4 +23,4 @@ def test_verify_frontend_script_and_ci_local_flag_exist() -> None:
     workflow = ROOT / ".github" / "workflows" / "ci.yml"
     wtext = workflow.read_text(encoding="utf-8")
     assert "strategist-web" in wtext
-    assert "npm run lint" in wtext
+    assert "npm run lint" in wtext or "npm run certify" in wtext

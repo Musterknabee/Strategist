@@ -8,6 +8,7 @@ import { Pane } from "@/components/terminal/Pane";
 import { TermKV } from "@/components/terminal/TermKV";
 import { useTerminalPageBind } from "@/hooks/useTerminalPageBind";
 import { useUiStrategyBatchLatest, useUiStrategyBatchList } from "@/hooks/useUiStrategyBatches";
+import { useUiBacktestForensicsLatest } from "@/hooks/useUiBacktestForensics";
 import { tryGetPublicStrategistApiBaseUrl } from "@/lib/config/public-config";
 import { asRecord, asString, asStringArray } from "@/lib/operator/payload-utils";
 import { useTerminalCockpit } from "@/lib/terminal/cockpit-context";
@@ -23,10 +24,13 @@ export default function StrategyLabPage() {
   const { openInspector } = useTerminalCockpit();
   const latest = useUiStrategyBatchLatest();
   const list = useUiStrategyBatchList();
+  const forensics = useUiBacktestForensicsLatest();
   const [filter, setFilter] = useState<StatusFilter>("ALL");
   const [sel, setSel] = useState<string | null>(null);
 
   const latestRoot = latest.data != null ? asRecord(latest.data) : null;
+  const forensicsRoot = forensics.data != null ? asRecord(forensics.data) : null;
+  const forensicSummary = forensicsRoot?.summary != null ? asRecord(forensicsRoot.summary) : null;
   const batch = latestRoot?.latest != null ? asRecord(latestRoot.latest as object) : null;
   const degraded = latestRoot ? asStringArray(latestRoot.degraded) : [];
   const strategiesRaw = batch?.strategies;
@@ -112,6 +116,7 @@ export default function StrategyLabPage() {
       cell: (r) => (r.analytics_rank != null ? String(r.analytics_rank) : "—"),
     },
     { key: "id", header: "Strategy", cell: (r) => <code>{asString(r.strategy_id)}</code> },
+    { key: "type", header: "Type", width: "132px", cell: (r) => <code>{asString(r.strategy_type) ?? "—"}</code> },
     {
       key: "sc",
       header: "Score",
@@ -158,6 +163,19 @@ export default function StrategyLabPage() {
             ? asString((g as { data_quality_gate?: string }).data_quality_gate)
             : null;
         return <StatusBadge raw={fromGate ?? asString(r.data_quality_gate_status) ?? "—"} />;
+      },
+    },
+    {
+      key: "mdi",
+      header: "MDI",
+      width: "72px",
+      cell: (r) => {
+        const g = r.gate_summary;
+        const fromGate =
+          g && typeof g === "object" && "market_data_integrity_gate" in g
+            ? asString((g as { market_data_integrity_gate?: string }).market_data_integrity_gate)
+            : null;
+        return <StatusBadge raw={fromGate ?? asString(r.market_data_integrity_gate_status) ?? "—"} />;
       },
     },
     { key: "pit", header: "PIT", width: "72px", cell: (r) => asString(r.pit_status) ?? "—" },
@@ -350,7 +368,40 @@ export default function StrategyLabPage() {
         </div>
       )}
 
+      <div className="readiness" role="status">
+        <strong>Governed technical strategy templates</strong>
+        <p className="muted" style={{ margin: "0.35rem 0 0" }}>
+          Supported research/paper templates now include candlestick + volume systems — bullish engulfing reversal, hammer
+          reversal, and inside-bar volume breakout — plus chart-pattern systems, statistical mean reversion, Donchian/ATR/MACD
+          market-structure templates, RSI/Bollinger/VWAP technical templates, and price-volume trendline/OBV systems.
+          They are signal templates only; gates, PIT data, execution realism, and paper validation remain mandatory.
+        </p>
+      </div>
+
       <div className="cockpit-grid" style={{ gridTemplateColumns: "1fr" }}>
+        <Pane
+          title="Backtest forensics"
+          dense
+          onInspect={() =>
+            openInspector({
+              title: "Backtest forensics · latest",
+              rawJson: forensics.data ?? {},
+            })
+          }
+        >
+          {forensics.isError && <p className="muted">DEGRADED · could not load /ui/backtest-forensics/latest</p>}
+          <TermKV
+            rows={[
+              { k: "strategy_count", v: String(forensicSummary?.strategy_count ?? "0") },
+              { k: "review_ready", v: String(forensicSummary?.promotion_eligible_count ?? "0") },
+              { k: "needs_evidence", v: String(forensicSummary?.needs_evidence_count ?? "0") },
+              { k: "paper_only", v: String(forensicSummary?.paper_only_count ?? "0") },
+              { k: "blocked", v: String(forensicSummary?.blocked_count ?? "0") },
+              { k: "summary_path", v: asString(forensicsRoot?.summary_path) ?? "—" },
+            ]}
+          />
+          <JsonDetails summary="forensic risk flags" data={forensicSummary?.risk_flag_counts ?? {}} />
+        </Pane>
         <Pane
           title="Latest batch"
           dense
@@ -408,8 +459,18 @@ export default function StrategyLabPage() {
             <p className="muted">No batch artifacts under scan root. Run the CLI to generate evidence.</p>
           )}
           <pre className="json-preview" style={{ marginTop: "0.75rem", fontSize: "10px" }}>
-            strategy-validator-strategy-batch-run --batch configs/strategy_batches/example_batch.json --output-root
-            artifacts/strategy_runs --max-workers 4 --mode paper --run-id my-run --overwrite --json
+            strategy-validator-strategy-batch-run --batch configs/strategy_batches/example_price_volume_batch.json --output-root
+            artifacts/strategy_runs --max-workers 4 --mode paper --run-id my-run --overwrite --json{`\n`}
+            strategy-validator-strategy-batch-run --batch configs/strategy_batches/example_advanced_technical_batch.json --output-root
+            artifacts/strategy_runs --max-workers 4 --mode paper --run-id advanced-tech --overwrite --no-synthetic --json{`\n`}
+            strategy-validator-strategy-batch-run --batch configs/strategy_batches/example_market_structure_batch.json --output-root
+            artifacts/strategy_runs --max-workers 4 --mode paper --run-id market-structure --overwrite --no-synthetic --json{`\n`}
+            strategy-validator-strategy-batch-run --batch configs/strategy_batches/example_mean_reversion_batch.json --output-root
+            artifacts/strategy_runs --max-workers 4 --mode paper --run-id mean-reversion --overwrite --no-synthetic --json{`\n`}
+            strategy-validator-strategy-batch-run --batch configs/strategy_batches/example_chart_pattern_batch.json --output-root
+            artifacts/strategy_runs --max-workers 4 --mode paper --run-id chart-patterns --overwrite --no-synthetic --json{`\n`}
+            strategy-validator-strategy-batch-run --batch configs/strategy_batches/example_candlestick_volume_batch.json --output-root
+            artifacts/strategy_runs --max-workers 4 --mode paper --run-id candlestick-volume --overwrite --no-synthetic --json
           </pre>
         </Pane>
 
@@ -555,6 +616,9 @@ export default function StrategyLabPage() {
                   gauntlet_inspector: {
                     data_quality_path: r.data_quality_artifact_path ?? null,
                     data_quality_gate: asString(r.data_quality_gate_status),
+                    market_data_integrity_path: r.market_data_integrity_artifact_path ?? null,
+                    market_data_integrity_gate: asString(r.market_data_integrity_gate_status),
+                    market_data_integrity_evidence_sha256: asString(r.market_data_integrity_evidence_sha256),
                     parameter_sensitivity_path: r.parameter_sensitivity_artifact_path ?? null,
                     parameter_sensitivity_gate: asString(r.parameter_sensitivity_gate_status),
                     regime_analysis_path: r.regime_analysis_artifact_path ?? null,

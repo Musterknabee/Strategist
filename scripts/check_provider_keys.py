@@ -11,6 +11,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from scripts._path_integrity import PathIntegrityError, path_error_payload, safe_input_file
+
 from strategy_validator.contracts.provider_capabilities import (
     ProviderAccessType,
     all_provider_capabilities,
@@ -123,7 +129,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--env-file", default="", help="Merge KEY=VALUE pairs from this file into the report.")
     parser.add_argument("--json", action="store_true", help="Pretty-print JSON.")
     ns = parser.parse_args(argv)
-    env_path = Path(ns.env_file).resolve() if ns.env_file else None
+    try:
+        env_path = safe_input_file(ns.env_file, label="CHECK_PROVIDER_KEYS_ENV_FILE", required=False) if ns.env_file else None
+    except PathIntegrityError as exc:
+        sys.stdout.write(json.dumps(path_error_payload(exc), sort_keys=True) + "\n")
+        return 2
     report = build_report(env_file=env_path)
     indent = 2 if ns.json else None
     sys.stdout.write(json.dumps(report, indent=indent, sort_keys=True) + "\n")

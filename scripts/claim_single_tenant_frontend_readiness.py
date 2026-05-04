@@ -16,6 +16,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from scripts._path_integrity import PathIntegrityError, path_error_payload, safe_output_file  # noqa: E402
+
 from strategy_validator.application.frontend_readiness_claim import (  # noqa: E402
     FRONTEND_EXPECTED_PACKAGE,
     FRONTEND_READINESS_CLAIM_SCHEMA_VERSION,
@@ -68,6 +70,16 @@ def _http_text(url: str) -> tuple[bool, int | None, str | None]:
     return status == 200 and "STRATEGIST TERMINAL" in text, status, None
 
 
+def _emit_path_error(error: PathIntegrityError) -> None:
+    sys.stderr.write(
+        json.dumps(
+            path_error_payload(error, schema_version="frontend_readiness_claim_path_error/v1"),
+            sort_keys=True,
+        )
+        + "\n"
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Claim single-tenant frontend readiness after formal local evidence gates pass.")
     parser.add_argument("--api-base-url", default="http://127.0.0.1:8010")
@@ -75,6 +87,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", type=Path, default=default_frontend_readiness_claim_path(REPO_ROOT))
     parser.add_argument("--skip-build", action="store_true", help="Use only lint/typecheck/test plus live smoke checks.")
     args = parser.parse_args(argv)
+    try:
+        output = safe_output_file(args.output, label="FRONTEND_READINESS_CLAIM_OUTPUT")
+    except PathIntegrityError as exc:
+        _emit_path_error(exc)
+        return 2
 
     web = REPO_ROOT / FRONTEND_EXPECTED_PACKAGE
     frontend_prebuild_ok, frontend_prebuild_status, frontend_prebuild_error = _http_text(args.frontend_url.rstrip("/") + "/")
@@ -127,13 +144,13 @@ def main(argv: list[str] | None = None) -> int:
             "frontend_postbuild": {"ok": frontend_postbuild_ok, "status": frontend_postbuild_status, "error": frontend_postbuild_error},
         },
     }
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
     print(
         json.dumps(
             {
                 "ok": ok,
-                "output": str(args.output),
+                "output": str(output),
                 "checks": checks,
                 "runtime_note": (
                     "The API ignores this artifact for /ui/facade unless "

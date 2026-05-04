@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib
+import os
 import shutil
 import subprocess
 from typing import Any
@@ -71,6 +72,11 @@ def probe_gpu_capability() -> dict[str, Any]:
         "fallback_status": "GPU_UNAVAILABLE_CPU_FALLBACK",
     }
     payload.update(_probe_nvidia_smi())
+    deep_probe = (os.environ.get("STRATEGY_VALIDATOR_RESEARCH_COMPUTE_DEEP_PROBE_ENABLE", "").strip().lower() in {"1", "true", "yes"})
+    if not deep_probe:
+        payload["reason"] = "TORCH_DEEP_PROBE_DISABLED"
+        payload["fallback_status"] = "GPU_UNAVAILABLE_CPU_FALLBACK"
+        return payload
     try:
         torch = importlib.import_module("torch")
     except Exception:

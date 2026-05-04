@@ -83,7 +83,14 @@ def _ingest_main(ns: argparse.Namespace) -> int:
         sys.stdout.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
     else:
         sys.stdout.write(f"ok={run.ok} snapshots={len(run.snapshots)} network={run.network_used}\n")
-    return 0 if run.ok or ns.allow_failed_exit else 1
+    # A PENDING_KEY / no-network manifest is a successful infrastructure
+    # outcome: the artifact exists and the read plane can degrade honestly.
+    # Reserve non-zero for malformed CLI input or hard execution errors.
+    if run.ok or ns.allow_failed_exit:
+        return 0
+    if run.snapshots and not run.network_used:
+        return 0
+    return 1
 
 
 def main(argv: list[str] | None = None) -> int:

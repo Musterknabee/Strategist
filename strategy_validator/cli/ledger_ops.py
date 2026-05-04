@@ -13,6 +13,10 @@ from pathlib import Path
 from typing import Any
 
 from strategy_validator.ledger._append_only import resolve_database_path
+from strategy_validator.cli.deployment_env_check import (
+    absolute_path_preserving_symlink,
+    symlink_components_preserving_path,
+)
 from strategy_validator.ledger.reader import verify_hash_chain, verify_hash_chain_readonly
 from strategy_validator.ledger.operator_actions import verify_operator_action_event_chain_readonly
 from strategy_validator.projections.operator_action_event_index import (
@@ -59,10 +63,74 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+
+def _symlink_code(label: str, *, final_component: bool) -> str:
+    return f"{label}_IS_SYMLINK" if final_component else f"{label}_PARENT_IS_SYMLINK"
+
+
+def _ensure_not_symlinked(path: str | Path, *, label: str) -> Path:
+    """Return an absolute path while rejecting symlinked durable ledger paths.
+
+    Ledger operations are break-glass/operator primitives.  They must not hash,
+    back up, restore, or preserve files through filesystem indirection because
+    that can make evidence point somewhere other than the reviewed deployment
+    volume.  Unlike ``Path.resolve()``, this preserves the operator-provided
+    path so symlinks remain observable.
+    """
+
+    target = absolute_path_preserving_symlink(path)
+    symlinks = symlink_components_preserving_path(target)
+    if symlinks:
+        final_component = target in symlinks
+        code = _symlink_code(label, final_component=final_component)
+        joined = ", ".join(str(item) for item in symlinks)
+        raise LedgerOpsError(f"{code}: {label.lower()} must not contain symlink components: {joined}")
+    return target
+
+
+def _database_path_for_operation(*, label: str) -> Path:
+    """Resolve the runtime ledger path while preserving operation-specific errors."""
+
+    try:
+        return _ensure_not_symlinked(resolve_database_path(), label=label)
+    except RuntimeError as exc:
+        configured = os.environ.get(_ENV_DB_PATH)
+        if configured and "LEDGER_DATABASE_PATH" in str(exc):
+            return _ensure_not_symlinked(configured, label=label)
+        raise
+
+
+def _ensure_regular_file(path: Path, *, label: str) -> None:
+    if not path.exists():
+        raise LedgerOpsError(f"{label}_MISSING: path does not exist: {path}")
+    if not path.is_file():
+        raise LedgerOpsError(f"{label}_NOT_FILE: path is not a regular file: {path}")
+
+
+def _ensure_directory_path(path: Path, *, label: str, create: bool) -> None:
+    if create:
+        path.mkdir(parents=True, exist_ok=True)
+    if path.exists() and not path.is_dir():
+        raise LedgerOpsError(f"{label}_NOT_DIRECTORY: path is not a directory: {path}")
+
 def verify_ledger(*, database_path: str | None = None, experiment_id: str | None = None) -> dict[str, Any]:
     """Verify schema version and hash-chain integrity for the configured ledger."""
     with _with_database_path(database_path):
-        resolved = resolve_database_path()
+        try:
+            resolved = _database_path_for_operation(label="LEDGER_DATABASE_PATH")
+        except LedgerOpsError as exc:
+            target = absolute_path_preserving_symlink(os.environ.get(_ENV_DB_PATH, ""))
+            return {
+                "schema_version": "ledger_ops_verify/v1",
+                "ok": False,
+                "database_path": str(target),
+                "database_exists": target.exists(),
+                "current_schema_version": 0,
+                "expected_schema_version": EXPECTED_SCHEMA_VERSION,
+                "hash_chain": None,
+                "path_integrity": {"ok": False, "error": str(exc)},
+                "error": str(exc),
+            }
         schema_version = 0
         if resolved.exists():
             with sqlite3.connect(resolved) as connection:
@@ -77,13 +145,27 @@ def verify_ledger(*, database_path: str | None = None, experiment_id: str | None
             "current_schema_version": schema_version,
             "expected_schema_version": EXPECTED_SCHEMA_VERSION,
             "hash_chain": chain.to_payload() if chain is not None else None,
+            "path_integrity": {"ok": True},
         }
 
 
 def verify_operator_action_journal(*, database_path: str | None = None) -> dict[str, Any]:
     """Verify append-only operator action event chain integrity."""
     with _with_database_path(database_path):
-        resolved = resolve_database_path()
+        try:
+            resolved = _database_path_for_operation(label="LEDGER_DATABASE_PATH")
+        except LedgerOpsError as exc:
+            target = absolute_path_preserving_symlink(os.environ.get(_ENV_DB_PATH, ""))
+            return {
+                "schema_version": "ledger_ops_operator_action_chain_verify/v1",
+                "ok": False,
+                "database_path": str(target),
+                "database_exists": target.exists(),
+                "event_count": 0,
+                "issue_count": 1,
+                "issues": [str(exc)],
+                "path_integrity": {"ok": False, "error": str(exc)},
+            }
         report = verify_operator_action_event_chain_readonly() if resolved.exists() else None
         return {
             "schema_version": "ledger_ops_operator_action_chain_verify/v1",
@@ -93,6 +175,7 @@ def verify_operator_action_journal(*, database_path: str | None = None) -> dict[
             "event_count": 0 if report is None else report.event_count,
             "issue_count": 1 if report is None else report.issue_count,
             "issues": ["ledger database does not exist"] if report is None else list(report.issues),
+            "path_integrity": {"ok": True},
         }
 
 
@@ -110,7 +193,8 @@ def verify_ledger_integrity(*, database_path: str | None = None, experiment_id: 
     ledger = verify_ledger(database_path=database_path, experiment_id=experiment_id)
     operator_actions = verify_operator_action_journal(database_path=database_path)
     resolved = Path(str(ledger.get("database_path", ""))).expanduser()
-    database_sha256 = _sha256_file(resolved) if resolved.exists() and resolved.is_file() else None
+    path_integrity_ok = bool((ledger.get("path_integrity") or {}).get("ok"))
+    database_sha256 = _sha256_file(resolved) if path_integrity_ok and resolved.exists() and resolved.is_file() else None
     return {
         "schema_version": "ledger_ops_integrity_verify/v1",
         "ok": bool(ledger.get("ok") and operator_actions.get("ok")),
@@ -131,16 +215,15 @@ def backup_ledger_database(
 ) -> dict[str, Any]:
     """Create a timestamped SQLite backup and verify hash-chain integrity."""
     with _with_database_path(database_path):
-        resolved = resolve_database_path()
-        if not resolved.exists():
-            raise LedgerOpsError(f"Ledger database does not exist: {resolved}")
+        resolved = _database_path_for_operation(label="LEDGER_DATABASE_PATH")
+        _ensure_regular_file(resolved, label="LEDGER_DATABASE_PATH")
 
         before = verify_ledger(database_path=str(resolved)) if verify_before else {"ok": True}
         if verify_before and not before["ok"]:
             raise LedgerOpsError("Refusing to back up ledger with failed pre-backup verification.")
 
-        target_dir = Path(backup_dir) if backup_dir else resolved.parent / "backups"
-        target_dir.mkdir(parents=True, exist_ok=True)
+        target_dir = _ensure_not_symlinked(backup_dir if backup_dir else resolved.parent / "backups", label="LEDGER_BACKUP_DIR")
+        _ensure_directory_path(target_dir, label="LEDGER_BACKUP_DIR", create=True)
         backup_path = target_dir / f"{resolved.stem}.{_timestamp_slug()}.sqlite3"
 
         with sqlite3.connect(resolved) as source, sqlite3.connect(backup_path) as destination:
@@ -174,14 +257,11 @@ def restore_ledger_database(
 ) -> dict[str, Any]:
     """Restore a SQLite ledger backup into the configured ledger path and verify it."""
 
-    source = Path(backup_path).resolve()
-    if not source.exists():
-        raise LedgerOpsError(f"Ledger backup does not exist: {source}")
-    if not source.is_file():
-        raise LedgerOpsError(f"Ledger backup is not a file: {source}")
+    source = _ensure_not_symlinked(backup_path, label="LEDGER_RESTORE_BACKUP_PATH")
+    _ensure_regular_file(source, label="LEDGER_RESTORE_BACKUP_PATH")
 
     with _with_database_path(database_path):
-        destination = resolve_database_path()
+        destination = _database_path_for_operation(label="LEDGER_RESTORE_DESTINATION_PATH")
         if destination.exists() and not allow_overwrite:
             raise LedgerOpsError(
                 f"Refusing to overwrite existing ledger database without allow_overwrite: {destination}"
@@ -193,12 +273,11 @@ def restore_ledger_database(
 
         pre_restore_backup: dict[str, Any] | None = None
         if destination.exists():
-            backup_directory = (
-                Path(pre_restore_backup_dir).expanduser().resolve()
-                if pre_restore_backup_dir
-                else destination.parent / "pre-restore-backups"
+            backup_directory = _ensure_not_symlinked(
+                pre_restore_backup_dir if pre_restore_backup_dir else destination.parent / "pre-restore-backups",
+                label="LEDGER_PRE_RESTORE_BACKUP_DIR",
             )
-            backup_directory.mkdir(parents=True, exist_ok=True)
+            _ensure_directory_path(backup_directory, label="LEDGER_PRE_RESTORE_BACKUP_DIR", create=True)
             preserved_path = backup_directory / f"{destination.stem}.pre-restore.{_timestamp_slug()}{destination.suffix}"
             shutil.copy2(destination, preserved_path)
             pre_restore_backup = {

@@ -15,7 +15,13 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from strategy_validator.migrations import EXPECTED_SCHEMA_VERSION, apply_sqlite_migrations, get_current_schema_version
+from scripts._path_integrity import PathIntegrityError, safe_input_dir
+from strategy_validator.migrations import (
+    EXPECTED_SCHEMA_VERSION,
+    SQLiteMigrationPathError,
+    apply_sqlite_migrations,
+    get_current_schema_version,
+)
 
 REQUIRED_TABLES = (
     "ledger_events",
@@ -206,41 +212,83 @@ def _idempotency_uniqueness_is_enforced(connection: sqlite3.Connection) -> bool:
     return False
 
 
+def _failed_path_integrity_report(exc: PathIntegrityError) -> MigrationTruthReport:
+    failure = MigrationTruthFailure(name="repo_root_path_integrity", detail=f"{exc.code}: {exc.detail} ({exc.path})")
+    return MigrationTruthReport(
+        schema_version="migration_truth_check/v3",
+        status="FAIL",
+        expected_schema_version=EXPECTED_SCHEMA_VERSION,
+        first_schema_version=0,
+        second_schema_version=0,
+        table_count=0,
+        index_count=0,
+        column_contract_count=0,
+        idempotency_uniqueness_enforced=False,
+        sequence_uniqueness_enforced=False,
+        failure_count=1,
+        failures=(failure,),
+    )
+
+
 def run_migration_truth_check(*, repo_root: str | Path | None = None) -> MigrationTruthReport:
     # repo_root is accepted for CLI symmetry and future extension. The migration
     # implementation is imported from source above, so this check intentionally
-    # exercises the currently checked-out package code.
-    _ = Path(repo_root).resolve() if repo_root is not None else REPO_ROOT
+    # exercises the currently checked-out package code. Still, explicit repo-root
+    # values must not be followed through symlinks: this gate is part of the same
+    # release evidence chain as source_health and repository_truth_check.
+    try:
+        if repo_root is not None:
+            safe_input_dir(repo_root, label="MIGRATION_TRUTH_REPO_ROOT")
+    except PathIntegrityError as exc:
+        return _failed_path_integrity_report(exc)
+
     failures: list[MigrationTruthFailure] = []
     idempotency_uniqueness_enforced = False
     sequence_uniqueness_enforced = False
-    with sqlite3.connect(":memory:") as connection:
-        apply_sqlite_migrations(connection)
-        connection.commit()
-        first_schema_version = get_current_schema_version(connection)
-        apply_sqlite_migrations(connection)
-        connection.commit()
-        second_schema_version = get_current_schema_version(connection)
-        tables = _sqlite_names(connection, kind="table")
-        indexes = _sqlite_names(connection, kind="index")
-        column_contract_count = 0
-        for table_name, required_columns in REQUIRED_COLUMNS.items():
-            existing_columns = _table_columns(connection, table_name)
-            missing_columns = sorted(set(required_columns) - existing_columns)
-            column_contract_count += len(required_columns)
-            if missing_columns:
-                failures.append(
-                    MigrationTruthFailure(
-                        name=f"required_columns:{table_name}",
-                        detail=", ".join(missing_columns),
+    try:
+        with sqlite3.connect(":memory:") as connection:
+            apply_sqlite_migrations(connection)
+            connection.commit()
+            first_schema_version = get_current_schema_version(connection)
+            apply_sqlite_migrations(connection)
+            connection.commit()
+            second_schema_version = get_current_schema_version(connection)
+            tables = _sqlite_names(connection, kind="table")
+            indexes = _sqlite_names(connection, kind="index")
+            column_contract_count = 0
+            for table_name, required_columns in REQUIRED_COLUMNS.items():
+                existing_columns = _table_columns(connection, table_name)
+                missing_columns = sorted(set(required_columns) - existing_columns)
+                column_contract_count += len(required_columns)
+                if missing_columns:
+                    failures.append(
+                        MigrationTruthFailure(
+                            name=f"required_columns:{table_name}",
+                            detail=", ".join(missing_columns),
+                        )
                     )
-                )
-        unique_indexes = _unique_indexes(connection, "operator_action_events")
-        missing_unique_indexes = sorted(set(REQUIRED_UNIQUE_INDEXES) - unique_indexes)
-        if missing_unique_indexes:
-            failures.append(MigrationTruthFailure(name="required_unique_indexes", detail=", ".join(missing_unique_indexes)))
-        sequence_uniqueness_enforced = _sequence_uniqueness_is_enforced(connection)
-        idempotency_uniqueness_enforced = _idempotency_uniqueness_is_enforced(connection)
+            unique_indexes = _unique_indexes(connection, "operator_action_events")
+            missing_unique_indexes = sorted(set(REQUIRED_UNIQUE_INDEXES) - unique_indexes)
+            if missing_unique_indexes:
+                failures.append(MigrationTruthFailure(name="required_unique_indexes", detail=", ".join(missing_unique_indexes)))
+            sequence_uniqueness_enforced = _sequence_uniqueness_is_enforced(connection)
+            idempotency_uniqueness_enforced = _idempotency_uniqueness_is_enforced(connection)
+    except SQLiteMigrationPathError as exc:
+        failures.append(MigrationTruthFailure(name="sqlite_migration_path_integrity", detail=str(exc)))
+        return MigrationTruthReport(
+            schema_version="migration_truth_check/v3",
+            status="FAIL",
+            expected_schema_version=EXPECTED_SCHEMA_VERSION,
+            first_schema_version=0,
+            second_schema_version=0,
+            table_count=0,
+            index_count=0,
+            column_contract_count=0,
+            idempotency_uniqueness_enforced=False,
+            sequence_uniqueness_enforced=False,
+            failure_count=len(failures),
+            failures=tuple(failures),
+        )
 
     if first_schema_version != EXPECTED_SCHEMA_VERSION:
         failures.append(

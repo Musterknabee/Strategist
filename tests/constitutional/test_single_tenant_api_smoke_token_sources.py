@@ -9,6 +9,9 @@ import pytest
 
 from strategy_validator.cli import single_tenant_api_smoke as smoke
 from strategy_validator.cli.single_tenant_api_smoke import (
+    _ERROR_ENV_FILE_IS_SYMLINK,
+    _ERROR_ENV_FILE_NOT_FILE,
+    _ERROR_ENV_FILE_PARENT_IS_SYMLINK,
     _ERROR_TOKEN_SOURCE_ENV_FILE_REQUIRES_ENV_FILE,
     resolve_smoke_base_url,
     resolve_smoke_token,
@@ -239,3 +242,115 @@ def test_api_smoke_rejects_invalid_derived_host_port(tmp_path: Path, monkeypatch
         assert "between 1 and 65535" in str(exc)
     else:  # pragma: no cover - assertion clarity
         raise AssertionError("expected invalid host port to fail")
+
+
+def test_api_smoke_rejects_symlinked_env_file_for_token_resolution(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    real_env = tmp_path / "real.env"
+    real_env.write_text("STRATEGY_VALIDATOR_API_TOKEN=file-token-from-real-env\n", encoding="utf-8")
+    linked_env = tmp_path / "deployment.env"
+    try:
+        linked_env.symlink_to(real_env)
+    except (OSError, NotImplementedError):
+        return
+    monkeypatch.delenv("STRATEGY_VALIDATOR_API_TOKEN", raising=False)
+
+    with pytest.raises(ValueError) as excinfo:
+        resolve_smoke_token(env_file=linked_env, token_source="env-file")
+
+    assert str(excinfo.value).startswith(_ERROR_ENV_FILE_IS_SYMLINK)
+
+
+def test_api_smoke_rejects_env_file_under_symlinked_parent_for_base_url(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    real_dir = tmp_path / "real"
+    real_dir.mkdir()
+    env_file = real_dir / "deployment.env"
+    env_file.write_text("STRATEGY_VALIDATOR_HOST_PORT=18081\n", encoding="utf-8")
+    linked_dir = tmp_path / "linked"
+    try:
+        linked_dir.symlink_to(real_dir, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        return
+    monkeypatch.delenv("STRATEGY_VALIDATOR_BASE_URL", raising=False)
+    monkeypatch.delenv("STRATEGY_VALIDATOR_HOST_PORT", raising=False)
+
+    with pytest.raises(ValueError) as excinfo:
+        resolve_smoke_base_url(env_file=linked_dir / "deployment.env")
+
+    assert str(excinfo.value).startswith(_ERROR_ENV_FILE_PARENT_IS_SYMLINK)
+
+
+def test_api_smoke_rejects_non_regular_env_file_path(tmp_path: Path) -> None:
+    env_dir = tmp_path / "deployment.env"
+    env_dir.mkdir()
+
+    with pytest.raises(ValueError) as excinfo:
+        resolve_smoke_token(env_file=env_dir, token_source="env-file")
+
+    assert str(excinfo.value).startswith(_ERROR_ENV_FILE_NOT_FILE)
+
+
+def test_api_smoke_main_reports_env_file_symlink_error_code(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    real_env = tmp_path / "real.env"
+    real_env.write_text("STRATEGY_VALIDATOR_API_TOKEN=file-token-from-real-env\n", encoding="utf-8")
+    linked_env = tmp_path / "deployment.env"
+    try:
+        linked_env.symlink_to(real_env)
+    except (OSError, NotImplementedError):
+        return
+    monkeypatch.delenv("STRATEGY_VALIDATOR_API_TOKEN", raising=False)
+
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        code = smoke.main(
+            [
+                "--base-url",
+                "http://127.0.0.1:1",
+                "--env-file",
+                str(linked_env),
+                "--token-source",
+                "env-file",
+                "--require-pass",
+            ]
+        )
+
+    payload = json.loads(buf.getvalue())
+    assert payload["ok"] is False
+    assert payload["error_code"] == _ERROR_ENV_FILE_IS_SYMLINK
+    assert code == 2
+
+
+def test_api_smoke_main_rejects_symlinked_env_file_even_when_explicit_token_and_base_url(
+    tmp_path: Path,
+) -> None:
+    real_env = tmp_path / "real.env"
+    real_env.write_text("STRATEGY_VALIDATOR_API_TOKEN=file-token-from-real-env\n", encoding="utf-8")
+    linked_env = tmp_path / "deployment.env"
+    try:
+        linked_env.symlink_to(real_env)
+    except (OSError, NotImplementedError):
+        return
+
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        code = smoke.main(
+            [
+                "--base-url",
+                "http://127.0.0.1:1",
+                "--token",
+                "explicit-token-abcdefghijklmnopqrstuvwxyz",
+                "--env-file",
+                str(linked_env),
+                "--require-pass",
+            ]
+        )
+
+    payload = json.loads(buf.getvalue())
+    assert payload["ok"] is False
+    assert payload["error_code"] == _ERROR_ENV_FILE_IS_SYMLINK
+    assert code == 2

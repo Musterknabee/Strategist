@@ -14,6 +14,8 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+from scripts._path_integrity import PathIntegrityError, path_error_payload, safe_input_file, safe_output_file
+
 from strategy_validator.evidence.provider_bundle import build_provider_evidence_manifest_payload
 from strategy_validator.providers.health import build_provider_health_snapshot
 
@@ -72,17 +74,20 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--json", action="store_true", help="Pretty-print JSON.")
     ns = parser.parse_args(argv)
-    samples = ns.samples.resolve()
-    env_path = Path(ns.env_file).resolve() if ns.env_file else None
+    try:
+        samples = safe_input_file(ns.samples, label="PROVIDER_EVIDENCE_SAMPLES_MANIFEST", required=True)
+        env_path = safe_input_file(ns.env_file, label="PROVIDER_EVIDENCE_ENV_FILE", required=False) if ns.env_file else None
+        output = safe_output_file(ns.output, label="PROVIDER_EVIDENCE_OUTPUT")
+        norm_path = safe_input_file(ns.normalized, label="PROVIDER_EVIDENCE_NORMALIZED", required=False) if ns.normalized else None
+    except PathIntegrityError as exc:
+        sys.stdout.write(json.dumps(path_error_payload(exc), sort_keys=True) + "\n")
+        return 2
     env = _merged_env(env_file=env_path if env_path and env_path.is_file() else None)
     health = build_provider_health_snapshot(
         env=env,
         samples_manifest_path=samples,
         repo_root=_REPO_ROOT,
     )
-    norm_path = ns.normalized.resolve() if ns.normalized else None
-    if norm_path is not None and not norm_path.is_file():
-        norm_path = None
     model = build_provider_evidence_manifest_payload(
         samples_manifest_path=samples,
         normalized_records_path=norm_path,
@@ -90,11 +95,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     payload: dict[str, Any] = model.model_dump(mode="json")
     indent = 2 if ns.json else None
-    ns.output.parent.mkdir(parents=True, exist_ok=True)
-    ns.output.write_text(json.dumps(payload, indent=indent, sort_keys=True) + "\n", encoding="utf-8")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(payload, indent=indent, sort_keys=True) + "\n", encoding="utf-8")
     summary = {
         "schema_version": "build_provider_evidence_manifest_cli/v1",
-        "wrote": ns.output.resolve().as_posix(),
+        "wrote": output.as_posix(),
         "provider_sample_manifest_digest": payload.get("provider_sample_manifest_digest"),
         "provider_health_digest": payload.get("provider_health_digest"),
         "unavailable_providers": list(payload.get("unavailable_providers") or ()),

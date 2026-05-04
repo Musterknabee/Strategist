@@ -22,6 +22,23 @@ const RAIL: { href: string; icon: string; label: string }[] = [
   { href: "/workboard", icon: "W", label: "Workboard" },
   { href: "/strategy-lab", icon: "S", label: "Strategy Lab" },
   { href: "/paper-tracking", icon: "K", label: "Paper" },
+  { href: "/strategy-memory", icon: "M", label: "Memory" },
+  { href: "/thesis", icon: "F", label: "Thesis" },
+  { href: "/shadow-book", icon: "B", label: "Shadow Book" },
+  { href: "/research-closure", icon: "C", label: "Closure" },
+  { href: "/research-attestation", icon: "A", label: "Attest" },
+  { href: "/research-briefing", icon: "D", label: "Brief" },
+  { href: "/research-export", icon: "Z", label: "Export" },
+  { href: "/research-run", icon: "U", label: "Run" },
+  { href: "/research-catalog", icon: "I", label: "Catalog" },
+  { href: "/research-drift", icon: "V", label: "Drift" },
+  { href: "/research-policy-gate", icon: "Y", label: "Policy" },
+  { href: "/research-exception", icon: "N", label: "Exception" },
+  { href: "/research-remediation", icon: "M", label: "Remediate" },
+  { href: "/research-release-readiness", icon: "Q", label: "Release" },
+  { href: "/research-handoff", icon: "H", label: "Handoff" },
+  { href: "/research-handoff-signoff", icon: "S", label: "Signoff" },
+  { href: "/research-review-journal", icon: "J", label: "Journal" },
   { href: "/research-os", icon: "X", label: "Research OS" },
 ];
 
@@ -161,7 +178,7 @@ export function TerminalShell({ children }: { children: ReactNode }) {
             <div className="term-footer__hints muted">
               <span>⌘K palette</span>
               <span>/ palette</span>
-              <span>G+O/W/R/E/L/P/T nav</span>
+              <span>G+O/W/R/E/L/P/T/U nav</span>
               <span>R refresh route</span>
               <span>? help</span>
               <span>Esc close</span>

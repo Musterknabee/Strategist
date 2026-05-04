@@ -465,6 +465,13 @@ GET /readiness/deployment/summary
 
 Use this endpoint for dashboards and release checks. Do not substitute it for `strategy-validator-ledger-ops backup`; readiness confirms the backup target is configured and writable, while the ledger ops command performs the actual verified backup.
 
+## Research OS runtime demo and thesis mutation loop
+
+Paper and research **artifacts only**; these commands do **not** adjudicate, trade live, or write the ledger.
+
+- `strategy-validator-research-os-runtime-demo` — Writes `research_os_runtime/latest/runtime_demo_manifest.json` under `STRATEGY_VALIDATOR_ARTIFACT_ROOT` (see `docs/strategy_lab/RESEARCH_OPERATING_SYSTEM.md`). Add **`--full-research-os-cycle`** to also emit thesis to Oracle mutation proposals to **proposed** next batch spec under `<artifact_root>/research_os_runtime/` (`next_batch_spec_proposed.json`, `thesis_mutation_loop_report.json`).
+- `strategy-validator-thesis-mutation-batch-loop` — Offline follow-on from a completed run: **`--batch-summary`** path to `batch_summary.json`, **`--next-batch-spec-output`** path for a proposed `StrategyBatchSpec` JSON, optional **`--loop-report-output`** for the loop report. Operator must review artifacts before running `strategy-validator-strategy-batch-run` on the proposed spec.
+
 ## Semantic research evidence preflight
 
 Before a semantic tribunal feature is used as adjudication evidence, route it through the application-layer bridge instead of appending ad-hoc payloads to an experiment manifest.
@@ -1524,6 +1531,12 @@ zipping the working directory directly:
 ```bash
 python scripts/package_repo.py --output /tmp/strategy-validator-clean.zip
 ```
+
+To plan removal of `__pycache__` directories and stray `.pyc` / `.pyo` files under
+`strategy_validator/`, `tests/`, `scripts/`, `docs/`, and `configs/` (no other
+trees), run `python scripts/purge_repo_transients.py --json`. That command is
+dry-run only; pass `--apply` when you intend to delete those paths from the
+worktree.
 
 The archive builder includes source, tests, docs, workflows, scripts, configs,
 and migrations while excluding generated `artifacts/`, `scratch/`, Python cache

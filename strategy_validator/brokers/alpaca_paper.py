@@ -168,6 +168,101 @@ def list_alpaca_paper_positions(
     return PaperBrokerPolicyStatus.PAPER_READY, out, notes
 
 
+def get_alpaca_paper_order_status(
+    env: dict[str, str],
+    broker_order_id: str,
+    *,
+    transport: Transport | None = None,
+    allow_network: bool = True,
+) -> PaperBrokerOrderResult:
+    """Fetch a paper order status snapshot from Alpaca.
+
+    This is a read-only status refresh. It never submits an order and is gated by
+    the same paper-only policy as order submission.
+    """
+
+    transport = transport or _default_transport
+    pol, warns, blocks = evaluate_alpaca_paper_policy(env)
+    now = datetime.now(timezone.utc)
+    order_id = str(broker_order_id or "").strip()
+    if not order_id:
+        return PaperBrokerOrderResult(
+            ok=False,
+            policy_status=pol,
+            dry_run=False,
+            blockers=["BROKER_ORDER_ID_MISSING"],
+            warnings=warns + blocks,
+            retrieved_at_utc=now,
+        )
+    if pol != PaperBrokerPolicyStatus.PAPER_READY:
+        return PaperBrokerOrderResult(
+            ok=False,
+            policy_status=pol,
+            dry_run=False,
+            broker_order_id=order_id,
+            blockers=blocks,
+            warnings=warns,
+            retrieved_at_utc=now,
+        )
+    if not allow_network:
+        return PaperBrokerOrderResult(
+            ok=False,
+            policy_status=PaperBrokerPolicyStatus.PAPER_READY,
+            dry_run=False,
+            broker_order_id=order_id,
+            blockers=["ORDER_STATUS_PROBE_SKIPPED_ALLOW_NETWORK_FALSE"],
+            warnings=warns,
+            retrieved_at_utc=now,
+        )
+    key = env["ALPACA_API_KEY"].strip()
+    secret = env["ALPACA_API_SECRET"].strip()
+    base = (env.get("ALPACA_BASE_URL") or "https://paper-api.alpaca.markets").rstrip("/")
+    url = f"{base}/v2/orders/{order_id}"
+    try:
+        code, body = transport(url, {"Authorization": _auth_header(key, secret)}, "GET")
+    except (OSError, HTTPError, URLError) as exc:
+        return PaperBrokerOrderResult(
+            ok=False,
+            policy_status=PaperBrokerPolicyStatus.DEGRADED,
+            dry_run=False,
+            broker_order_id=order_id,
+            blockers=[exc.__class__.__name__],
+            warnings=warns,
+            retrieved_at_utc=now,
+        )
+    try:
+        payload = json.loads(body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        payload = {"parse_error": True}
+    ok = 200 <= code < 300 and isinstance(payload, dict) and not payload.get("parse_error")
+    def _float(value: Any) -> float | None:
+        try:
+            return float(value) if value is not None and value != "" else None
+        except (TypeError, ValueError):
+            return None
+    redacted = {
+        "id": payload.get("id") if isinstance(payload, dict) else order_id,
+        "status": payload.get("status") if isinstance(payload, dict) else None,
+        "symbol": payload.get("symbol") if isinstance(payload, dict) else None,
+        "side": payload.get("side") if isinstance(payload, dict) else None,
+        "qty": payload.get("qty") if isinstance(payload, dict) else None,
+        "filled_qty": payload.get("filled_qty") if isinstance(payload, dict) else None,
+    }
+    return PaperBrokerOrderResult(
+        ok=ok,
+        policy_status=PaperBrokerPolicyStatus.PAPER_READY if ok else PaperBrokerPolicyStatus.DEGRADED,
+        dry_run=False,
+        client_order_id=str(payload.get("client_order_id")) if isinstance(payload, dict) and payload.get("client_order_id") else None,
+        broker_order_id=str(payload.get("id") or order_id) if isinstance(payload, dict) else order_id,
+        status=str(payload.get("status")) if isinstance(payload, dict) and payload.get("status") else None,
+        filled_qty=_float(payload.get("filled_qty")) if isinstance(payload, dict) else None,
+        evidence_redacted=redacted,
+        warnings=warns + ([] if ok else [f"HTTP_{code}" if isinstance(code, int) else "ORDER_STATUS_FETCH_FAILED"]),
+        blockers=[] if ok else ["ORDER_STATUS_FETCH_FAILED"],
+        retrieved_at_utc=now,
+    )
+
+
 def dry_run_paper_order(intent: PaperBrokerOrderIntent, env: dict[str, str]) -> PaperBrokerOrderResult:
     pol, _, blocks = evaluate_alpaca_paper_policy(env)
     now = datetime.now(timezone.utc)
@@ -274,6 +369,7 @@ __all__ = [
     "dry_run_paper_order",
     "evaluate_alpaca_paper_policy",
     "get_alpaca_paper_account",
+    "get_alpaca_paper_order_status",
     "list_alpaca_paper_positions",
     "submit_paper_order",
 ]

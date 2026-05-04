@@ -7,6 +7,7 @@ import { Pane } from "@/components/terminal/Pane";
 import { TermKV } from "@/components/terminal/TermKV";
 import { useTerminalPageBind } from "@/hooks/useTerminalPageBind";
 import { useUiProviderHealth } from "@/hooks/useUiProviderHealth";
+import { useUiProviderSetup } from "@/hooks/useUiProviderSetup";
 import { useUiResearchOsStatus } from "@/hooks/useUiResearchOsStatus";
 import { tryGetPublicStrategistApiBaseUrl } from "@/lib/config/public-config";
 import {
@@ -16,6 +17,7 @@ import {
   asString,
   asStringArray,
 } from "@/lib/operator/payload-utils";
+import type { UiProviderSetupEntry } from "@/lib/api/types";
 import type { InspectorPayload } from "@/lib/terminal/cockpit-context";
 import { useTerminalCockpit } from "@/lib/terminal/cockpit-context";
 import type { TapeLine } from "@/lib/terminal/cockpit-context";
@@ -24,6 +26,7 @@ import { useMemo, useState } from "react";
 type Pf = "all" | "public" | "keyed" | "missing" | "warn" | "bad";
 
 type ERow = Record<string, unknown> & { __id: string };
+type SRow = UiProviderSetupEntry & { __id: string };
 
 function unknownUnless(v: string | undefined, fallback = "UNKNOWN"): string {
   if (v === undefined || v === null || v === "") return fallback;
@@ -86,6 +89,7 @@ export default function ProvidersPage() {
   const config = tryGetPublicStrategistApiBaseUrl();
   const { openInspector } = useTerminalCockpit();
   const health = useUiProviderHealth();
+  const setup = useUiProviderSetup();
   const ros = useUiResearchOsStatus();
   const rosRoot = ros.data != null ? asRecord(ros.data) : null;
   const snapRun =
@@ -105,6 +109,12 @@ export default function ProvidersPage() {
       : [];
     return raw.map((e, i) => ({ ...e, __id: asString(e.provider_id) ?? `p${i}` })) as ERow[];
   }, [entriesRaw]);
+
+  const setupEntries = useMemo(() => {
+    const rows = Array.isArray(setup.data?.entries) ? setup.data.entries : [];
+    return rows.map((e, i) => ({ ...e, __id: e.provider_id || `setup${i}` })) as SRow[];
+  }, [setup.data]);
+  const setupSummary = setup.data?.summary;
 
   const execBlockers = Array.isArray(root?.execution_workflow_blockers)
     ? root.execution_workflow_blockers.filter((x): x is string => typeof x === "string")
@@ -169,6 +179,19 @@ export default function ProvidersPage() {
     [],
   );
 
+  const setupCols: DenseColumn<SRow>[] = useMemo(
+    () => [
+      { key: "id", header: "id", width: "14%", cell: (r) => <code>{r.provider_id}</code> },
+      { key: "tier", header: "tier", width: "14%", cell: (r) => <StatusBadge raw={r.readiness_tier} /> },
+      { key: "setup", header: "setup", width: "18%", cell: (r) => r.setup_status },
+      { key: "fresh", header: "fresh", width: "12%", cell: (r) => r.freshness_class },
+      { key: "cfg", header: "cfg", width: "7%", cell: (r) => (r.configured ? "Y" : "N") },
+      { key: "env", header: "env names", width: "18%", cell: (r) => (r.expected_env_vars ?? []).slice(0, 2).join(", ") || "—" },
+      { key: "prio", header: "prio", width: "7%", cell: (r) => String(r.recommended_priority) },
+    ],
+    [],
+  );
+
   if (!config.ok) {
     return (
       <div className="term-page">
@@ -189,6 +212,61 @@ export default function ProvidersPage() {
         <p className="term-page__banner" style={{ color: "#f85149" }}>
           {health.error instanceof Error ? health.error.message : String(health.error)}
         </p>
+      )}
+      {setup.isLoading && <p className="muted">Loading setup/freshness console…</p>}
+      {setup.isError && (
+        <p className="term-page__banner" style={{ color: "#f85149" }}>
+          {setup.error instanceof Error ? setup.error.message : String(setup.error)}
+        </p>
+      )}
+
+      {setup.data && (
+        <Pane
+          title="Setup + freshness console"
+          dense
+          onInspect={() => openInspector({ title: "Provider setup/freshness", rawJson: setup.data })}
+        >
+          <p className="muted" style={{ fontSize: "10px", margin: "0 0 6px" }}>
+            GET /ui/provider-setup · read-plane only · no network calls · env names only, never secret values.
+          </p>
+          <TermKV
+            rows={[
+              { k: "schema", v: setup.data.schema_version },
+              { k: "providers", v: String(setupSummary?.provider_count ?? "—") },
+              { k: "ready", v: String(setupSummary?.ready_count ?? "—") },
+              { k: "action_required", v: String(setupSummary?.action_required_count ?? "—") },
+              { k: "blocked", v: String(setupSummary?.blocked_count ?? "—") },
+              { k: "missing_secret", v: String(setupSummary?.missing_secret_count ?? "—") },
+              { k: "stale", v: String(setupSummary?.stale_count ?? "—") },
+              { k: "not_checked", v: String(setupSummary?.not_checked_count ?? "—") },
+              { k: "freshness_max_age_sec", v: String(setup.data.freshness_max_age_seconds) },
+              { k: "manifest_digest", v: setup.data.samples_manifest_digest_prefix ?? "—" },
+            ]}
+          />
+          <DenseTable
+            columns={setupCols}
+            rows={setupEntries.slice(0, 16)}
+            rowKey={(r) => r.__id}
+            selectedKey={sel}
+            onRowClick={(r) => {
+              setSel(r.__id);
+              openInspector({
+                title: `${r.display_name} setup`,
+                body: (
+                  <TermKV
+                    rows={[
+                      { k: "docs", v: r.official_docs_url || "—" },
+                      { k: "signup", v: r.signup_url || "—" },
+                      { k: "remediation", v: (r.remediation ?? []).join("; ") || "—" },
+                    ]}
+                  />
+                ),
+                rawJson: r,
+                digestToCopy: r.sample_digest_prefix ?? undefined,
+              });
+            }}
+          />
+        </Pane>
       )}
 
       {root && (
@@ -284,6 +362,7 @@ export default function ProvidersPage() {
         </pre>
       </Pane>
 
+      {setup.data && <JsonDetails summary="Drilldown: provider-setup JSON" data={setup.data} />}
       {health.data && <JsonDetails summary="Drilldown: provider-health JSON" data={health.data} />}
     </div>
   );

@@ -30,6 +30,41 @@ def frontend_readiness_claim_path(repo_root: Path | None = None) -> Path:
     return default_frontend_readiness_claim_path(repo_root)
 
 
+def _absolute_path_preserving_symlink(path: str | Path) -> Path:
+    candidate = Path(path).expanduser()
+    if candidate.is_absolute():
+        return candidate
+    return Path.cwd() / candidate
+
+
+def _symlink_components_preserving_path(path: str | Path) -> tuple[Path, ...]:
+    absolute = _absolute_path_preserving_symlink(path)
+    candidates = [item for item in reversed(absolute.parents) if item != item.parent]
+    candidates.append(absolute)
+    return tuple(candidate for candidate in candidates if candidate.is_symlink())
+
+
+def _claim_path_integrity_failure(path: str | Path) -> dict[str, object] | None:
+    target = _absolute_path_preserving_symlink(path)
+    symlinks = _symlink_components_preserving_path(target)
+    if not symlinks:
+        return None
+    if target in symlinks:
+        return {
+            "ok": False,
+            "code": "FRONTEND_READINESS_CLAIM_PATH_IS_SYMLINK",
+            "path": str(target),
+            "detail": f"frontend readiness claim path must be a regular file, not a symlink: {target}",
+        }
+    joined = ", ".join(str(item) for item in symlinks)
+    return {
+        "ok": False,
+        "code": "FRONTEND_READINESS_CLAIM_PATH_PARENT_IS_SYMLINK",
+        "path": str(target),
+        "detail": f"frontend readiness claim path must not be read through symlinked parent directories: {joined}",
+    }
+
+
 def load_frontend_readiness_claim(repo_root: Path | None = None) -> dict[str, Any]:
     path = frontend_readiness_claim_path(repo_root)
     payload: dict[str, Any] = {
@@ -40,15 +75,22 @@ def load_frontend_readiness_claim(repo_root: Path | None = None) -> dict[str, An
         "claim_status": "NOT_CLAIMED",
         "claim_reason": "CLAIM_ARTIFACT_MISSING",
     }
+    path_failure = _claim_path_integrity_failure(path)
+    if path_failure is not None:
+        payload["claim_reason"] = "CLAIM_ARTIFACT_PATH_UNSAFE"
+        payload["claim_status"] = "NOT_CLAIMED"
+        payload["path_integrity"] = path_failure
+        return payload
+    target = _absolute_path_preserving_symlink(path)
     if not frontend_readiness_claim_enable_active():
         payload["claim_reason"] = (
-            "CLAIM_OPT_IN_REQUIRED_ARTIFACT_PRESENT_BUT_IGNORED" if path.is_file() else "CLAIM_OPT_IN_REQUIRED"
+            "CLAIM_OPT_IN_REQUIRED_ARTIFACT_PRESENT_BUT_IGNORED" if target.is_file() else "CLAIM_OPT_IN_REQUIRED"
         )
         return payload
-    if not path.is_file():
+    if not target.is_file():
         return payload
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(target.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         payload["claim_reason"] = "CLAIM_ARTIFACT_UNREADABLE"
         return payload

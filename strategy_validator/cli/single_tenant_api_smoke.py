@@ -24,6 +24,10 @@ from urllib.request import Request, urlopen
 
 _SCHEMA_VERSION = "single_tenant_api_http_smoke/v1"
 _ERROR_TOKEN_SOURCE_ENV_FILE_REQUIRES_ENV_FILE = "SMOKE_TOKEN_SOURCE_ENV_FILE_REQUIRES_ENV_FILE"
+_ERROR_ENV_FILE_IS_SYMLINK = "SMOKE_ENV_FILE_IS_SYMLINK"
+_ERROR_ENV_FILE_PARENT_IS_SYMLINK = "SMOKE_ENV_FILE_PARENT_IS_SYMLINK"
+_ERROR_ENV_FILE_NOT_FILE = "SMOKE_ENV_FILE_NOT_FILE"
+_ERROR_ENV_FILE_MISSING = "SMOKE_ENV_FILE_MISSING"
 
 SmokeTokenSource = Literal["auto", "env", "env-file"]
 
@@ -87,6 +91,50 @@ def _strip_inline_comment(value: str) -> str:
     return value.strip()
 
 
+def _absolute_path_preserving_symlink(path: str | Path) -> Path:
+    """Return an absolute path without following symlink components.
+
+    The smoke runner is copied into generated deployment bundles as a standalone
+    stdlib script, so it cannot import the main deployment env validator.  Keep
+    this helper local and deliberately avoid ``Path.resolve()`` because that
+    would hide symlinked env-file inputs before validation.
+    """
+
+    candidate = Path(path).expanduser()
+    if candidate.is_absolute():
+        return candidate
+    return Path.cwd() / candidate
+
+
+def _symlink_components_preserving_path(path: str | Path) -> tuple[Path, ...]:
+    absolute = _absolute_path_preserving_symlink(path)
+    candidates = [item for item in reversed(absolute.parents) if item != item.parent]
+    candidates.append(absolute)
+    return tuple(candidate for candidate in candidates if candidate.is_symlink())
+
+
+def _validate_env_file_path(path: str | Path) -> Path:
+    """Validate ``--env-file`` before reading token/base-URL material.
+
+    This smoke script often runs after Docker has consumed the same env file. A
+    symlinked or non-regular path would make the post-deploy proof depend on
+    filesystem indirection rather than the reviewed deployment artifact.
+    """
+
+    target = _absolute_path_preserving_symlink(path)
+    symlinks = _symlink_components_preserving_path(target)
+    if target in symlinks:
+        raise ValueError(f"{_ERROR_ENV_FILE_IS_SYMLINK}: --env-file must be a regular file, not a symlink: {target}")
+    if symlinks:
+        joined = ", ".join(str(item) for item in symlinks)
+        raise ValueError(f"{_ERROR_ENV_FILE_PARENT_IS_SYMLINK}: --env-file must not be under symlinked parent directories: {joined}")
+    if not target.exists():
+        raise ValueError(f"{_ERROR_ENV_FILE_MISSING}: --env-file does not exist: {target}")
+    if not target.is_file():
+        raise ValueError(f"{_ERROR_ENV_FILE_NOT_FILE}: --env-file must be a regular file: {target}")
+    return target
+
+
 def _parse_env_file(path: str | Path) -> dict[str, str]:
     """Parse a simple KEY=VALUE env file without shell evaluation.
 
@@ -95,10 +143,8 @@ def _parse_env_file(path: str | Path) -> dict[str, str]:
     bundles copy this file as a standalone stdlib smoke runner.
     """
 
-    target = Path(path)
+    target = _validate_env_file_path(path)
     values: dict[str, str] = {}
-    if not target.is_file():
-        return values
     for raw_line in target.read_text(encoding="utf-8").splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#"):
@@ -222,7 +268,7 @@ def resolve_smoke_token(
     # auto
     env_value = os.environ.get(token_env_var, "").strip()
     file_value = ""
-    if env_path is not None and env_path.is_file():
+    if env_path is not None:
         file_value = _parse_env_file(env_path).get(token_env_var, "").strip()
 
     warnings: list[str] = []
@@ -372,6 +418,20 @@ def build_single_tenant_api_smoke(
     )
 
 
+def _error_code_from_value_error(exc: ValueError) -> str | None:
+    msg = str(exc)
+    for code in (
+        _ERROR_TOKEN_SOURCE_ENV_FILE_REQUIRES_ENV_FILE,
+        _ERROR_ENV_FILE_IS_SYMLINK,
+        _ERROR_ENV_FILE_PARENT_IS_SYMLINK,
+        _ERROR_ENV_FILE_NOT_FILE,
+        _ERROR_ENV_FILE_MISSING,
+    ):
+        if msg.startswith(code):
+            return code
+    return None
+
+
 def _token_resolution_error_payload(*, base_url: str, exc: ValueError) -> dict[str, object]:
     msg = str(exc)
     payload: dict[str, object] = {
@@ -382,8 +442,9 @@ def _token_resolution_error_payload(*, base_url: str, exc: ValueError) -> dict[s
         "failed_step_count": 1,
         "error": msg,
     }
-    if msg.startswith(_ERROR_TOKEN_SOURCE_ENV_FILE_REQUIRES_ENV_FILE):
-        payload["error_code"] = _ERROR_TOKEN_SOURCE_ENV_FILE_REQUIRES_ENV_FILE
+    error_code = _error_code_from_value_error(exc)
+    if error_code:
+        payload["error_code"] = error_code
     return payload
 
 
@@ -422,6 +483,24 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--require-pass", action="store_true", help="Exit non-zero if any smoke step fails.")
     ns = parser.parse_args(argv)
 
+    if ns.env_file:
+        try:
+            _validate_env_file_path(ns.env_file)
+        except ValueError as exc:
+            error_payload = {
+                "schema_version": _SCHEMA_VERSION,
+                "ok": False,
+                "base_url": ns.base_url or "",
+                "step_count": 0,
+                "failed_step_count": 1,
+                "error": str(exc),
+            }
+            error_code = _error_code_from_value_error(exc)
+            if error_code:
+                error_payload["error_code"] = error_code
+            sys.stdout.write(json.dumps(error_payload, indent=2, sort_keys=True) + "\n")
+            return 2 if ns.require_pass else 0
+
     try:
         base_url = resolve_smoke_base_url(base_url=ns.base_url or None, env_file=ns.env_file or None)
     except ValueError as exc:
@@ -433,6 +512,9 @@ def main(argv: list[str] | None = None) -> int:
             "failed_step_count": 1,
             "error": str(exc),
         }
+        error_code = _error_code_from_value_error(exc)
+        if error_code:
+            error_payload["error_code"] = error_code
         sys.stdout.write(json.dumps(error_payload, indent=2, sort_keys=True) + "\n")
         return 2 if ns.require_pass else 0
 

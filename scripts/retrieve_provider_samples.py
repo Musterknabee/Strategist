@@ -9,6 +9,8 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+from scripts._path_integrity import PathIntegrityError, path_error_payload, safe_input_file, safe_output_dir
+
 import argparse
 import hashlib
 import json
@@ -925,9 +927,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--env-file", default="", help="Load KEY=VALUE pairs before checking keys.")
     ns = parser.parse_args(argv)
-    out_dir = ns.output_dir.resolve()
+    try:
+        out_dir = safe_output_dir(ns.output_dir, label="RETRIEVE_PROVIDER_OUTPUT_DIR")
+        env_path = safe_input_file(ns.env_file, label="RETRIEVE_PROVIDER_ENV_FILE", required=False) if ns.env_file else None
+    except PathIntegrityError as exc:
+        sys.stdout.write(json.dumps(path_error_payload(exc), sort_keys=True) + "\n")
+        return 2
     out_dir.mkdir(parents=True, exist_ok=True)
-    env_path = Path(ns.env_file).resolve() if ns.env_file else None
     env = _merged_env(env_file=env_path)
 
     public_fetchers = _registry_fetchers()

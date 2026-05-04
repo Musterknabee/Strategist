@@ -92,6 +92,7 @@ def main(argv: list[str] | None = None) -> int:
         ("source_health", py + [str(root / "scripts" / "source_health.py"), "--json"]),
         ("repository_truth_check", py + [str(root / "scripts" / "repository_truth_check.py"), "--json"]),
         ("migration_truth_check", py + [str(root / "scripts" / "migration_truth_check.py")]),
+        ("purge_repo_transients_dry_run", py + [str(root / "scripts" / "purge_repo_transients.py"), "--json"]),
         (
             "import_linter",
             py
@@ -109,6 +110,14 @@ def main(argv: list[str] | None = None) -> int:
         (
             "ui_facade_contract_snapshot",
             py + [str(root / "scripts" / "ui_facade_contract_snapshot.py"), "--check", "--no-static-fallback"],
+        ),
+        (
+            "thesis_mutation_batch_loop_cli_help",
+            py + ["-m", "strategy_validator.cli.thesis_mutation_batch_loop", "--help"],
+        ),
+        (
+            "research_os_runtime_demo_cli_help",
+            py + ["-m", "strategy_validator.cli.research_os_runtime_demo", "--help"],
         ),
         ("pytest", py + ["-m", "pytest", "-q"]),
     ]

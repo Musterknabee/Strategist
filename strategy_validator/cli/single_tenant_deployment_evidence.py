@@ -12,10 +12,15 @@ import argparse
 import hashlib
 import json
 import sys
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
+
+from strategy_validator.cli.deployment_env_check import (
+    absolute_path_preserving_symlink,
+    symlink_components_preserving_path,
+)
 
 _SCHEMA_VERSION = "single_tenant_deployment_evidence/v1"
 _FRONTEND_PACKAGE = "ui/strategist-web"
@@ -31,12 +36,17 @@ _REQUIRED_FINAL_REPORT_SCHEMAS = {
     "ledger_backup": "ledger_ops_backup/v1",
 }
 
+_FRONTEND_CHECKPOINT_SCHEMAS = (
+    "deployment_frontend_checkpoint/v1",
+    "single_tenant_frontend_readiness/v1",
+)
+
 _OPTIONAL_REPORT_SCHEMAS = {
     "env_check": "single_tenant_deployment_env_check/v1",
     "bundle": "single_tenant_deployment_bundle/v1",
     "ci_local_verify": "ci_local_verify/v1",
     "provider_key_report": "check_provider_keys/v1",
-    "frontend_checkpoint": "deployment_frontend_checkpoint/v1",
+    "frontend_checkpoint": _FRONTEND_CHECKPOINT_SCHEMAS,
     "provider_evidence_manifest": "provider_evidence_manifest/v1",
 }
 
@@ -92,6 +102,13 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _path_symlink_detail(path: str | Path, *, label: str) -> str | None:
+    symlinks = symlink_components_preserving_path(path)
+    if not symlinks:
+        return None
+    return f"{label} contains symlink component(s): " + ", ".join(str(item) for item in symlinks)
 
 
 def _contains_plaintext_secret_like_value(value: object, *, parent_key: str = "") -> bool:
@@ -151,6 +168,19 @@ def _schema_matches(schema: str | None, expected_schema: str | tuple[str, ...] |
 
 
 def _evaluate_report(name: str, path: Path, expected_schema: str | tuple[str, ...] | None, *, required: bool) -> EvidenceFile:
+    if path.is_symlink():
+        return EvidenceFile(
+            name=name,
+            path=str(path),
+            exists=True,
+            sha256=None,
+            size_bytes=path.lstat().st_size,
+            schema_version=None,
+            ok_field=None,
+            status="FAIL",
+            detail="evidence report path is a symlink; copy JSON report files directly into the evidence directory",
+        )
+
     if not path.exists():
         status = "FAIL" if required else "WARN"
         return EvidenceFile(
@@ -163,6 +193,19 @@ def _evaluate_report(name: str, path: Path, expected_schema: str | tuple[str, ..
             ok_field=None,
             status=status,
             detail="required evidence report is missing" if required else "optional evidence report is missing",
+        )
+
+    if not path.is_file():
+        return EvidenceFile(
+            name=name,
+            path=str(path),
+            exists=True,
+            sha256=None,
+            size_bytes=path.stat().st_size,
+            schema_version=None,
+            ok_field=None,
+            status="FAIL",
+            detail="evidence report path is not a regular file; expected a JSON report file",
         )
 
     payload, error = _load_json_report(path)
@@ -185,6 +228,22 @@ def _evaluate_report(name: str, path: Path, expected_schema: str | tuple[str, ..
             _status_from_ok_field(payload),
             "FAIL" if required else "WARN",
             f"schema_version must be {_schema_label(expected_schema)}; found {schema!r}",
+        )
+
+    if name == "frontend_checkpoint" and (
+        payload.get("frontend_readiness_claimed") is True
+        or str(payload.get("claim_status", "")).strip().upper() == "CLAIMED"
+    ):
+        return EvidenceFile(
+            name,
+            str(path),
+            True,
+            digest,
+            size,
+            schema,
+            _status_from_ok_field(payload),
+            "FAIL",
+            "frontend checkpoint claims readiness; backend-only deployment evidence must keep frontend readiness unclaimed",
         )
 
     if _contains_plaintext_secret_like_value(payload):
@@ -245,13 +304,32 @@ def build_single_tenant_deployment_evidence(
     final: bool = False,
     report_overrides: dict[str, str | Path] | None = None,
 ) -> DeploymentEvidenceReport:
-    evidence_root = Path(evidence_dir).expanduser().resolve()
+    evidence_root = absolute_path_preserving_symlink(evidence_dir)
     repo = Path(repo_root).expanduser().resolve()
+    path_errors = []
+    evidence_root_symlink_detail = _path_symlink_detail(evidence_root, label="evidence directory")
+    if evidence_root_symlink_detail is not None:
+        path_errors.append(evidence_root_symlink_detail)
+    if path_errors:
+        frontend_present = (repo / _FRONTEND_PACKAGE / "package.json").exists()
+        return DeploymentEvidenceReport(
+            schema_version=_SCHEMA_VERSION,
+            ok=False,
+            generated_at_utc=datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+            deployment_model=_DEPLOYMENT_MODEL,
+            evidence_dir=str(evidence_root),
+            frontend_expected_package=_FRONTEND_PACKAGE,
+            frontend_package_present=frontend_present,
+            frontend_readiness_claimed=False,
+            final_evidence=bool(final),
+            files=(),
+            errors=tuple(path_errors),
+        )
     overrides = report_overrides or {}
     paths = _default_report_paths(evidence_root)
     for name, override in overrides.items():
         if override:
-            paths[name] = Path(override).expanduser().resolve()
+            paths[name] = absolute_path_preserving_symlink(override)
 
     files: list[EvidenceFile] = []
     for name, expected in _OPTIONAL_REPORT_SCHEMAS.items():
@@ -283,11 +361,17 @@ def build_single_tenant_deployment_evidence(
 
 
 def write_evidence_outputs(report: DeploymentEvidenceReport, *, manifest_path: str | Path, markdown_path: str | Path = "") -> None:
-    manifest = Path(manifest_path).expanduser().resolve()
+    manifest = absolute_path_preserving_symlink(manifest_path)
+    manifest_detail = _path_symlink_detail(manifest, label="evidence manifest output path")
+    if manifest_detail is not None:
+        raise ValueError(manifest_detail)
     manifest.parent.mkdir(parents=True, exist_ok=True)
     manifest.write_text(json.dumps(report.to_payload(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
     if markdown_path:
-        markdown = Path(markdown_path).expanduser().resolve()
+        markdown = absolute_path_preserving_symlink(markdown_path)
+        markdown_detail = _path_symlink_detail(markdown, label="evidence summary markdown output path")
+        if markdown_detail is not None:
+            raise ValueError(markdown_detail)
         markdown.parent.mkdir(parents=True, exist_ok=True)
         rows = "\n".join(
             f"| {item.status} | `{item.name}` | `{item.schema_version or '-'}` | `{item.sha256 or '-'}` | {item.detail} |"
@@ -323,8 +407,22 @@ def main(argv: list[str] | None = None) -> int:
         report_overrides=overrides,
     )
     if ns.manifest_output_path or ns.summary_markdown_output_path:
-        manifest_path = ns.manifest_output_path or str(Path(ns.evidence_dir) / "deployment-evidence.json")
-        write_evidence_outputs(report, manifest_path=manifest_path, markdown_path=ns.summary_markdown_output_path)
+        manifest_path = ns.manifest_output_path or str(absolute_path_preserving_symlink(ns.evidence_dir) / "deployment-evidence.json")
+        output_errors = []
+        manifest_detail = _path_symlink_detail(manifest_path, label="evidence manifest output path")
+        if manifest_detail is not None:
+            output_errors.append(manifest_detail)
+        if ns.summary_markdown_output_path:
+            markdown_detail = _path_symlink_detail(
+                ns.summary_markdown_output_path,
+                label="evidence summary markdown output path",
+            )
+            if markdown_detail is not None:
+                output_errors.append(markdown_detail)
+        if output_errors:
+            report = replace(report, ok=False, errors=report.errors + tuple(output_errors))
+        else:
+            write_evidence_outputs(report, manifest_path=manifest_path, markdown_path=ns.summary_markdown_output_path)
     sys.stdout.write(json.dumps(report.to_payload(), indent=2, sort_keys=True) + "\n")
     return 2 if ns.require_pass and not report.ok else 0
 

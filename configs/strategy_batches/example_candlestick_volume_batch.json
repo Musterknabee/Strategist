@@ -1,0 +1,166 @@
+{
+  "batch_id": "candlestick-volume-demo-001",
+  "created_at_utc": "2026-05-04T12:00:00+00:00",
+  "as_of_utc": "2026-01-08T00:00:00+00:00",
+  "mode": "paper",
+  "max_workers": 4,
+  "pit_policy": "DEGRADE_TO_PAPER_ONLY",
+  "output_root": "artifacts/strategy_runs",
+  "strategies": [
+    {
+      "strategy_id": "candle-bullish-engulfing-volume-1",
+      "strategy_type": "bullish_engulfing_volume_reversal",
+      "universe": "DEMO",
+      "timeframe": "1d",
+      "as_of_utc": "2026-01-08T00:00:00+00:00",
+      "lookback_days": 180,
+      "data_source": {
+        "kind": "local_bars",
+        "path": "tests/fixtures/strategy_data/candlestick_volume_bars.csv",
+        "pit_status": "PIT_VERIFIED"
+      },
+      "params": {
+        "trend_lookback": 8,
+        "volume_window": 20,
+        "min_downtrend_return": -0.035,
+        "min_volume_ratio": 1.05,
+        "min_body_ratio": 1.05,
+        "exposure": 0.70,
+        "max_hold_bars": 4
+      },
+      "data_requirements": [
+        "local_csv_bars",
+        "ohlcv",
+        "open_close_candles",
+        "bullish_engulfing",
+        "volume_confirmation"
+      ],
+      "execution_assumptions": {
+        "friction_bps": 6.0,
+        "paper_only": true,
+        "starting_capital": 25000,
+        "max_participation_rate": 0.12,
+        "fee_bps": 1.0,
+        "slippage_bps": 5.0,
+        "min_average_daily_volume": 50000,
+        "allow_short": false,
+        "borrow_required": false
+      },
+      "robustness_assumptions": {
+        "fold_count": 3,
+        "min_train_bars": 12,
+        "min_test_bars": 6,
+        "min_positive_fold_ratio": 0.0,
+        "max_worst_fold_return": -1.0,
+        "max_pbo_like_score": 1.0,
+        "min_dsr_like_score": -1.0
+      },
+      "robustness_mode": "walk_forward",
+      "tags": ["candlestick", "bullish_engulfing", "reversal", "volume"]
+    },
+    {
+      "strategy_id": "candle-hammer-volume-1",
+      "strategy_type": "hammer_volume_reversal",
+      "universe": "DEMO",
+      "timeframe": "1d",
+      "as_of_utc": "2026-01-08T00:00:00+00:00",
+      "lookback_days": 180,
+      "data_source": {
+        "kind": "local_bars",
+        "path": "tests/fixtures/strategy_data/candlestick_volume_bars.csv",
+        "pit_status": "PIT_VERIFIED"
+      },
+      "params": {
+        "trend_lookback": 8,
+        "volume_window": 20,
+        "min_downtrend_return": -0.03,
+        "min_lower_shadow_ratio": 2.0,
+        "max_upper_shadow_ratio": 1.1,
+        "min_volume_ratio": 1.0,
+        "exposure": 0.65,
+        "max_hold_bars": 4
+      },
+      "data_requirements": [
+        "local_csv_bars",
+        "ohlcv",
+        "open_close_candles",
+        "hammer_reversal",
+        "volume_confirmation"
+      ],
+      "execution_assumptions": {
+        "friction_bps": 6.0,
+        "paper_only": true,
+        "starting_capital": 25000,
+        "max_participation_rate": 0.12,
+        "fee_bps": 1.0,
+        "slippage_bps": 5.0,
+        "min_average_daily_volume": 50000,
+        "allow_short": false,
+        "borrow_required": false
+      },
+      "robustness_assumptions": {
+        "fold_count": 3,
+        "min_train_bars": 12,
+        "min_test_bars": 6,
+        "min_positive_fold_ratio": 0.0,
+        "max_worst_fold_return": -1.0,
+        "max_pbo_like_score": 1.0,
+        "min_dsr_like_score": -1.0
+      },
+      "robustness_mode": "walk_forward",
+      "tags": ["candlestick", "hammer", "reversal", "volume"]
+    },
+    {
+      "strategy_id": "candle-inside-bar-breakout-1",
+      "strategy_type": "inside_bar_volume_breakout",
+      "universe": "DEMO",
+      "timeframe": "1d",
+      "as_of_utc": "2026-01-08T00:00:00+00:00",
+      "lookback_days": 180,
+      "data_source": {
+        "kind": "local_bars",
+        "path": "tests/fixtures/strategy_data/candlestick_volume_bars.csv",
+        "pit_status": "PIT_VERIFIED"
+      },
+      "params": {
+        "cluster_window": 4,
+        "volume_window": 20,
+        "breakout_buffer": 0.001,
+        "min_volume_ratio": 1.0,
+        "min_trend_return": 0.015,
+        "trend_lookback": 12,
+        "exposure": 0.68,
+        "max_hold_bars": 4
+      },
+      "data_requirements": [
+        "local_csv_bars",
+        "ohlcv",
+        "inside_bar_compression",
+        "range_breakout",
+        "volume_confirmation"
+      ],
+      "execution_assumptions": {
+        "friction_bps": 6.0,
+        "paper_only": true,
+        "starting_capital": 25000,
+        "max_participation_rate": 0.12,
+        "fee_bps": 1.0,
+        "slippage_bps": 5.0,
+        "min_average_daily_volume": 50000,
+        "allow_short": false,
+        "borrow_required": false
+      },
+      "robustness_assumptions": {
+        "fold_count": 3,
+        "min_train_bars": 12,
+        "min_test_bars": 6,
+        "min_positive_fold_ratio": 0.0,
+        "max_worst_fold_return": -1.0,
+        "max_pbo_like_score": 1.0,
+        "min_dsr_like_score": -1.0
+      },
+      "robustness_mode": "walk_forward",
+      "tags": ["candlestick", "inside_bar", "breakout", "volume"]
+    }
+  ]
+}

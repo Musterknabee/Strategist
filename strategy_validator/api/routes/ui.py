@@ -4,6 +4,7 @@ from fastapi import APIRouter, Request, Response
 
 from strategy_validator.api.auth import require_mutation_auth
 from strategy_validator.contracts.ui_command_mutation import UiMutationAuthContext, UiOperatorCommandRequest
+from strategy_validator.contracts.strategy_intake import StrategyIntakeRequest
 from strategy_validator.api.routes.ui_route_queries import (
     build_ui_burnin_query_kwargs,
     build_ui_evidence_query_kwargs,
@@ -43,6 +44,8 @@ from strategy_validator.application.api_ui_surfaces import (
     build_ui_provider_health_payload,
     build_ui_research_compute_payload,
 )
+
+from strategy_validator.application.strategy_intake import submit_ui_strategy_intake
 
 router = APIRouter(prefix='/ui', tags=['ui'])
 

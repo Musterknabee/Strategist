@@ -24,6 +24,7 @@ from strategy_validator.contracts.strategy_batch import (
     StrategyRunStatus,
 )
 from strategy_validator.contracts.strategy_data_snapshot import (
+    ProviderSnapshotDataSourceConfig,
     StrategyDataSnapshotManifest,
     StrategyDataSourceClassification,
     StrategyPitSnapshotStatus,
@@ -37,14 +38,13 @@ from strategy_validator.research.strategy_cpcv import cpcv_to_robustness_result,
 from strategy_validator.research.strategy_robustness import evaluate_strategy_robustness
 from strategy_validator.research.strategy_batch_analytics import apply_batch_ranking, build_chart_artifacts
 from strategy_validator.research.strategy_data_quality import evaluate_local_bars_data_quality
+from strategy_validator.research.market_data_integrity import evaluate_market_data_integrity
 from strategy_validator.research.strategy_parameter_sensitivity import evaluate_parameter_sensitivity
 from strategy_validator.research.strategy_portfolio_summary import build_batch_portfolio_summary
 from strategy_validator.research.strategy_regime_analysis import evaluate_regime_analysis
 from strategy_validator.research.strategy_batch_evaluators import (
     deterministic_prices,
-    evaluate_mean_reversion,
-    evaluate_momentum,
-    evaluate_volatility_breakout,
+    evaluate_strategy_metrics,
 )
 from strategy_validator.research.strategy_data_loader import (
     StrategyDataLoadError,
@@ -158,6 +158,8 @@ def _promotion_state(
         reasons.append(f"DATA_COVERAGE:{gate.data_coverage_gate}")
     if not synthetic and gate.data_quality_gate == "BLOCKED":
         reasons.append(f"DATA_QUALITY:{gate.data_quality_gate}")
+    if not synthetic and gate.market_data_integrity_gate == "BLOCKED":
+        reasons.append("MARKET_DATA_INTEGRITY:BLOCKED")
     if not synthetic and sample_count is not None and sample_count < 30:
         reasons.append("STRATEGY_METRICS_LOW_SAMPLE")
     if not synthetic and gate.robustness_gate != "PROVEN":
@@ -170,6 +172,8 @@ def _promotion_state(
         reasons.append("PARAMETER_SENSITIVITY:FRAGILE")
     if not synthetic and gate.regime_analysis_gate == "BLOCKED":
         reasons.append("REGIME_ANALYSIS:BLOCKED")
+    if not synthetic and gate.oos_holdout_gate == "BLOCKED":
+        reasons.append("OOS_HOLDOUT:BLOCKED")
     eligible = len(reasons) == 0
     return eligible, reasons
 
@@ -193,12 +197,14 @@ def run_single_strategy(
         pit_gate="PENDING",
         data_gate="PENDING",
         data_quality_gate="NOT_RUN",
+        market_data_integrity_gate="NOT_RUN",
         robustness_gate="NOT_RUN",
         cpcv_robustness_gate="NOT_RUN",
         execution_realism_gate="PAPER_ASSUMED",
         parameter_sensitivity_gate="NOT_RUN",
         regime_analysis_gate="NOT_RUN",
         data_coverage_gate="NOT_RUN",
+        oos_holdout_gate="NOT_RUN",
     )
 
     try:
@@ -211,11 +217,16 @@ def run_single_strategy(
         loaded_bars: list[Any] | None = None
         load_warnings: list[str] = []
         prices: np.ndarray | None = None
+        opens: np.ndarray | None = None
+        highs: np.ndarray | None = None
+        lows: np.ndarray | None = None
+        volumes: np.ndarray | None = None
         used_synthetic = False
         data_snapshot_path: Path | None = None
         data_snapshot_sha: str | None = None
         bars_row_count: int | None = None
         provider_snap = None
+        provider_snapshot_source_manifest_path: str | None = None
 
         if candidate.data_source is not None and candidate.data_source.kind == "local_bars":
             try:
@@ -230,6 +241,10 @@ def run_single_strategy(
                 loaded_bars = list(loaded.bars)
                 load_warnings = list(loaded.warnings)
                 prices = np.array([b.close for b in loaded.bars], dtype=np.float64)
+                opens = np.array([b.open for b in loaded.bars], dtype=np.float64)
+                highs = np.array([b.high for b in loaded.bars], dtype=np.float64)
+                lows = np.array([b.low for b in loaded.bars], dtype=np.float64)
+                volumes = np.array([b.volume for b in loaded.bars], dtype=np.float64)
                 bars_row_count = len(loaded.bars)
                 filt_path = strat_dir / "filtered_bars.csv"
                 _write_filtered_bars_csv(filt_path, loaded.bars)
@@ -261,9 +276,15 @@ def run_single_strategy(
                 loaded_bars = list(loaded.bars)
                 load_warnings = list(loaded.warnings)
                 prices = np.array([b.close for b in loaded.bars], dtype=np.float64)
+                opens = np.array([b.open for b in loaded.bars], dtype=np.float64)
+                highs = np.array([b.high for b in loaded.bars], dtype=np.float64)
+                lows = np.array([b.low for b in loaded.bars], dtype=np.float64)
+                volumes = np.array([b.volume for b in loaded.bars], dtype=np.float64)
                 bars_row_count = len(loaded.bars)
                 filt_path = strat_dir / "filtered_bars.csv"
                 _write_filtered_bars_csv(filt_path, loaded.bars)
+                if isinstance(candidate.data_source, ProviderSnapshotDataSourceConfig):
+                    provider_snapshot_source_manifest_path = candidate.data_source.manifest_path
                 dsm_extra = {
                     "max_workers_declared": batch.max_workers,
                     "worker_model": batch.worker_model,
@@ -357,6 +378,10 @@ def run_single_strategy(
             seed = f"{batch.batch_id}|{run_id}|{candidate.strategy_id}|{candidate.as_of_utc.isoformat()}"
             n = max(32, min(512, candidate.lookback_days))
             prices = deterministic_prices(seed=seed, n=n)
+            opens = prices.copy()
+            highs = prices * 1.002
+            lows = prices * 0.998
+            volumes = np.ones_like(prices, dtype=np.float64) * 1000.0
             used_synthetic = True
 
         if batch.pit_policy == PitPolicy.STRICT and used_synthetic:
@@ -433,6 +458,11 @@ def run_single_strategy(
         pit_sha = canonical_json_sha256(pit_context)
         _write_json(strat_dir / "pit_context.json", {**pit_context, "pit_context_sha256": pit_sha})
 
+        warnings: list[str] = list(load_warnings)
+        blockers: list[str] = []
+        status = StrategyRunStatus.PASSED
+        may_promo_ev = False
+
         bars_for_dq: list[Any] = list(loaded_bars) if loaded_bars else []
         dq = evaluate_local_bars_data_quality(
             strategy_id=candidate.strategy_id,
@@ -452,21 +482,64 @@ def run_single_strategy(
             {**dq_plain, "data_quality_evidence_sha256": dq.data_quality_evidence_sha256},
         )
 
-        if candidate.strategy_type == "momentum":
-            metrics = evaluate_momentum(prices, candidate.params)
-        elif candidate.strategy_type == "mean_reversion":
-            metrics = evaluate_mean_reversion(prices, candidate.params)
-        else:
-            metrics = evaluate_volatility_breakout(prices, candidate.params)
+        mdi = evaluate_market_data_integrity(
+            strategy_id=candidate.strategy_id,
+            batch_id=batch.batch_id,
+            run_id=run_id,
+            bars=bars_for_dq,
+            as_of_utc=candidate.as_of_utc,
+            snapshot=local_snap,
+            provider_id=(provider_snap.provider_id if provider_snap else (local_snap.provider_id if local_snap else "synthetic")),
+            license_scope=(provider_snap.license_scope if provider_snap else "local_or_synthetic_unverified"),
+            trust_level=(provider_snap.trust_level if provider_snap else "local_or_synthetic_unverified"),
+            adjusted_status="UNKNOWN",
+        )
+        gate.market_data_integrity_gate = mdi.gate_status.value
+        mdi_plain = mdi.model_dump(mode="json")
+        mdi_path = strat_dir / "market_data_integrity_result.json"
+        _write_json(mdi_path, {**mdi_plain, "evidence_sha256": mdi.evidence_sha256})
+        if mdi.gate_status.value == "BLOCKED":
+            blockers.extend(mdi.blockers)
+            if status == StrategyRunStatus.PASSED:
+                status = StrategyRunStatus.BLOCKED
+        elif mdi.gate_status.value == "WARNING":
+            warnings.extend(mdi.warnings)
+
+        metrics = evaluate_strategy_metrics(
+            strategy_type=candidate.strategy_type,
+            prices=prices,
+            params=candidate.params,
+            opens=opens,
+            highs=highs,
+            lows=lows,
+            volumes=volumes,
+        )
 
         metrics_payload = _enrich_metrics(metrics, prices, candidate, synthetic=used_synthetic)
+        hb = int(candidate.params.get("oos_holdout_bars", 0) or 0)
+        if hb > 0:
+            from strategy_validator.research.strategy_holdout_gate import evaluate_oos_holdout
+
+            ho = evaluate_oos_holdout(
+                strategy_type=candidate.strategy_type,
+                prices=prices,
+                params=candidate.params,
+                holdout_bars=hb,
+                opens=opens,
+                highs=highs,
+                lows=lows,
+                volumes=volumes,
+            )
+            gate.oos_holdout_gate = str(ho.get("oos_holdout_gate", "NOT_RUN"))
+            for key in ("oos_sharpe_like", "is_sharpe_like", "oos_holdout_bars", "oos_min_sharpe"):
+                if key in ho and isinstance(ho[key], (int, float)):
+                    metrics_payload[key] = float(ho[key])
+            if gate.oos_holdout_gate == "BLOCKED":
+                blockers.append("OOS_HOLDOUT_SHARPE_BELOW_THRESHOLD")
+                status = StrategyRunStatus.BLOCKED
         metrics_sha = canonical_json_sha256(metrics_payload)
         _write_json(strat_dir / "strategy_metrics.json", {"metrics": metrics_payload, "metrics_sha256": metrics_sha})
 
-        warnings: list[str] = list(load_warnings)
-        blockers: list[str] = []
-        status = StrategyRunStatus.PASSED
-        may_promo_ev = False
         ds_digest = local_snap.bars_sha256 if local_snap is not None else None
         pit_snap_s = local_snap.pit_status.value if local_snap is not None else None
 
@@ -631,6 +704,10 @@ def run_single_strategy(
             strategy_type=candidate.strategy_type,
             params=candidate.params,
             synthetic_demo=used_synthetic,
+            opens=opens,
+            highs=highs,
+            lows=lows,
+            volumes=volumes,
         )
         gate.parameter_sensitivity_gate = ps.gate_status.value
         ps_plain = ps.model_dump(mode="json")
@@ -657,6 +734,10 @@ def run_single_strategy(
             strategy_type=candidate.strategy_type,
             params=candidate.params,
             synthetic_demo=used_synthetic,
+            opens=opens,
+            highs=highs,
+            lows=lows,
+            volumes=volumes,
         )
         gate.regime_analysis_gate = reg.gate_status
         reg_plain = reg.model_dump(mode="json")
@@ -704,6 +785,10 @@ def run_single_strategy(
             gate_data_quality=gate.data_quality_gate,
             gate_parameter_sensitivity=gate.parameter_sensitivity_gate,
             gate_regime_analysis=gate.regime_analysis_gate,
+            opens=opens,
+            highs=highs,
+            lows=lows,
+            volumes=volumes,
         )
         eq_body = art["equity_curve"]
         dd_body = art["drawdown_curve"]
@@ -714,6 +799,8 @@ def run_single_strategy(
             **sc_body,
             "warnings": list(warnings)[:64],
             "blockers": list(blockers)[:64],
+            "market_data_integrity_gate": gate.market_data_integrity_gate,
+            "market_data_integrity_evidence_sha256": mdi.evidence_sha256,
         }
         if cpcv is not None:
             sc_body = {
@@ -753,6 +840,7 @@ def run_single_strategy(
 
         ev = StrategyEvidenceManifest(
             strategy_id=candidate.strategy_id,
+            strategy_type=candidate.strategy_type,
             batch_id=batch.batch_id,
             run_id=run_id,
             as_of_utc=candidate.as_of_utc,
@@ -768,6 +856,7 @@ def run_single_strategy(
             data_snapshot_digest=ds_digest,
             data_snapshot_manifest_sha256=data_snapshot_sha,
             provider_snapshot_manifest_sha256=provider_snap.manifest_sha256 if provider_snap else None,
+            provider_snapshot_source_manifest_path=provider_snapshot_source_manifest_path,
             pit_snapshot_status=pit_snap_s,
             bars_row_count=bars_row_count,
             execution_realism_evidence_sha256=er_sha,
@@ -779,6 +868,8 @@ def run_single_strategy(
             cpcv_gate_status=cpcv.gate_status.value if cpcv else None,
             data_quality_evidence_sha256=dq.data_quality_evidence_sha256,
             data_quality_gate_status=dq.gate_status.value,
+            market_data_integrity_evidence_sha256=mdi.evidence_sha256,
+            market_data_integrity_gate_status=mdi.gate_status.value,
             parameter_sensitivity_evidence_sha256=ps.parameter_sensitivity_evidence_sha256,
             parameter_sensitivity_gate_status=ps.gate_status.value,
             regime_analysis_evidence_sha256=reg.regime_analysis_evidence_sha256,
@@ -821,6 +912,7 @@ def run_single_strategy(
 
         result = StrategyRunResult(
             strategy_id=candidate.strategy_id,
+            strategy_type=candidate.strategy_type,
             status=status,
             started_at_utc=started,
             completed_at_utc=completed,
@@ -851,6 +943,9 @@ def run_single_strategy(
             cpcv_evidence_sha256=cpcv.cpcv_evidence_sha256 if cpcv else None,
             cpcv_artifact_path=str(cpcv_path.resolve()) if cpcv_path.is_file() else None,
             data_quality_gate_status=dq.gate_status.value,
+            market_data_integrity_gate_status=mdi.gate_status.value,
+            market_data_integrity_artifact_path=str(mdi_path.resolve()),
+            market_data_integrity_evidence_sha256=mdi.evidence_sha256,
             parameter_sensitivity_gate_status=ps.gate_status.value,
             regime_analysis_gate_status=reg.gate_status,
             data_quality_artifact_path=str(dq_path.resolve()),
@@ -879,6 +974,7 @@ def run_single_strategy(
             data_snapshot_manifest_sha256=data_snapshot_sha,
             data_snapshot_digest=ds_digest,
             provider_snapshot_manifest_sha256=provider_snap.manifest_sha256 if provider_snap else None,
+            provider_snapshot_source_manifest_path=provider_snapshot_source_manifest_path,
             provider_license_scope=provider_snap.license_scope if provider_snap else None,
             provider_trust_level=provider_snap.trust_level if provider_snap else None,
             bars_row_count=bars_row_count,
@@ -1048,6 +1144,27 @@ def run_strategy_batch(
             key = reason.split(":", 1)[0] if ":" in reason else reason
             ctr[key] += 1
     promo_counts = dict(ctr)
+
+    provider_rows: list[dict[str, str | None]] = []
+    for r in results:
+        if r.provider_snapshot_source_manifest_path:
+            provider_rows.append(
+                {
+                    "strategy_id": r.strategy_id,
+                    "provider_snapshot_source_manifest_path": r.provider_snapshot_source_manifest_path,
+                    "provider_snapshot_manifest_sha256": r.provider_snapshot_manifest_sha256,
+                }
+            )
+    if provider_rows:
+        _write_json(
+            run_dir / "batch_provider_historical_evidence.json",
+            {
+                "schema_version": "batch_provider_historical_evidence/v1",
+                "batch_id": spec.batch_id,
+                "run_id": run_id_final,
+                "strategies": provider_rows,
+            },
+        )
 
     passed = sum(1 for r in results if r.status == StrategyRunStatus.PASSED)
     blocked = sum(1 for r in results if r.status == StrategyRunStatus.BLOCKED)

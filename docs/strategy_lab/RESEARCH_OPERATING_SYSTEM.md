@@ -48,6 +48,7 @@ Or use `scripts/run_research_os_runtime_demo_in_container.ps1` from the repo.
 
 - Writes `research_os_runtime/latest/runtime_demo_manifest.json` under the artifact root (`research_os_runtime_demo_manifest/v1`).
 - `ok=true` means the pipeline machinery completed; individual gates may still be **BLOCKED**, **PENDING_KEY**, or **DO_NOT_PROMOTE** — those are honest outcomes, not API failures.
+- **`--full-research-os-cycle`** (same CLI) also runs **thesis to Oracle mutation proposals to proposed next batch spec** after the gauntlet: see `thesis_mutation_loop` in the manifest and files under `<artifact_root>/research_os_runtime/` (`next_batch_spec_proposed.json`, `thesis_mutation_loop_report.json`). Offline follow-up: `strategy-validator-thesis-mutation-batch-loop` (`strategy_validator/cli/thesis_mutation_batch_loop.py`).
 
 ## Legacy packaged demo (no network, no keys)
 
@@ -129,3 +130,72 @@ python scripts/run_research_os_runtime_demo.py `
 - [COMPUTE_ACCELERATION.md](./COMPUTE_ACCELERATION.md)
 - [CPCV_ROBUSTNESS.md](./CPCV_ROBUSTNESS.md)
 - [PORTFOLIO_ALLOCATION.md](./PORTFOLIO_ALLOCATION.md)
+
+## Related research-memory layers
+
+- [Strategy Memory and Candidate Graveyard](STRATEGY_MEMORY_AND_GRAVEYARD.md)
+
+## Related research-memory layers
+
+- [Strategy Thesis and Falsification Manifest](STRATEGY_THESIS_AND_FALSIFICATION.md)
+
+
+## Added paper-governance layers
+
+- [Shadow Book](SHADOW_BOOK.md): paper-only portfolio simulator with simulated fills, risk flags, drawdown, and read-plane cockpit visibility. No broker orders.
+- [Market Data Integrity](MARKET_DATA_INTEGRITY.md): deterministic checks for stale bars, missing trading days, split-like jumps, survivorship warnings, and adjustment-status caveats.
+
+
+## Research OS Closure
+
+The closure manifest digest-links the latest Research OS evidence artifacts and exposes a read-plane cockpit page. See [RESEARCH_OS_CLOSURE.md](RESEARCH_OS_CLOSURE.md).
+
+- [Research OS Attestation](RESEARCH_OS_ATTESTATION.md)
+
+
+## Research OS Briefing
+
+The Research OS briefing pack summarizes closure, attestation, provider-paper-loop, paper broker, strategy memory, thesis, shadow-book, and runtime evidence into one read-plane operator report. See [Research OS Briefing](RESEARCH_OS_BRIEFING.md).
+
+
+## Research OS Export Bundle
+
+Portable offline evidence handoff is documented in [RESEARCH_OS_EXPORT.md](RESEARCH_OS_EXPORT.md). It packages closure, attestation, briefing, and paper-research artifacts into a digest-linked bundle without granting live trading authority.
+
+- [Research OS Operator Run](RESEARCH_OS_OPERATOR_RUN.md) — sequences closure, verification, attestation, briefing, and export into one daily run manifest.
+
+- [Research OS Evidence Catalog](RESEARCH_OS_EVIDENCE_CATALOG.md) — read-plane artifact inventory with SHA-256 digests and category/status hints.
+
+
+## Evidence drift
+
+The Research OS evidence drift report compares evidence catalogs and shows added, removed, changed, and unchanged artifacts without executing research or granting trading authority. See [Research OS Evidence Drift](RESEARCH_OS_EVIDENCE_DRIFT.md).
+
+
+## Research OS Policy Gate
+
+The policy gate turns closure, attestation, briefing, export, operator-run, catalog, and drift evidence into a PASS/WARN/BLOCK operator-review posture. See `docs/strategy_lab/RESEARCH_OS_POLICY_GATE.md`.
+
+- [Research OS Governed Exceptions](RESEARCH_OS_EXCEPTION.md) — time-bounded constrained annotations for WARN-level evidence.
+
+
+## Research OS Remediation
+
+See [RESEARCH_OS_REMEDIATION.md](RESEARCH_OS_REMEDIATION.md) for the read-plane action queue that turns policy-gate, exception, catalog, and drift evidence into prioritized remediation work.
+
+
+## Release-readiness review
+
+See [RESEARCH_OS_RELEASE_READINESS.md](RESEARCH_OS_RELEASE_READINESS.md) for the read-plane single-tenant release review posture. This is not deployment approval and does not enable live trading or broker orders.
+
+
+## Research OS handoff
+
+The single-tenant handoff pack summarizes release-readiness, policy-gate, exception, remediation, export, catalog, and operator-run evidence into one final operator handoff artifact. See [RESEARCH_OS_HANDOFF.md](RESEARCH_OS_HANDOFF.md). It is not deployment approval and does not authorize live trading or broker orders.
+
+- [Research OS Handoff Verification and Reviewer Signoff](RESEARCH_OS_HANDOFF_SIGNOFF.md)
+
+
+## Review Journal
+
+The review journal summarizes Research OS review decisions and source artifact digests without mutating the canonical validator ledger. See [RESEARCH_OS_REVIEW_JOURNAL.md](RESEARCH_OS_REVIEW_JOURNAL.md).

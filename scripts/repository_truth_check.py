@@ -3,11 +3,19 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import os
 import re
+import sys
 import tomllib
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterable
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from scripts._path_integrity import PathIntegrityError, safe_input_dir, symlink_components_preserving_path  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -86,25 +94,71 @@ def _importlinter_contracts(pyproject: dict[str, object]) -> list[dict[str, obje
 
 
 
-def _iter_markdown_files(repo_root: Path) -> Iterable[Path]:
+def _safe_docs_markdown_root(repo_root: Path) -> Path | None:
+    """Return the docs scan root without following symlinked components.
+
+    The repository truth gate treats ``docs/`` as an implicit evidence input.
+    ``Path.rglob`` follows a symlinked starting directory on supported Python
+    versions, so a linked ``docs`` tree can launder outside markdown into the
+    console-command/test-path drift checks.  Missing docs remain valid for tiny
+    fixture repositories; present docs must be a real directory inside the
+    reviewed repo envelope.
+    """
     docs_root = repo_root / "docs"
+    symlinks = symlink_components_preserving_path(docs_root)
+    if symlinks:
+        final_component = docs_root in symlinks
+        code = (
+            "REPOSITORY_TRUTH_DOCS_ROOT_IS_SYMLINK"
+            if final_component
+            else "REPOSITORY_TRUTH_DOCS_ROOT_PARENT_IS_SYMLINK"
+        )
+        detail_prefix = "symlinked docs scan root" if final_component else "symlinked docs scan-root parent directories"
+        raise PathIntegrityError(
+            code=code,
+            path=str(docs_root),
+            detail=f"{detail_prefix}: {', '.join(str(item) for item in symlinks)}",
+        )
     if not docs_root.exists():
+        return None
+    if not docs_root.is_dir():
+        raise PathIntegrityError(
+            code="REPOSITORY_TRUTH_DOCS_ROOT_NOT_DIRECTORY",
+            path=str(docs_root),
+            detail="docs markdown scan root exists but is not a directory",
+        )
+    return docs_root
+
+
+def _iter_markdown_files(repo_root: Path, docs_root: Path | None) -> Iterable[Path]:
+    if docs_root is None:
         return ()
-    paths = []
-    for path in sorted(docs_root.rglob("*.md")):
+    paths: list[Path] = []
+    for current, dirnames, filenames in os.walk(docs_root):
+        current_path = Path(current)
         try:
-            rel = path.relative_to(repo_root).parts
+            rel = current_path.relative_to(repo_root).parts
         except ValueError:
+            dirnames[:] = []
             continue
         if len(rel) >= 2 and rel[0] == "docs" and rel[1] == "artifacts":
+            dirnames[:] = []
             continue
-        paths.append(path)
+        dirnames[:] = sorted(
+            dirname
+            for dirname in dirnames
+            if not (current_path / dirname).is_symlink()
+        )
+        for filename in sorted(filenames):
+            path = current_path / filename
+            if path.suffix == ".md" and not path.is_symlink():
+                paths.append(path)
     return tuple(paths)
 
 
-def _iter_documented_console_commands(repo_root: Path) -> Iterable[str]:
+def _iter_documented_console_commands(repo_root: Path, docs_root: Path | None) -> Iterable[str]:
     pattern = re.compile(r"\b(strategy-validator-[A-Za-z0-9_-]+)\b")
-    for path in _iter_markdown_files(repo_root):
+    for path in _iter_markdown_files(repo_root, docs_root):
         text = _read_text(path)
         for match in pattern.finditer(text):
             next_char = text[match.end():match.end() + 1]
@@ -113,9 +167,9 @@ def _iter_documented_console_commands(repo_root: Path) -> Iterable[str]:
             yield match.group(1)
 
 
-def _iter_documented_test_paths(repo_root: Path) -> Iterable[str]:
+def _iter_documented_test_paths(repo_root: Path, docs_root: Path | None) -> Iterable[str]:
     pattern = re.compile(r"\btests/[A-Za-z0-9_./-]+\.py\b")
-    for path in _iter_markdown_files(repo_root):
+    for path in _iter_markdown_files(repo_root, docs_root):
         for match in pattern.finditer(_read_text(path)):
             yield match.group(0)
 
@@ -126,18 +180,77 @@ def _iter_test_paths_referenced_by_ci(ci_text: str) -> Iterable[str]:
         yield match.group(0).rstrip("'\"),]")
 
 
-def _max_sqlite_migration_version(repo_root: Path) -> int:
+def _safe_sqlite_migration_files(repo_root: Path) -> tuple[Path, ...]:
+    """Return SQLite migration SQL files without following symlinked inputs.
+
+    Repository-truth checks derive schema version evidence from migration file
+    names and tracking inserts.  That evidence must come from the reviewed repo
+    tree, not from a symlinked migration root or linked ``*.sql`` file outside
+    the source envelope.  Missing migration roots remain valid for tiny fixture
+    repositories; present roots and files must be real filesystem entries.
+    """
+    sqlite_root = repo_root / "strategy_validator" / "migrations" / "sqlite"
+    symlinks = symlink_components_preserving_path(sqlite_root)
+    if symlinks:
+        final_component = sqlite_root in symlinks
+        code = (
+            "REPOSITORY_TRUTH_SQLITE_MIGRATION_ROOT_IS_SYMLINK"
+            if final_component
+            else "REPOSITORY_TRUTH_SQLITE_MIGRATION_ROOT_PARENT_IS_SYMLINK"
+        )
+        detail_prefix = "symlinked SQLite migration root" if final_component else "symlinked SQLite migration-root parent directories"
+        raise PathIntegrityError(
+            code=code,
+            path=str(sqlite_root),
+            detail=f"{detail_prefix}: {', '.join(str(item) for item in symlinks)}",
+        )
+    if not sqlite_root.exists():
+        return ()
+    if not sqlite_root.is_dir():
+        raise PathIntegrityError(
+            code="REPOSITORY_TRUTH_SQLITE_MIGRATION_ROOT_NOT_DIRECTORY",
+            path=str(sqlite_root),
+            detail="SQLite migration scan root exists but is not a directory",
+        )
+
+    migrations: list[Path] = []
+    for path in sorted(sqlite_root.glob("*.sql"), key=lambda item: item.as_posix()):
+        symlinks = symlink_components_preserving_path(path)
+        if symlinks:
+            final_component = path in symlinks
+            code = (
+                "REPOSITORY_TRUTH_SQLITE_MIGRATION_FILE_IS_SYMLINK"
+                if final_component
+                else "REPOSITORY_TRUTH_SQLITE_MIGRATION_FILE_PARENT_IS_SYMLINK"
+            )
+            detail_prefix = "symlinked SQLite migration file" if final_component else "symlinked SQLite migration-file parent directories"
+            raise PathIntegrityError(
+                code=code,
+                path=str(path),
+                detail=f"{detail_prefix}: {', '.join(str(item) for item in symlinks)}",
+            )
+        if not path.is_file():
+            raise PathIntegrityError(
+                code="REPOSITORY_TRUTH_SQLITE_MIGRATION_FILE_NOT_REGULAR",
+                path=str(path),
+                detail="SQLite migration path exists but is not a regular file",
+            )
+        migrations.append(path)
+    return tuple(migrations)
+
+
+def _max_sqlite_migration_version(migration_files: Iterable[Path]) -> int:
     versions: list[int] = []
-    for path in (repo_root / "strategy_validator/migrations/sqlite").glob("*.sql"):
+    for path in migration_files:
         match = re.match(r"^(\d{4})_", path.name)
         if match:
             versions.append(int(match.group(1)))
     return max(versions, default=0)
 
 
-def _schema_versions_recorded_by_migrations(repo_root: Path) -> set[int]:
+def _schema_versions_recorded_by_migrations(migration_files: Iterable[Path]) -> set[int]:
     versions: set[int] = set()
-    for path in (repo_root / "strategy_validator/migrations/sqlite").glob("*.sql"):
+    for path in migration_files:
         text = _read_text(path)
         for match in re.finditer(r"version_id\)\s*\nVALUES\s*\((\d+),", text):
             versions.add(int(match.group(1)))
@@ -190,8 +303,29 @@ def _ignore_file_missing_patterns(path: Path, required_patterns: tuple[str, ...]
 
 
 def run_repository_truth_check(repo_root: str | Path | None = None) -> RepositoryTruthReport:
-    root = Path(repo_root).resolve() if repo_root is not None else Path(__file__).resolve().parents[1]
     checks: list[TruthCheck] = []
+    if repo_root is None:
+        root = _REPO_ROOT
+    else:
+        try:
+            checked_root = safe_input_dir(repo_root, label="REPOSITORY_TRUTH_REPO_ROOT", required=True)
+        except PathIntegrityError as exc:
+            checks.append(TruthCheck(name="repo_root_path_integrity", status="FAIL", detail=f"{exc.code}: {exc.detail} ({exc.path})"))
+            return RepositoryTruthReport(schema_version="repository_truth_check/v2", status="FAIL", checks=tuple(checks))
+        assert checked_root is not None
+        root = checked_root
+
+    docs_markdown_root: Path | None = None
+    try:
+        docs_markdown_root = _safe_docs_markdown_root(root)
+    except PathIntegrityError as exc:
+        checks.append(
+            TruthCheck(
+                name="docs_markdown_path_integrity",
+                status="FAIL",
+                detail=f"{exc.code}: {exc.detail} ({exc.path})",
+            )
+        )
 
     pyproject_path = root / "pyproject.toml"
     checks.append(_check(pyproject_path.exists(), "pyproject_present", "pyproject.toml exists", "pyproject.toml is missing"))
@@ -239,7 +373,7 @@ def run_repository_truth_check(repo_root: str | Path | None = None) -> Repositor
                 )
             )
 
-    documented_commands = sorted(set(_iter_documented_console_commands(root)))
+    documented_commands = sorted(set(_iter_documented_console_commands(root, docs_markdown_root)))
     missing_documented_commands = [name for name in documented_commands if name not in scripts]
     checks.append(
         _check(
@@ -250,7 +384,7 @@ def run_repository_truth_check(repo_root: str | Path | None = None) -> Repositor
         )
     )
 
-    documented_test_paths = sorted(set(_iter_documented_test_paths(root)))
+    documented_test_paths = sorted(set(_iter_documented_test_paths(root, docs_markdown_root)))
     missing_documented_tests = [path for path in documented_test_paths if not (root / path).exists()]
     checks.append(
         _check(
@@ -290,6 +424,14 @@ def run_repository_truth_check(repo_root: str | Path | None = None) -> Repositor
                 "ci_source_health_gate_present",
                 "CI includes scripts/source_health.py",
                 "CI does not include scripts/source_health.py",
+            )
+        )
+        checks.append(
+            _check(
+                "python scripts/purge_repo_transients.py --json" in ci_text,
+                "ci_purge_repo_transients_dry_run_gate_present",
+                "CI includes scripts/purge_repo_transients.py --json (dry-run plan)",
+                "CI does not include scripts/purge_repo_transients.py --json transient purge plan",
             )
         )
         checks.append(
@@ -722,7 +864,18 @@ def run_repository_truth_check(repo_root: str | Path | None = None) -> Repositor
     migrations_text = _read_text(migrations_init) if migrations_init.exists() else ""
     match = re.search(r"EXPECTED_SCHEMA_VERSION\s*=\s*(\d+)", migrations_text)
     expected_schema = int(match.group(1)) if match else None
-    max_migration = _max_sqlite_migration_version(root)
+    try:
+        sqlite_migration_files = _safe_sqlite_migration_files(root)
+    except PathIntegrityError as exc:
+        sqlite_migration_files = ()
+        checks.append(
+            TruthCheck(
+                name="sqlite_migration_path_integrity",
+                status="FAIL",
+                detail=f"{exc.code}: {exc.detail} ({exc.path})",
+            )
+        )
+    max_migration = _max_sqlite_migration_version(sqlite_migration_files)
     checks.append(
         _check(
             expected_schema == max_migration,
@@ -732,7 +885,7 @@ def run_repository_truth_check(repo_root: str | Path | None = None) -> Repositor
         )
     )
 
-    recorded_versions = _schema_versions_recorded_by_migrations(root)
+    recorded_versions = _schema_versions_recorded_by_migrations(sqlite_migration_files)
     expected_recorded = set(range(1, max_migration + 1)) if max_migration else set()
     missing_recorded = sorted(expected_recorded - recorded_versions)
     checks.append(

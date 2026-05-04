@@ -11,10 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from strategy_validator.application.promotion_review_ops import build_promotion_review_packet
-from strategy_validator.application.research_os_paths import (
-    artifact_root_directory,
-    provider_paper_loop_manifest_path,
-)
+from strategy_validator.application.research_os_paths import artifact_root_directory
 from strategy_validator.application.strategy_batch_loader import load_strategy_batch_spec
 from strategy_validator.application.paper_tracking_ops import (
     append_daily_snapshot,
@@ -233,7 +230,7 @@ def main(argv: list[str] | None = None) -> int:
     digest_body = json.loads(json.dumps(manifest, default=str))
     digest_body.pop("digests", None)
     manifest["digests"]["full_manifest_sha256"] = _digest_obj(digest_body)
-    out_path = provider_paper_loop_manifest_path(repo_root)
+    out_path = (art / "provider_paper_loop" / "latest" / "provider_paper_loop_manifest.json").resolve()
     try:
         loop = ProviderPaperLoopManifest.model_validate(manifest)
         _write_json(out_path, json.loads(loop.model_dump_json()))
@@ -243,7 +240,7 @@ def main(argv: list[str] | None = None) -> int:
 
     payload = {"ok": bool(manifest.get("ok")), "manifest_path": str(out_path), "manifest": manifest}
     if ns.json:
-        sys.stdout.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        sys.stdout.write(json.dumps(payload, indent=2, sort_keys=True, default=str) + "\n")
     else:
         sys.stdout.write(f"wrote {out_path}\n")
     return 0 if manifest.get("ok") else 1

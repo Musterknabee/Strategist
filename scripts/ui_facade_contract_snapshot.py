@@ -5,10 +5,17 @@ import argparse
 import ast
 import hashlib
 import importlib.util
+import os
 import json
 import sys
 from pathlib import Path
 from typing import Iterable
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from scripts._path_integrity import PathIntegrityError, path_error_payload, safe_input_dir, safe_input_file, safe_output_file
 
 DEFAULT_SNAPSHOT = Path('docs/api/ui-public-facade.snapshot.json')
 UI_ROUTE_DECLARATION_ROOT = Path('strategy_validator/api/routes')
@@ -25,7 +32,15 @@ HTTP_DECORATORS = {
 
 
 def _repo_root_from_script() -> Path:
-    return Path(__file__).resolve().parents[1]
+    return _REPO_ROOT
+
+
+def _validate_repo_root(repo_root: str | Path | None) -> Path:
+    if repo_root is None:
+        return _repo_root_from_script()
+    checked = safe_input_dir(repo_root, label="UI_FACADE_REPO_ROOT", required=True)
+    assert checked is not None
+    return checked
 
 
 def _ensure_repo_on_path(repo_root: Path) -> None:
@@ -112,6 +127,16 @@ def collect_registered_ui_routes_fastapi(repo_root: Path) -> list[dict[str, str]
 
 
 def collect_registered_ui_routes(repo_root: Path, *, allow_static_fallback: bool = True) -> list[dict[str, str]]:
+    # Prefer static route declaration reconciliation by default. Importing the full
+    # FastAPI app pulls the complete operator/oracle surface into snapshot checks,
+    # which is unnecessary for drift detection and can make simple CI checks slow
+    # or sensitive to optional runtime stacks. Set this env var to force true
+    # FastAPI route-table introspection when needed.
+    force_fastapi = os.environ.get('STRATEGY_VALIDATOR_UI_FACADE_FASTAPI_INTROSPECTION', '').strip().lower() in {
+        '1', 'true', 'yes'
+    }
+    if allow_static_fallback and not force_fastapi:
+        return collect_declared_ui_routes_static(repo_root)
     if importlib.util.find_spec('fastapi') is None:
         if not allow_static_fallback:
             raise ModuleNotFoundError('fastapi')
@@ -129,7 +154,7 @@ def build_ui_facade_contract_snapshot(
     repo_root: str | Path | None = None,
     allow_static_fallback: bool = True,
 ) -> dict[str, object]:
-    root = Path(repo_root).resolve() if repo_root is not None else _repo_root_from_script()
+    root = _validate_repo_root(repo_root)
     _ensure_repo_on_path(root)
     from strategy_validator.application.ui_public_facade import build_ui_public_facade_inventory
 
@@ -178,10 +203,27 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    repo_root = Path(args.repo_root).resolve() if args.repo_root else _repo_root_from_script()
+    try:
+        repo_root = _validate_repo_root(args.repo_root)
+    except PathIntegrityError as exc:
+        print(json.dumps(path_error_payload(exc, schema_version="ui_facade_contract_snapshot_path_error/v1"), sort_keys=True))
+        return 1
+
     output = Path(args.output)
     if not output.is_absolute():
         output = repo_root / output
+
+    try:
+        checked_output = (
+            safe_input_file(output, label="UI_FACADE_SNAPSHOT", required=True)
+            if args.check
+            else safe_output_file(output, label="UI_FACADE_SNAPSHOT_OUTPUT")
+        )
+    except PathIntegrityError as exc:
+        print(json.dumps(path_error_payload(exc, schema_version="ui_facade_contract_snapshot_path_error/v1"), sort_keys=True))
+        return 1
+    assert checked_output is not None
+    output = checked_output
 
     payload = build_ui_facade_contract_snapshot(
         repo_root=repo_root,

@@ -107,12 +107,71 @@ def _strip_inline_comment(value: str) -> str:
     return value.strip()
 
 
+
+
+def absolute_path_preserving_symlink(path: str | Path) -> Path:
+    """Return an absolute path without resolving the final symlink target.
+
+    Deployment gates must reject symlinked secret-bearing env files. Calling
+    ``Path.resolve()`` before validation follows symlinks and hides the exact
+    operator-provided path from ``Path.is_symlink()``. This helper gives callers
+    stable absolute paths for reports while preserving symlink observability.
+    """
+
+    candidate = Path(path).expanduser()
+    if candidate.is_absolute():
+        return candidate
+    return Path.cwd() / candidate
+
+
+def symlink_components_preserving_path(path: str | Path) -> tuple[Path, ...]:
+    """Return symlink components without resolving through them.
+
+    Operator-facing deployment commands write or read secret/evidence artifacts.
+    They need absolute, stable paths for reports, but must not call
+    ``Path.resolve()`` before checking because that follows symlinks.  This
+    helper detects symlinks in existing parents as well as the final component.
+    Missing future leaf paths are allowed; existing symlinked parents are not.
+    """
+
+    absolute = absolute_path_preserving_symlink(path)
+    candidates = [item for item in reversed(absolute.parents) if item != item.parent]
+    candidates.append(absolute)
+    return tuple(candidate for candidate in candidates if candidate.is_symlink())
+
+
+def has_symlink_component(path: str | Path) -> bool:
+    """Return True if any existing component of ``path`` is a symlink."""
+
+    return bool(symlink_components_preserving_path(path))
+
+
 def parse_env_file(path: str | Path) -> tuple[dict[str, str], list[EnvIssue]]:
     """Parse a simple KEY=VALUE env file without shell expansion."""
 
-    target = Path(path)
+    target = absolute_path_preserving_symlink(path)
     issues: list[EnvIssue] = []
     values: dict[str, str] = {}
+    symlinks = symlink_components_preserving_path(target)
+    if target in symlinks:
+        return values, [
+            EnvIssue(
+                "<file>",
+                "ENV_FILE_IS_SYMLINK",
+                "ERROR",
+                f"deployment env file must be a regular file, not a symlink: {target}",
+            )
+        ]
+    if symlinks:
+        joined = ", ".join(str(item) for item in symlinks)
+        return values, [
+            EnvIssue(
+                "<file>",
+                "ENV_FILE_PARENT_IS_SYMLINK",
+                "ERROR",
+                f"deployment env file must not be read through symlinked parent directories: {joined}",
+            )
+        ]
     if not target.exists():
         return values, [EnvIssue("<file>", "ENV_FILE_MISSING", "ERROR", f"env file does not exist: {target}")]
     if not target.is_file():

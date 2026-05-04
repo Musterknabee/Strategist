@@ -30,6 +30,10 @@ from strategy_validator.cli.ledger_ops import (
     verify_operator_action_journal,
 )
 from strategy_validator.cli.migrate import run_migration
+from strategy_validator.cli.deployment_env_check import (
+    absolute_path_preserving_symlink,
+    symlink_components_preserving_path,
+)
 from strategy_validator.ledger._append_only import resolve_database_path
 
 _ENV_MODE = "STRATEGY_VALIDATOR_MODE"
@@ -61,11 +65,40 @@ def _temporary_env(overrides: dict[str, str | None]):
 
 def _path_value(explicit: str, env_name: str, fallback: Path) -> Path:
     if explicit:
-        return Path(explicit).expanduser().resolve()
+        return absolute_path_preserving_symlink(explicit)
     raw = os.environ.get(env_name, "").strip()
     if raw:
-        return Path(raw).expanduser().resolve()
-    return fallback.expanduser().resolve()
+        return absolute_path_preserving_symlink(raw)
+    return absolute_path_preserving_symlink(fallback)
+
+
+def _symlink_components(path: Path) -> tuple[str, ...]:
+    """Return symlink components in a durable deployment path."""
+
+    return tuple(str(candidate) for candidate in symlink_components_preserving_path(path))
+
+
+def _durable_path_integrity(*, db_path: Path, backup_path: Path, artifact_path: Path, restore_drill_path: Path | None) -> dict[str, Any]:
+    entries = {
+        "ledger_database_path": db_path,
+        "ledger_backup_dir": backup_path,
+        "artifact_root": artifact_path,
+    }
+    if restore_drill_path is not None:
+        entries["restore_drill_path"] = restore_drill_path
+
+    details: dict[str, Any] = {}
+    errors: list[str] = []
+    for name, path in entries.items():
+        symlinks = _symlink_components(path)
+        details[name] = {
+            "path": str(path),
+            "symlink_components": list(symlinks),
+            "ok": not symlinks,
+        }
+        if symlinks:
+            errors.append(f"{name}: SYMLINK_IN_DURABLE_PATH: {', '.join(symlinks)}")
+    return {"ok": not errors, "paths": details, "errors": errors}
 
 
 def _ensure_writable_dir(path: Path, *, prepare: bool) -> dict[str, Any]:
@@ -117,6 +150,13 @@ def build_single_tenant_deployment_preflight(
     db_path = _path_value(database_path, _ENV_LEDGER_DB_PATH, default_db)
     backup_path = _path_value(backup_dir, _ENV_LEDGER_BACKUP_DIR, db_path.parent / "backups")
     artifact_path = _path_value(artifact_root, _ENV_ARTIFACT_ROOT, db_path.parent / "artifacts")
+    restore_drill = absolute_path_preserving_symlink(restore_drill_path) if restore_drill_path else None
+    path_integrity = _durable_path_integrity(
+        db_path=db_path,
+        backup_path=backup_path,
+        artifact_path=artifact_path,
+        restore_drill_path=restore_drill,
+    )
 
     env_overrides = {
         _ENV_LEDGER_DB_PATH: str(db_path),
@@ -129,63 +169,92 @@ def build_single_tenant_deployment_preflight(
         "migration": None,
         "backup_dir": None,
         "artifact_root": None,
+        "path_integrity": path_integrity,
     }
     backup_restore: dict[str, Any] | None = None
     ledger_verification: dict[str, Any] | None = None
     operator_action_chain: dict[str, Any] | None = None
-    errors: list[str] = []
+    errors: list[str] = list(path_integrity["errors"])
 
     with _temporary_env(env_overrides):
-        if prepare:
-            db_path.parent.mkdir(parents=True, exist_ok=True)
-            backup_path.mkdir(parents=True, exist_ok=True)
-            artifact_path.mkdir(parents=True, exist_ok=True)
-            preparation["migration"] = run_migration(database_path=str(db_path))
-
-        preparation["backup_dir"] = _ensure_writable_dir(backup_path, prepare=prepare)
-        preparation["artifact_root"] = _ensure_writable_dir(artifact_path, prepare=prepare)
-
-        try:
-            ledger_verification = verify_ledger(database_path=str(db_path))
-        except Exception as exc:  # pragma: no cover - defensive operator diagnostic.
-            errors.append(f"ledger verification failed: {exc}")
-            ledger_verification = {"ok": False, "error": str(exc), "database_path": str(db_path)}
-
-        try:
-            operator_action_chain = verify_operator_action_journal(database_path=str(db_path))
-        except Exception as exc:  # pragma: no cover - defensive operator diagnostic.
-            errors.append(f"operator action journal verification failed: {exc}")
-            operator_action_chain = {"ok": False, "error": str(exc), "database_path": str(db_path)}
-
-        if verify_backup_restore:
-            try:
-                backup_report = backup_ledger_database(database_path=str(db_path), backup_dir=str(backup_path))
-                restore_path = (
-                    Path(restore_drill_path).expanduser().resolve()
-                    if restore_drill_path
-                    else backup_path / "restore-drill.sqlite3"
-                )
-                restore_report = restore_ledger_database(
-                    backup_path=str(backup_report["backup_path"]),
-                    database_path=str(restore_path),
-                    allow_overwrite=True,
-                )
-                backup_restore = {
-                    "schema_version": "single_tenant_backup_restore_drill/v1",
-                    "ok": bool(backup_report.get("ok") and restore_report.get("ok")),
-                    "backup": backup_report,
-                    "restore": restore_report,
-                }
-            except LedgerOpsError as exc:
-                backup_restore = {
+        if not path_integrity["ok"]:
+            preparation["backup_dir"] = {"path": str(backup_path), "exists": backup_path.exists(), "is_dir": False, "writable": False, "ok": False}
+            preparation["artifact_root"] = {"path": str(artifact_path), "exists": artifact_path.exists(), "is_dir": False, "writable": False, "ok": False}
+            ledger_verification = {
+                "schema_version": "ledger_ops_verify/v1",
+                "ok": False,
+                "database_path": str(db_path),
+                "database_exists": db_path.exists(),
+                "error": "skipped because durable deployment path integrity failed",
+            }
+            operator_action_chain = {
+                "schema_version": "ledger_ops_operator_action_chain_verify/v1",
+                "ok": False,
+                "database_path": str(db_path),
+                "database_exists": db_path.exists(),
+                "issues": ["skipped because durable deployment path integrity failed"],
+            }
+            backup_restore = (
+                {
                     "schema_version": "single_tenant_backup_restore_drill/v1",
                     "ok": False,
-                    "error": str(exc),
+                    "error": "skipped because durable deployment path integrity failed",
                 }
-                errors.append(f"backup/restore drill failed: {exc}")
+                if verify_backup_restore
+                else None
+            )
+            deployment = {
+                "status": "BLOCKED",
+                "skipped": True,
+                "reason": "durable deployment path integrity failed",
+            }
+        else:
+            if prepare:
+                db_path.parent.mkdir(parents=True, exist_ok=True)
+                backup_path.mkdir(parents=True, exist_ok=True)
+                artifact_path.mkdir(parents=True, exist_ok=True)
+                preparation["migration"] = run_migration(database_path=str(db_path))
 
-        deployment_report = perform_deployment_readiness_check(repo_root=repo)
-        deployment = deployment_report.model_dump(mode="json") if hasattr(deployment_report, "model_dump") else deployment_report.dict()
+            preparation["backup_dir"] = _ensure_writable_dir(backup_path, prepare=prepare)
+            preparation["artifact_root"] = _ensure_writable_dir(artifact_path, prepare=prepare)
+
+            try:
+                ledger_verification = verify_ledger(database_path=str(db_path))
+            except Exception as exc:  # pragma: no cover - defensive operator diagnostic.
+                errors.append(f"ledger verification failed: {exc}")
+                ledger_verification = {"ok": False, "error": str(exc), "database_path": str(db_path)}
+
+            try:
+                operator_action_chain = verify_operator_action_journal(database_path=str(db_path))
+            except Exception as exc:  # pragma: no cover - defensive operator diagnostic.
+                errors.append(f"operator action journal verification failed: {exc}")
+                operator_action_chain = {"ok": False, "error": str(exc), "database_path": str(db_path)}
+
+            if verify_backup_restore:
+                try:
+                    backup_report = backup_ledger_database(database_path=str(db_path), backup_dir=str(backup_path))
+                    restore_path = restore_drill if restore_drill is not None else backup_path / "restore-drill.sqlite3"
+                    restore_report = restore_ledger_database(
+                        backup_path=str(backup_report["backup_path"]),
+                        database_path=str(restore_path),
+                        allow_overwrite=True,
+                    )
+                    backup_restore = {
+                        "schema_version": "single_tenant_backup_restore_drill/v1",
+                        "ok": bool(backup_report.get("ok") and restore_report.get("ok")),
+                        "backup": backup_report,
+                        "restore": restore_report,
+                    }
+                except LedgerOpsError as exc:
+                    backup_restore = {
+                        "schema_version": "single_tenant_backup_restore_drill/v1",
+                        "ok": False,
+                        "error": str(exc),
+                    }
+                    errors.append(f"backup/restore drill failed: {exc}")
+
+            deployment_report = perform_deployment_readiness_check(repo_root=repo)
+            deployment = deployment_report.model_dump(mode="json") if hasattr(deployment_report, "model_dump") else deployment_report.dict()
 
     token = os.environ.get(_ENV_API_TOKEN, "").strip()
     scopes = split_token_scopes(
@@ -211,6 +280,7 @@ def build_single_tenant_deployment_preflight(
 
     checks = {
         "backend_only_single_tenant_scope": True,
+        "deployment_paths_not_symlinked": bool(path_integrity["ok"]),
         "production_mode": bool(env_contract["mode_is_production"]),
         "api_token_configured": bool(env_contract["api_token_configured"]),
         "api_token_not_placeholder": bool(env_contract["api_token_not_placeholder"]),
@@ -247,7 +317,17 @@ def build_single_tenant_deployment_preflight(
 def _write_summary(path: str, payload: dict[str, Any]) -> None:
     if not path:
         return
-    target = Path(path)
+    target = absolute_path_preserving_symlink(path)
+    symlinks = symlink_components_preserving_path(target)
+    if symlinks:
+        payload["ok"] = False
+        payload["recommended_action"] = "BLOCK_DEPLOYMENT_AND_FIX_PREFLIGHT"
+        payload.setdefault("errors", []).append(
+            "summary_markdown_output_path: SYMLINK_IN_OUTPUT_PATH: "
+            + ", ".join(str(item) for item in symlinks)
+        )
+        payload.setdefault("checks", {})["summary_markdown_output_path_not_symlinked"] = False
+        return
     target.parent.mkdir(parents=True, exist_ok=True)
     checks = payload.get("checks", {})
     lines = [

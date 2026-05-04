@@ -14,6 +14,8 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+from scripts._path_integrity import PathIntegrityError, path_error_payload, safe_input_file
+
 from strategy_validator.providers.health import build_provider_health_snapshot
 
 
@@ -60,9 +62,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--json", action="store_true", help="Pretty-print JSON.")
     ns = parser.parse_args(argv)
-    env_path = Path(ns.env_file).resolve() if ns.env_file else None
+    try:
+        env_path = safe_input_file(ns.env_file, label="PROVIDER_HEALTH_ENV_FILE", required=False) if ns.env_file else None
+        manifest = safe_input_file(ns.manifest, label="PROVIDER_HEALTH_MANIFEST", required=False) if ns.manifest else None
+    except PathIntegrityError as exc:
+        sys.stdout.write(json.dumps(path_error_payload(exc), sort_keys=True) + "\n")
+        return 2
     env = _merged_env(env_file=env_path if env_path and env_path.is_file() else None)
-    manifest = ns.manifest.resolve() if ns.manifest else None
     snap = build_provider_health_snapshot(
         env=env,
         samples_manifest_path=manifest,

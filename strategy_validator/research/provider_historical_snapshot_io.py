@@ -113,7 +113,7 @@ def write_snapshot_run(
     latest_dir.mkdir(parents=True, exist_ok=True)
     run = finalize_run_sha(run)
     path = latest_dir / "provider_historical_snapshot_run.json"
-    path.write_text(run.model_dump_json(indent=2, sort_keys=True), encoding="utf-8")
+    path.write_text(json.dumps(run.model_dump(mode="json"), indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return path
 
 

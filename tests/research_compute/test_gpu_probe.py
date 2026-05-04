@@ -8,6 +8,8 @@ from strategy_validator.research_compute.gpu_probe import probe_gpu_capability
 def test_gpu_probe_torch_missing(monkeypatch) -> None:
     import importlib
 
+    monkeypatch.setenv("STRATEGY_VALIDATOR_RESEARCH_COMPUTE_DEEP_PROBE_ENABLE", "1")
+
     def _boom(_name: str):
         raise ModuleNotFoundError("torch")
 
@@ -23,6 +25,8 @@ def test_gpu_probe_torch_missing(monkeypatch) -> None:
 
 def test_gpu_probe_torch_cpu_only(monkeypatch) -> None:
     import importlib
+
+    monkeypatch.setenv("STRATEGY_VALIDATOR_RESEARCH_COMPUTE_DEEP_PROBE_ENABLE", "1")
 
     fake_torch = types.SimpleNamespace(
         cuda=types.SimpleNamespace(is_available=lambda: False),
@@ -41,6 +45,8 @@ def test_gpu_probe_torch_cpu_only(monkeypatch) -> None:
 
 def test_gpu_probe_cuda_available(monkeypatch) -> None:
     import importlib
+
+    monkeypatch.setenv("STRATEGY_VALIDATOR_RESEARCH_COMPUTE_DEEP_PROBE_ENABLE", "1")
 
     class FakeCuda:
         @staticmethod

@@ -7,11 +7,20 @@ import type { ReactNode } from "react";
 const NAV: { href: string; label: string }[] = [
   { href: "/", label: "Home" },
   { href: "/workboard", label: "Workboard" },
+  { href: "/daily-operator-run", label: "Daily Run" },
   { href: "/readiness", label: "Readiness" },
   { href: "/evidence", label: "Evidence" },
   { href: "/ledger", label: "Ledger" },
   { href: "/providers", label: "Providers" },
+  { href: "/paper-execution", label: "Paper Execution" },
   { href: "/runtime", label: "Runtime" },
+  { href: "/strategy-memory", label: "Memory" },
+  { href: "/strategy-graveyard", label: "Graveyard" },
+  { href: "/strategy-inbox", label: "Strategy Inbox" },
+  { href: "/thesis", label: "Thesis" },
+  { href: "/shadow-book", label: "Shadow Book" },
+  { href: "/research-briefing", label: "Briefing" },
+  { href: "/research-export", label: "Export" },
 ];
 
 export function ConsoleShell({ children }: { children: ReactNode }) {

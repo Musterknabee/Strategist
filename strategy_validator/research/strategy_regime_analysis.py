@@ -7,11 +7,12 @@ from typing import Any, Literal
 import numpy as np
 
 from strategy_validator.contracts.strategy_regime_analysis import RegimeAnalysisResult, RegimeStat
+from strategy_validator.contracts.strategy_batch import StrategyTypeId
 from strategy_validator.research.strategy_batch_analytics import strategy_log_returns_series
 from strategy_validator.research.strategy_batch_digests import canonical_json_sha256
 from strategy_validator.research.strategy_batch_evaluators import log_returns
 
-StrategyType = Literal["momentum", "mean_reversion", "volatility_breakout"]
+StrategyType = StrategyTypeId
 
 _ROLL = 20
 _VOL_HI = 0.02
@@ -28,6 +29,10 @@ def evaluate_regime_analysis(
     strategy_type: StrategyType,
     params: dict[str, Any],
     synthetic_demo: bool,
+    opens: np.ndarray | None = None,
+    highs: np.ndarray | None = None,
+    lows: np.ndarray | None = None,
+    volumes: np.ndarray | None = None,
 ) -> RegimeAnalysisResult:
     if synthetic_demo:
         body = RegimeAnalysisResult(
@@ -57,7 +62,15 @@ def evaluate_regime_analysis(
         )
 
     r_px = log_returns(prices)
-    strat = strategy_log_returns_series(prices, strategy_type, params)
+    strat = strategy_log_returns_series(
+        prices,
+        strategy_type,
+        params,
+        opens=opens,
+        highs=highs,
+        lows=lows,
+        volumes=volumes,
+    )
     if strat.size == 0:
         body = RegimeAnalysisResult(
             strategy_id=strategy_id,

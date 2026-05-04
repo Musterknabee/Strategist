@@ -29,6 +29,7 @@ from strategy_validator.application.ui_public_facade import (
 )
 from strategy_validator.application.ui_research_compute import build_ui_research_compute_payload
 from strategy_validator.application.operator_action_projection import build_operator_action_event_index_payload
+from strategy_validator.application.evidence_chain_projection import build_ui_evidence_chain_payload
 from strategy_validator.application.ui_views import (
     build_ui_burnin_payload,
     build_ui_evidence_payload,
@@ -68,6 +69,7 @@ __all__ = [
     'build_ui_tribunal_query',
     'execute_ui_operator_command',
     'build_operator_action_event_index_payload',
+    'build_ui_evidence_chain_payload',
     'build_ui_evidence_payload',
     'build_ui_operator_command_receipt_payload',
     'build_ui_pack_detail_payload',

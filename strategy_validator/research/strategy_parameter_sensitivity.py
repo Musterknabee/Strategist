@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import copy
 import math
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 
@@ -15,19 +15,9 @@ from strategy_validator.contracts.strategy_parameter_sensitivity import (
 )
 from strategy_validator.research.strategy_batch_digests import canonical_json_sha256
 from strategy_validator.research.strategy_batch_evaluators import (
-    evaluate_mean_reversion,
-    evaluate_momentum,
-    evaluate_volatility_breakout,
+    evaluate_strategy_metrics,
 )
 
-def _eval_fn(
-    strategy_type: StrategyTypeId,
-) -> Callable[[np.ndarray, dict[str, Any]], dict[str, float]]:
-    if strategy_type == "momentum":
-        return evaluate_momentum
-    if strategy_type == "mean_reversion":
-        return evaluate_mean_reversion
-    return evaluate_volatility_breakout
 
 
 def _perturbations_for_params(params: dict[str, Any]) -> list[tuple[str, Any, Any]]:
@@ -70,6 +60,10 @@ def evaluate_parameter_sensitivity(
     strategy_type: StrategyTypeId,
     params: dict[str, Any],
     synthetic_demo: bool,
+    opens: np.ndarray | None = None,
+    highs: np.ndarray | None = None,
+    lows: np.ndarray | None = None,
+    volumes: np.ndarray | None = None,
 ) -> ParameterSensitivityResult:
     if synthetic_demo:
         body = ParameterSensitivityResult(
@@ -99,8 +93,15 @@ def evaluate_parameter_sensitivity(
             update={"parameter_sensitivity_evidence_sha256": canonical_json_sha256(plain)}
         )
 
-    fn = _eval_fn(strategy_type)
-    base_m = fn(prices, params)
+    base_m = evaluate_strategy_metrics(
+        strategy_type=strategy_type,
+        prices=prices,
+        params=params,
+        opens=opens,
+        highs=highs,
+        lows=lows,
+        volumes=volumes,
+    )
     base_tr = float(base_m.get("total_return", 0.0))
     base_sh = float(base_m.get("sharpe_like", 0.0))
 
@@ -112,7 +113,15 @@ def evaluate_parameter_sensitivity(
             p2[key] = int(new_v)
         else:
             p2[key] = float(new_v)
-        m = fn(prices, p2)
+        m = evaluate_strategy_metrics(
+            strategy_type=strategy_type,
+            prices=prices,
+            params=p2,
+            opens=opens,
+            highs=highs,
+            lows=lows,
+            volumes=volumes,
+        )
         tr = float(m.get("total_return", 0.0))
         sh = float(m.get("sharpe_like", 0.0))
         results.append(

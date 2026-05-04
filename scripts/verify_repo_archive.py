@@ -16,7 +16,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.package_repo import iter_clean_repo_files
+from scripts.package_repo import UnsafeArchiveOutputError, _safe_repo_root, iter_clean_repo_files
+from scripts._path_integrity import absolute_path_preserving_symlink, symlink_components_preserving_path
 
 EXPECTED_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 EXPECTED_FILE_MODE = 0o644
@@ -62,9 +63,23 @@ def verify_clean_repo_archive(
     *,
     repo_root: str | Path | None = None,
 ) -> ArchiveVerificationReport:
-    root = Path(repo_root).resolve() if repo_root is not None else REPO_ROOT
-    archive = Path(archive_path).resolve()
+    archive = absolute_path_preserving_symlink(archive_path)
     failures: list[ArchiveVerificationFailure] = []
+    try:
+        root = _safe_repo_root(repo_root) if repo_root is not None else REPO_ROOT
+    except UnsafeArchiveOutputError as exc:
+        failures.append(ArchiveVerificationFailure(name="repo_root_path_integrity", detail=str(exc)))
+        return ArchiveVerificationReport(
+            schema_version="repo_archive_verify/v1",
+            status="FAIL",
+            repo_root=str(absolute_path_preserving_symlink(repo_root)) if repo_root is not None else str(REPO_ROOT),
+            archive_path=str(archive),
+            expected_file_count=0,
+            archive_file_count=0,
+            archive_sha256=None,
+            failure_count=len(failures),
+            failures=tuple(failures),
+        )
 
     expected_files = {
         path.relative_to(root).as_posix(): path
@@ -73,8 +88,40 @@ def verify_clean_repo_archive(
 
     archive_names: list[str] = []
     archive_sha256: str | None = None
+    symlinks = symlink_components_preserving_path(archive)
+    if symlinks:
+        failures.append(
+            ArchiveVerificationFailure(
+                name="archive_path_integrity",
+                detail="archive path uses symlinked components: " + ", ".join(str(item) for item in symlinks),
+            )
+        )
+        return ArchiveVerificationReport(
+            schema_version="repo_archive_verify/v1",
+            status="FAIL",
+            repo_root=str(root),
+            archive_path=str(archive),
+            expected_file_count=len(expected_files),
+            archive_file_count=0,
+            archive_sha256=None,
+            failure_count=len(failures),
+            failures=tuple(failures),
+        )
     if not archive.exists():
         failures.append(ArchiveVerificationFailure(name="archive_exists", detail=f"archive is missing: {archive}"))
+        return ArchiveVerificationReport(
+            schema_version="repo_archive_verify/v1",
+            status="FAIL",
+            repo_root=str(root),
+            archive_path=str(archive),
+            expected_file_count=len(expected_files),
+            archive_file_count=0,
+            archive_sha256=None,
+            failure_count=len(failures),
+            failures=tuple(failures),
+        )
+    if not archive.is_file():
+        failures.append(ArchiveVerificationFailure(name="archive_regular_file", detail=f"archive path is not a regular file: {archive}"))
         return ArchiveVerificationReport(
             schema_version="repo_archive_verify/v1",
             status="FAIL",

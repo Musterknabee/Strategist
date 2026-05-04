@@ -65,6 +65,34 @@ def _is_effectively_absolute(path: Path, configured: str | None) -> bool:
     return False
 
 
+def _symlinked_parent(path: Path) -> Path | None:
+    """Return the first symlinked parent component without resolving ``path``.
+
+    Runtime ledger access is a lower-level authority surface than the deployment
+    helper CLIs.  It must therefore preserve the operator-provided path shape and
+    reject filesystem indirection before SQLite can follow it.
+    """
+
+    current = path.parent
+    while True:
+        if current.is_symlink():
+            return current
+        parent = current.parent
+        if parent == current:
+            return None
+        current = parent
+
+
+def _enforce_database_path_integrity(path: Path) -> None:
+    """Fail closed when the configured runtime ledger path uses symlinks."""
+
+    if path.is_symlink():
+        raise RuntimeError(f"LEDGER_DATABASE_PATH_IS_SYMLINK: {path}")
+    parent = _symlinked_parent(path)
+    if parent is not None:
+        raise RuntimeError(f"LEDGER_DATABASE_PATH_PARENT_IS_SYMLINK: {parent}")
+
+
 
 @dataclass(frozen=True)
 class LedgerEvent:
@@ -97,6 +125,8 @@ def resolve_database_path() -> Path:
             raise RuntimeError(f"UNSAFE_LEDGER_PATH: Production requires an absolute path. Got: {configured or path}")
         if is_default:
             raise RuntimeError(f"DEFAULT_LEDGER_PATH_FORBIDDEN: Production cannot use default local path {path}")
+
+    _enforce_database_path_integrity(path)
 
     return path
 

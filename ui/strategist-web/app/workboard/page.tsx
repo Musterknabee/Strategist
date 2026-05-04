@@ -2,6 +2,7 @@
 
 import { DegradedBanner } from "@/components/operator/DegradedBanner";
 import { JsonDetails } from "@/components/operator/JsonDetails";
+import { OperatorCommandPanel } from "@/components/operator/OperatorCommandPanel";
 import { StatusBadge } from "@/components/operator/StatusBadge";
 import { Timestamp } from "@/components/operator/Timestamp";
 import { DenseTable, type DenseColumn } from "@/components/terminal/DenseTable";
@@ -68,6 +69,8 @@ export default function WorkboardPage() {
 
   const entryCount = workboardQuery.data?.queue?.entries?.length ?? 0;
 
+  const selectedTarget = useMemo(() => rows.find((r) => r.__id === sel) ?? rows[0] ?? null, [rows, sel]);
+
   const tape: TapeLine[] = useMemo(
     () => [
       {
@@ -117,7 +120,7 @@ export default function WorkboardPage() {
     <div className="term-page">
       <h1 className="term-page__title">WORKBOARD · QUEUE</h1>
       <p className="muted" style={{ fontSize: "10px" }}>
-        Read-plane: /ui/facade · /ui/workboard · <code>{config.baseUrl}</code> · read-only
+        Read-plane: /ui/facade · /ui/workboard · mutation-plane: /ui/commands/{"{action}"} · <code>{config.baseUrl}</code>
       </p>
 
       <Pane title="Facade · frontend posture (informational)" dense>
@@ -146,6 +149,8 @@ export default function WorkboardPage() {
 
       {workboardQuery.data && !workboardError && (
         <>
+          <OperatorCommandPanel target={selectedTarget} boardLabel="operator" />
+
           <PaneGrid cols={2}>
             <Pane
               title="Queue rail"

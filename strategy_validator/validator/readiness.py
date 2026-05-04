@@ -243,6 +243,45 @@ def _path_writable(path: Path) -> bool:
     return (path.exists() and path.is_dir() and os.access(path, os.W_OK)) or (not path.exists() and path.parent.exists() and os.access(path.parent, os.W_OK))
 
 
+def _absolute_path_preserving_symlink(path: Path) -> Path:
+    """Return an absolute path without resolving through symlinks."""
+
+    expanded = path.expanduser()
+    if expanded.is_absolute():
+        return expanded
+    return Path.cwd() / expanded
+
+
+def _symlink_components_preserving_path(path: Path) -> tuple[Path, ...]:
+    """Return symlink components without following filesystem indirection."""
+
+    absolute = _absolute_path_preserving_symlink(path)
+    candidates = [item for item in reversed(absolute.parents) if item != item.parent]
+    candidates.append(absolute)
+    return tuple(candidate for candidate in candidates if candidate.is_symlink())
+
+
+def _path_integrity_blocker(path: Path, *, label: str) -> ReadinessBlocker | None:
+    """Return a blocker when a deployment support root uses symlinks."""
+
+    absolute = _absolute_path_preserving_symlink(path)
+    symlinks = _symlink_components_preserving_path(absolute)
+    if absolute in symlinks:
+        return _b(
+            f"{label}_IS_SYMLINK",
+            f"{label.replace('_', ' ').title()} must not be a symlink: {absolute}",
+            hint="Use a direct durable filesystem path, not a symlinked mount or alias.",
+        )
+    if symlinks:
+        joined = ", ".join(str(item) for item in symlinks)
+        return _b(
+            f"{label}_PARENT_IS_SYMLINK",
+            f"{label.replace('_', ' ').title()} must not be under symlinked parent directories: {joined}",
+            hint="Move the deployment support root under a non-symlinked durable directory.",
+        )
+    return None
+
+
 def perform_deployment_readiness_check(repo_root: str | Path | None = None) -> DeploymentReadinessTierReport:
     runtime = perform_readiness_check()
     mode = runtime.run_mode
@@ -276,14 +315,23 @@ def perform_deployment_readiness_check(repo_root: str | Path | None = None) -> D
 
     backup_raw = os.environ.get("STRATEGY_VALIDATOR_LEDGER_BACKUP_DIR", "").strip()
     artifact_raw = os.environ.get("STRATEGY_VALIDATOR_ARTIFACT_ROOT", "").strip()
-    backup = Path(backup_raw).expanduser() if backup_raw else None
-    artifact = Path(artifact_raw).expanduser() if artifact_raw else None
+    backup = _absolute_path_preserving_symlink(Path(backup_raw)) if backup_raw else None
+    artifact = _absolute_path_preserving_symlink(Path(artifact_raw)) if artifact_raw else None
 
-    checks["backup_root_writable"] = bool(backup and _path_writable(backup))
-    checks["artifact_root_writable"] = bool(artifact and _path_writable(artifact))
+    backup_integrity_blocker = _path_integrity_blocker(backup, label="BACKUP_ROOT") if backup else None
+    artifact_integrity_blocker = _path_integrity_blocker(artifact, label="ARTIFACT_ROOT") if artifact else None
+
+    checks["backup_root_path_integrity"] = backup_integrity_blocker is None
+    checks["artifact_root_path_integrity"] = artifact_integrity_blocker is None
+    checks["backup_root_writable"] = bool(backup and backup_integrity_blocker is None and _path_writable(backup))
+    checks["artifact_root_writable"] = bool(artifact and artifact_integrity_blocker is None and _path_writable(artifact))
     checks["ledger_backup_dir_configured"] = bool(backup)
     checks["ledger_backup_dir_writable"] = checks["backup_root_writable"]
 
+    if backup_integrity_blocker is not None:
+        blockers.append(backup_integrity_blocker)
+    if artifact_integrity_blocker is not None:
+        blockers.append(artifact_integrity_blocker)
     if mode == RuntimeMode.PRODUCTION and not checks["backup_root_writable"]:
         blockers.append(_b("BACKUP_ROOT_NOT_WRITABLE", f"Backup root not writable: {backup_raw or '<unset>'}"))
     if mode == RuntimeMode.PRODUCTION and not checks["artifact_root_writable"]:

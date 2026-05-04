@@ -1470,6 +1470,130 @@
         "title": "SemanticValidatorSubmissionReadinessRequest",
         "type": "object"
       },
+      "StrategyIntakeRequest": {
+        "additionalProperties": false,
+        "description": "Operator-entered strategy idea before validator authority is involved.",
+        "properties": {
+          "data_dependencies": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Data Dependencies",
+            "type": "array"
+          },
+          "evaluation_plan": {
+            "additionalProperties": true,
+            "title": "Evaluation Plan",
+            "type": "object"
+          },
+          "expected_edge": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Expected Edge",
+            "type": "string"
+          },
+          "falsification_rules": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Falsification Rules",
+            "type": "array"
+          },
+          "feature_dependencies": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Feature Dependencies",
+            "type": "array"
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "maxLength": 240,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key"
+          },
+          "intended_horizon": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Intended Horizon",
+            "type": "string"
+          },
+          "operator_id": {
+            "default": "operator",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Operator Id",
+            "type": "string"
+          },
+          "required_evidence_class": {
+            "default": "institutional",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Required Evidence Class",
+            "type": "string"
+          },
+          "risk_assumptions": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Risk Assumptions",
+            "type": "array"
+          },
+          "source_registry_references": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Registry References",
+            "type": "array"
+          },
+          "strategy_name": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Strategy Name",
+            "type": "string"
+          },
+          "tags": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "target_universe": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Target Universe",
+            "type": "string"
+          },
+          "thesis": {
+            "maxLength": 6000,
+            "minLength": 1,
+            "title": "Thesis",
+            "type": "string"
+          }
+        },
+        "required": [
+          "strategy_name",
+          "thesis",
+          "target_universe",
+          "intended_horizon",
+          "expected_edge"
+        ],
+        "title": "StrategyIntakeRequest",
+        "type": "object"
+      },
       "UiOperatorCommandRequest": {
         "properties": {
           "idempotency_key": {
@@ -6215,6 +6339,96 @@
         ]
       }
     },
+    "/ui/backtest-forensics": {
+      "get": {
+        "operationId": "get_backtest_forensics_ui_backtest_forensics_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Backtest Forensics Ui Backtest Forensics Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Backtest Forensics",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/backtest-forensics/latest": {
+      "get": {
+        "operationId": "get_backtest_forensics_latest_ui_backtest_forensics_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Backtest Forensics Latest Ui Backtest Forensics Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Backtest Forensics Latest",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/backtest-forensics/{run_id}": {
+      "get": {
+        "operationId": "get_backtest_forensics_by_run_ui_backtest_forensics__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Backtest Forensics By Run Ui Backtest Forensics  Run Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Backtest Forensics By Run",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
     "/ui/burnin": {
       "get": {
         "operationId": "get_ui_burnin_ui_burnin_get",
@@ -6461,6 +6675,140 @@
         ]
       }
     },
+    "/ui/daily-operator-run": {
+      "get": {
+        "operationId": "get_daily_operator_run_ui_daily_operator_run_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "repo_root",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Repo Root"
+            }
+          },
+          {
+            "in": "query",
+            "name": "database_path",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Database Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Daily Operator Run Ui Daily Operator Run Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Daily Operator Run",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/daily-operator-run/latest": {
+      "get": {
+        "operationId": "get_daily_operator_run_latest_ui_daily_operator_run_latest_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "repo_root",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Repo Root"
+            }
+          },
+          {
+            "in": "query",
+            "name": "database_path",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Database Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Daily Operator Run Latest Ui Daily Operator Run Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Daily Operator Run Latest",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
     "/ui/evidence": {
       "get": {
         "operationId": "get_ui_evidence_ui_evidence_get",
@@ -6523,6 +6871,77 @@
           }
         },
         "summary": "Get Ui Evidence",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/evidence-chain": {
+      "get": {
+        "operationId": "get_ui_evidence_chain_ui_evidence_chain_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "database_path",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Database Path"
+            }
+          },
+          {
+            "in": "query",
+            "name": "readonly",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Readonly",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Ui Evidence Chain Ui Evidence Chain Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Ui Evidence Chain",
         "tags": [
           "ui"
         ]
@@ -6751,6 +7170,52 @@
         ]
       }
     },
+    "/ui/paper-execution": {
+      "get": {
+        "operationId": "get_paper_execution_ui_paper_execution_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Paper Execution Ui Paper Execution Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Paper Execution",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/paper-execution/latest": {
+      "get": {
+        "operationId": "get_paper_execution_latest_ui_paper_execution_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Paper Execution Latest Ui Paper Execution Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Paper Execution Latest",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
     "/ui/paper-tracking/latest": {
       "get": {
         "operationId": "get_paper_tracking_latest_ui_paper_tracking_latest_get",
@@ -6841,6 +7306,29 @@
         ]
       }
     },
+    "/ui/provider-setup": {
+      "get": {
+        "operationId": "get_provider_setup_ui_provider_setup_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Provider Setup Ui Provider Setup Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Provider Setup",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
     "/ui/research-compute": {
       "get": {
         "operationId": "get_ui_research_compute_ui_research_compute_get",
@@ -6859,6 +7347,328 @@
           }
         },
         "summary": "Get Ui Research Compute",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/research-os/attestation/latest": {
+      "get": {
+        "operationId": "get_research_os_attestation_latest_ui_research_os_attestation_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Research Os Attestation Latest Ui Research Os Attestation Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Research Os Attestation Latest",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/research-os/briefing/latest": {
+      "get": {
+        "operationId": "get_research_os_briefing_latest_ui_research_os_briefing_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Research Os Briefing Latest Ui Research Os Briefing Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Research Os Briefing Latest",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/research-os/catalog/latest": {
+      "get": {
+        "operationId": "get_research_os_evidence_catalog_latest_ui_research_os_catalog_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Research Os Evidence Catalog Latest Ui Research Os Catalog Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Research Os Evidence Catalog Latest",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/research-os/closure/latest": {
+      "get": {
+        "operationId": "get_research_os_closure_latest_ui_research_os_closure_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Research Os Closure Latest Ui Research Os Closure Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Research Os Closure Latest",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/research-os/drift/latest": {
+      "get": {
+        "operationId": "get_research_os_evidence_drift_latest_ui_research_os_drift_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Research Os Evidence Drift Latest Ui Research Os Drift Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Research Os Evidence Drift Latest",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/research-os/exceptions/latest": {
+      "get": {
+        "operationId": "get_research_os_exception_latest_ui_research_os_exceptions_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Research Os Exception Latest Ui Research Os Exceptions Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Research Os Exception Latest",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/research-os/export/latest": {
+      "get": {
+        "operationId": "get_research_os_export_latest_ui_research_os_export_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Research Os Export Latest Ui Research Os Export Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Research Os Export Latest",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/research-os/handoff-signoff/latest": {
+      "get": {
+        "operationId": "get_research_os_handoff_signoff_latest_ui_research_os_handoff_signoff_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Research Os Handoff Signoff Latest Ui Research Os Handoff Signoff Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Research Os Handoff Signoff Latest",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/research-os/handoff/latest": {
+      "get": {
+        "operationId": "get_research_os_handoff_latest_ui_research_os_handoff_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Research Os Handoff Latest Ui Research Os Handoff Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Research Os Handoff Latest",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/research-os/policy-gate/latest": {
+      "get": {
+        "operationId": "get_research_os_policy_gate_latest_ui_research_os_policy_gate_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Research Os Policy Gate Latest Ui Research Os Policy Gate Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Research Os Policy Gate Latest",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/research-os/release-readiness/latest": {
+      "get": {
+        "operationId": "get_research_os_release_readiness_latest_ui_research_os_release_readiness_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Research Os Release Readiness Latest Ui Research Os Release Readiness Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Research Os Release Readiness Latest",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/research-os/remediation/latest": {
+      "get": {
+        "operationId": "get_research_os_remediation_latest_ui_research_os_remediation_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Research Os Remediation Latest Ui Research Os Remediation Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Research Os Remediation Latest",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/research-os/review-journal/latest": {
+      "get": {
+        "operationId": "get_research_os_review_journal_latest_ui_research_os_review_journal_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Research Os Review Journal Latest Ui Research Os Review Journal Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Research Os Review Journal Latest",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/research-os/run/latest": {
+      "get": {
+        "operationId": "get_research_os_operator_run_latest_ui_research_os_run_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Research Os Operator Run Latest Ui Research Os Run Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Research Os Operator Run Latest",
         "tags": [
           "ui"
         ]
@@ -6927,6 +7737,29 @@
           }
         },
         "summary": "Get Ui Runtime",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/shadow-book/latest": {
+      "get": {
+        "operationId": "get_shadow_book_latest_ui_shadow_book_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Shadow Book Latest Ui Shadow Book Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Shadow Book Latest",
         "tags": [
           "ui"
         ]
@@ -7017,6 +7850,237 @@
           }
         },
         "summary": "Get Strategy Batch By Run",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/strategy-graveyard": {
+      "get": {
+        "operationId": "get_strategy_graveyard_ui_strategy_graveyard_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Strategy Graveyard Ui Strategy Graveyard Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Strategy Graveyard",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/strategy-graveyard/latest": {
+      "get": {
+        "operationId": "get_strategy_graveyard_latest_ui_strategy_graveyard_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Strategy Graveyard Latest Ui Strategy Graveyard Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Strategy Graveyard Latest",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/strategy-intake": {
+      "post": {
+        "operationId": "post_ui_strategy_intake_ui_strategy_intake_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-strategy-validator-token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Strategy-Validator-Token"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-strategy-validator-operator",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Strategy-Validator-Operator"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StrategyIntakeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post Ui Strategy Intake Ui Strategy Intake Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Ui Strategy Intake",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/strategy-intake/latest": {
+      "get": {
+        "operationId": "get_strategy_intake_latest_ui_strategy_intake_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Strategy Intake Latest Ui Strategy Intake Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Strategy Intake Latest",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/strategy-memory/latest": {
+      "get": {
+        "operationId": "get_strategy_memory_latest_ui_strategy_memory_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Strategy Memory Latest Ui Strategy Memory Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Strategy Memory Latest",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/strategy-thesis/generation/latest": {
+      "get": {
+        "operationId": "get_strategy_thesis_generation_latest_ui_strategy_thesis_generation_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Strategy Thesis Generation Latest Ui Strategy Thesis Generation Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Strategy Thesis Generation Latest",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/ui/strategy-thesis/latest": {
+      "get": {
+        "operationId": "get_strategy_thesis_latest_ui_strategy_thesis_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Strategy Thesis Latest Ui Strategy Thesis Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Strategy Thesis Latest",
         "tags": [
           "ui"
         ]

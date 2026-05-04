@@ -18,6 +18,23 @@ from strategy_validator.application.research_os_paths import (
 from strategy_validator.application.ui_paper_broker import build_ui_paper_broker_status_payload
 from strategy_validator.application.ui_paper_tracking import build_ui_paper_tracking_latest_payload
 from strategy_validator.application.ui_research_compute import build_ui_research_compute_payload
+from strategy_validator.application.strategy_memory_ops import build_ui_strategy_memory_latest_payload
+from strategy_validator.application.shadow_book_ops import build_ui_shadow_book_latest_payload
+from strategy_validator.application.research_os_closure_ops import build_ui_research_os_closure_latest_payload
+from strategy_validator.application.research_os_attestation_ops import build_ui_research_os_attestation_latest_payload
+from strategy_validator.application.research_os_briefing_ops import build_ui_research_os_briefing_latest_payload
+from strategy_validator.application.research_os_export_ops import build_ui_research_os_export_latest_payload
+from strategy_validator.application.research_os_operator_run_ops import build_ui_research_os_operator_run_latest_payload
+from strategy_validator.application.research_os_evidence_catalog_ops import build_ui_research_os_evidence_catalog_latest_payload
+from strategy_validator.application.research_os_drift_ops import build_ui_research_os_evidence_drift_latest_payload
+from strategy_validator.application.research_os_policy_gate_ops import build_ui_research_os_policy_gate_latest_payload
+from strategy_validator.application.research_os_exception_ops import build_ui_research_os_exception_latest_payload
+from strategy_validator.application.research_os_remediation_ops import build_ui_research_os_remediation_latest_payload
+from strategy_validator.application.research_os_release_readiness_ops import build_ui_research_os_release_readiness_latest_payload
+from strategy_validator.application.research_os_handoff_ops import build_ui_research_os_handoff_latest_payload
+from strategy_validator.application.research_os_handoff_signoff_ops import build_ui_research_os_handoff_signoff_latest_payload
+from strategy_validator.application.research_os_review_journal_ops import build_ui_research_os_review_journal_latest_payload
+from strategy_validator.research.strategy_thesis_eval import build_ui_strategy_thesis_latest_payload
 from strategy_validator.application.ui_strategy_batch import build_ui_strategy_batch_latest_payload
 
 _SCHEMA = "ui_research_os_status/v1"
@@ -204,6 +221,57 @@ def build_ui_research_os_status_payload(*, repo_root: Path | None = None) -> dic
 
     broker_payload = build_ui_paper_broker_status_payload()
     compute_payload = build_ui_research_compute_payload()
+    strategy_memory_payload = build_ui_strategy_memory_latest_payload(repo_root=root)
+    strategy_thesis_payload = build_ui_strategy_thesis_latest_payload(repo_root=root)
+    shadow_book_payload = build_ui_shadow_book_latest_payload(repo_root=root)
+    research_os_closure_payload = build_ui_research_os_closure_latest_payload(repo_root=root)
+    research_os_attestation_payload = build_ui_research_os_attestation_latest_payload(repo_root=root)
+    research_os_briefing_payload = build_ui_research_os_briefing_latest_payload(repo_root=root)
+    research_os_export_payload = build_ui_research_os_export_latest_payload(repo_root=root)
+    research_os_operator_run_payload = build_ui_research_os_operator_run_latest_payload(repo_root=root)
+    research_os_evidence_catalog_payload = build_ui_research_os_evidence_catalog_latest_payload(repo_root=root)
+    research_os_evidence_drift_payload = build_ui_research_os_evidence_drift_latest_payload(repo_root=root)
+    research_os_policy_gate_payload = build_ui_research_os_policy_gate_latest_payload(repo_root=root)
+    research_os_exception_payload = build_ui_research_os_exception_latest_payload(repo_root=root)
+    research_os_remediation_payload = build_ui_research_os_remediation_latest_payload(repo_root=root)
+    research_os_release_readiness_payload = build_ui_research_os_release_readiness_latest_payload(repo_root=root)
+    research_os_handoff_payload = build_ui_research_os_handoff_latest_payload(repo_root=root)
+    research_os_handoff_signoff_payload = build_ui_research_os_handoff_signoff_latest_payload(repo_root=root)
+    research_os_review_journal_payload = build_ui_research_os_review_journal_latest_payload(repo_root=root)
+    if strategy_memory_payload.get("degraded"):
+        degraded.extend(str(x) for x in strategy_memory_payload["degraded"])
+    if strategy_thesis_payload.get("degraded"):
+        degraded.extend(str(x) for x in strategy_thesis_payload["degraded"])
+    if shadow_book_payload.get("degraded"):
+        degraded.extend(str(x) for x in shadow_book_payload["degraded"])
+    if research_os_closure_payload.get("degraded"):
+        degraded.extend(str(x) for x in research_os_closure_payload["degraded"])
+    if research_os_attestation_payload.get("degraded"):
+        degraded.extend(str(x) for x in research_os_attestation_payload["degraded"])
+    if research_os_briefing_payload.get("degraded"):
+        degraded.extend(str(x) for x in research_os_briefing_payload["degraded"])
+    if research_os_export_payload.get("degraded"):
+        degraded.extend(str(x) for x in research_os_export_payload["degraded"])
+    if research_os_operator_run_payload.get("degraded"):
+        degraded.extend(str(x) for x in research_os_operator_run_payload["degraded"])
+    if research_os_evidence_catalog_payload.get("degraded"):
+        degraded.extend(str(x) for x in research_os_evidence_catalog_payload["degraded"])
+    if research_os_evidence_drift_payload.get("degraded"):
+        degraded.extend(str(x) for x in research_os_evidence_drift_payload["degraded"])
+    if research_os_policy_gate_payload.get("degraded"):
+        degraded.extend(str(x) for x in research_os_policy_gate_payload["degraded"])
+    if research_os_exception_payload.get("degraded"):
+        degraded.extend(str(x) for x in research_os_exception_payload["degraded"])
+    if research_os_remediation_payload.get("degraded"):
+        degraded.extend(str(x) for x in research_os_remediation_payload["degraded"])
+    if research_os_release_readiness_payload.get("degraded"):
+        degraded.extend(str(x) for x in research_os_release_readiness_payload["degraded"])
+    if research_os_handoff_payload.get("degraded"):
+        degraded.extend(str(x) for x in research_os_handoff_payload["degraded"])
+    if research_os_handoff_signoff_payload.get("degraded"):
+        degraded.extend(str(x) for x in research_os_handoff_signoff_payload["degraded"])
+    if research_os_review_journal_payload.get("degraded"):
+        degraded.extend(str(x) for x in research_os_review_journal_payload["degraded"])
 
     provider = _provider_ingestion_hint(repo_root=root)
     if provider.get("status") == "NO_ARTIFACTS":
@@ -213,6 +281,18 @@ def build_ui_research_os_status_payload(*, repo_root: Path | None = None) -> dic
     runtime_demo = _runtime_demo_manifest_hint(repo_root=root)
     if demo.get("status") != "PRESENT" and runtime_demo.get("status") != "PRESENT":
         degraded.append("RESEARCH_OS_OPERATOR_MANIFEST_ABSENT")
+
+    provider_hist_run = _provider_historical_snapshot_run_hint(repo_root=root)
+    if provider_hist_run.get("status") == "NOT_PRESENT":
+        degraded.append("NO_PROVIDER_HISTORICAL_SNAPSHOT_RUN_ARTIFACT")
+
+    provider_paper_loop = _provider_paper_loop_manifest_hint(repo_root=root)
+    if provider_paper_loop.get("status") == "NOT_PRESENT":
+        degraded.append("NO_PROVIDER_PAPER_LOOP_ARTIFACT")
+
+    paper_broker_art = _paper_broker_artifact_hint(repo_root=root)
+    if paper_broker_art.get("status") == "NOT_PRESENT":
+        degraded.append("NO_PAPER_BROKER_STATUS_ARTIFACT")
 
     cpcv = _cpcv_from_batch(batch_rec)
     if cpcv.get("status") in ("NO_BATCH", "NO_STRATEGIES", "NO_CPCV_FIELDS"):
@@ -254,6 +334,23 @@ def build_ui_research_os_status_payload(*, repo_root: Path | None = None) -> dic
         "paper_broker_status_latest": paper_broker_art,
         "provider_backed_gauntlet_latest": batch_payload.get("provider_backed_gauntlet"),
         "provider_loop_warnings": prov_loop_warns,
+        "strategy_memory_latest": strategy_memory_payload,
+        "strategy_thesis_latest": strategy_thesis_payload,
+        "shadow_book_latest": shadow_book_payload,
+        "research_os_closure_latest": research_os_closure_payload,
+        "research_os_attestation_latest": research_os_attestation_payload,
+        "research_os_briefing_latest": research_os_briefing_payload,
+        "research_os_export_latest": research_os_export_payload,
+        "research_os_operator_run_latest": research_os_operator_run_payload,
+        "research_os_evidence_catalog_latest": research_os_evidence_catalog_payload,
+        "research_os_evidence_drift_latest": research_os_evidence_drift_payload,
+        "research_os_policy_gate_latest": research_os_policy_gate_payload,
+        "research_os_exception_latest": research_os_exception_payload,
+        "research_os_remediation_latest": research_os_remediation_payload,
+        "research_os_release_readiness_latest": research_os_release_readiness_payload,
+        "research_os_handoff_latest": research_os_handoff_payload,
+        "research_os_handoff_signoff_latest": research_os_handoff_signoff_payload,
+        "research_os_review_journal_latest": research_os_review_journal_payload,
         "provider_loop_blockers": list(provider_paper_loop.get("blockers") or [])
         if isinstance(provider_paper_loop.get("blockers"), list)
         else [],

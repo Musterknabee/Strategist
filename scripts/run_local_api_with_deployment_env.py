@@ -7,9 +7,16 @@ from __future__ import annotations
 
 import os
 import re
+import json
 import subprocess
 import sys
 from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from scripts._path_integrity import PathIntegrityError, path_error_payload, safe_input_file
 
 
 def _resolve_container_style_paths_for_local_os() -> None:
@@ -49,12 +56,18 @@ def _load_env_file(path: Path) -> None:
             os.environ[key] = value
 
 
+def _emit_path_error(error: PathIntegrityError) -> None:
+    sys.stderr.write(json.dumps(path_error_payload(error, schema_version="local_deployment_helper_path_error/v1"), sort_keys=True) + "\n")
+
+
 def main() -> int:
     root = Path(__file__).resolve().parents[1]
-    env_path = root / "deployment.env"
-    if not env_path.is_file():
-        sys.stderr.write(f"missing {env_path}\n")
+    try:
+        env_path = safe_input_file(root / "deployment.env", label="RUN_LOCAL_API_ENV_FILE")
+    except PathIntegrityError as exc:
+        _emit_path_error(exc)
         return 2
+    assert env_path is not None
     _load_env_file(env_path)
     _resolve_container_style_paths_for_local_os()
     child_env = os.environ.copy()

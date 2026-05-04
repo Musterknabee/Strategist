@@ -10,6 +10,12 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
 
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from scripts._path_integrity import PathIntegrityError, safe_input_dir  # noqa: E402
+
 # Fallback used only when pyproject.toml is unavailable.  The normal gate derives
 # required runtime distributions directly from [project].dependencies so the
 # environment check cannot silently drift from packaging metadata.
@@ -150,7 +156,23 @@ def run_environment_check(
     repo_root: str | Path | None = None,
     include_extras: Sequence[str] = (),
 ) -> EnvironmentReport:
-    root = Path(repo_root).resolve() if repo_root is not None else Path(__file__).resolve().parents[1]
+    checks: list[EnvironmentCheck] = []
+    if repo_root is None:
+        root = _REPO_ROOT
+    else:
+        try:
+            checked_root = safe_input_dir(repo_root, label="ENVIRONMENT_CHECK_REPO_ROOT", required=True)
+        except PathIntegrityError as exc:
+            checks.append(
+                EnvironmentCheck(
+                    name="repo_root_path_integrity",
+                    status="FAIL",
+                    detail=f"{exc.code}: {exc.detail} ({exc.path})",
+                )
+            )
+            return EnvironmentReport(schema_version="environment_check/v3", status="FAIL", checks=tuple(checks))
+        assert checked_root is not None
+        root = checked_root
     extras = _normalise_extra_names(include_extras)
     required = (
         tuple(_coerce_required_distribution(item) for item in required_distributions)
@@ -158,7 +180,6 @@ def run_environment_check(
         else _required_distributions_from_pyproject(root, include_extras=extras)
     )
 
-    checks: list[EnvironmentCheck] = []
     python_ok = sys.version_info >= (3, 11)
     checks.append(
         EnvironmentCheck(

@@ -16,6 +16,8 @@ jobs:
           python-version: "3.12"
       - name: Python source syntax gate
         run: python scripts/source_health.py
+      - name: Transient purge plan (dry-run)
+        run: python scripts/purge_repo_transients.py --json
       - name: Repository truth gate
         run: python scripts/repository_truth_check.py
       - name: Migration truth gate
@@ -95,14 +97,8 @@ jobs:
           cache-dependency-path: ui/strategist-web/package-lock.json
       - name: npm ci
         run: npm ci
-      - name: lint
-        run: npm run lint
-      - name: typecheck
-        run: npm run typecheck
-      - name: test
-        run: npm run test
-      - name: build
-        run: npm run build
+      - name: frontend production certification (lint, typecheck, test, build)
+        run: npm run certify
 
   confidence-sweeps:
     runs-on: ubuntu-latest

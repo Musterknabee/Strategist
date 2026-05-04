@@ -1,51 +1,55 @@
 "use client";
 
 import { JsonDetails } from "@/components/operator/JsonDetails";
+import { StatusBadge } from "@/components/operator/StatusBadge";
 import { DenseTable, type DenseColumn } from "@/components/terminal/DenseTable";
 import { Pane } from "@/components/terminal/Pane";
+import { PaneGrid } from "@/components/terminal/PaneGrid";
 import { TermKV } from "@/components/terminal/TermKV";
 import { useTerminalPageBind } from "@/hooks/useTerminalPageBind";
-import { useUiOperatorActions } from "@/hooks/useUiOperatorActions";
+import { useUiEvidenceChain } from "@/hooks/useUiEvidenceChain";
 import { tryGetPublicStrategistApiBaseUrl } from "@/lib/config/public-config";
-import { asBool, asNumber, asRecord, asString } from "@/lib/operator/payload-utils";
+import { asBool, asNumber, asRecord, asString, asStringArray } from "@/lib/operator/payload-utils";
 import { useTerminalCockpit } from "@/lib/terminal/cockpit-context";
 import type { TapeLine } from "@/lib/terminal/cockpit-context";
+import type { UiEvidenceChainEntry } from "@/lib/api/types";
 import { useMemo, useState } from "react";
 
-function entryTime(e: Record<string, unknown>): string | undefined {
-  return (
-    asString(e.accepted_at_utc) ??
-    asString(e.event_time_utc) ??
-    asString(e.occurred_at_utc) ??
-    asString(e.timestamp_utc)
-  );
+type Row = UiEvidenceChainEntry & { __id: string };
+
+function entryKind(row: Record<string, unknown>): string {
+  return asString(row.action) ?? asString(row.event_type) ?? "—";
 }
 
-type Row = Record<string, unknown> & { __id: string };
+function entryActor(row: Record<string, unknown>): string {
+  return asString(row.operator_id) ?? asString(row.writer_identity) ?? asString(row.actor_id) ?? "—";
+}
+
+function issueList(row: Record<string, unknown>): string[] {
+  return asStringArray(row.issue_codes);
+}
 
 export default function LedgerPage() {
   const config = tryGetPublicStrategistApiBaseUrl();
   const { openInspector, setLastDigest } = useTerminalCockpit();
-  const index = useUiOperatorActions();
+  const evidenceChain = useUiEvidenceChain();
   const [sel, setSel] = useState<string | null>(null);
 
-  const data = index.data != null ? asRecord(index.data) : null;
-  const entriesRaw = data?.entries;
+  const data = evidenceChain.data != null ? asRecord(evidenceChain.data) : null;
+  const summary = data ? asRecord(data.summary) : null;
+  const streams = data ? asRecord(data.streams) : null;
+  const timeline = data ? asRecord(data.timeline) : null;
+
+  const entriesRaw = timeline?.entries;
   const entries = useMemo(() => {
     const raw = Array.isArray(entriesRaw)
       ? entriesRaw.map((x) => asRecord(x)).filter((x): x is Record<string, unknown> => x != null)
       : [];
     return raw.map((e, i) => ({
       ...e,
-      __id: asString(e.action_event_id) ?? asString(e.event_hash) ?? `r${i}`,
+      __id: `${asString(e.stream_family) ?? "stream"}:${asString(e.record_id) ?? asString(e.event_hash) ?? `r${i}`}`,
     })) as Row[];
   }, [entriesRaw]);
-
-  let latestIso: string | undefined;
-  for (const e of entries) {
-    const t = entryTime(e);
-    if (t && (!latestIso || t > latestIso)) latestIso = t;
-  }
 
   const last = entries.length ? entries[entries.length - 1] : null;
   const lastHash = last ? asString(last.event_hash) : null;
@@ -53,43 +57,54 @@ export default function LedgerPage() {
   const tape: TapeLine[] = useMemo(
     () => [
       {
-        id: "lc",
-        severity: asBool(data?.chain_ok) ? "ok" : "warn",
-        text: `ledger chain_ok=${String(data?.chain_ok)} events=${String(data?.event_count ?? "—")}`,
+        id: "ec",
+        severity: asBool(data?.ok) ? "ok" : "warn",
+        text: `evidence_chain ok=${String(data?.ok)} events=${String(summary?.event_count_total ?? "—")}`,
       },
       {
-        id: "la",
+        id: "es",
         severity: "info",
-        text: last ? `last ${asString(last.action) ?? "—"} ${asString(last.status) ?? ""}` : "no actions",
+        text: last ? `last ${asString(last.stream_family) ?? "—"} ${entryKind(last)}` : "no evidence events",
       },
     ],
-    [data, last],
+    [data, summary, last],
   );
 
   const ticker = useMemo(
     () => [
-      { severity: "neutral" as const, text: `LG ${String(data?.event_count ?? "?")}` },
+      { severity: "neutral" as const, text: `EVCH ${String(summary?.event_count_total ?? "?")}` },
       {
-        severity: asBool(data?.chain_ok) ? ("ok" as const) : ("warn" as const),
-        text: `CHAIN ${String(data?.chain_ok)}`,
+        severity: asBool(data?.ok) ? ("ok" as const) : ("warn" as const),
+        text: `CHAIN ${String(data?.ok)}`,
       },
     ],
-    [data],
+    [data, summary],
   );
 
   useTerminalPageBind(tape, ticker);
 
   const cols: DenseColumn<Row>[] = useMemo(
     () => [
-      { key: "a", header: "action", width: "28%", cell: (r) => <code>{asString(r.action) ?? "—"}</code> },
-      { key: "s", header: "st", width: "10%", cell: (r) => asString(r.status) ?? "—" },
-      { key: "o", header: "op", width: "14%", cell: (r) => asString(r.operator_id) ?? "—" },
       {
-        key: "h",
+        key: "stream",
+        header: "stream",
+        width: "19%",
+        cell: (r) => <code>{asString(r.stream_family)?.replace("_", "·") ?? "—"}</code>,
+      },
+      { key: "seq", header: "seq", width: "64px", cell: (r) => String(r.sequence_number ?? "—") },
+      { key: "kind", header: "event/action", width: "24%", cell: (r) => <code>{entryKind(r)}</code> },
+      { key: "status", header: "status", width: "13%", cell: (r) => asString(r.status) ?? "—" },
+      { key: "actor", header: "actor", width: "15%", cell: (r) => entryActor(r) },
+      {
+        key: "hash",
         header: "hash",
-        cell: (r) => (
-          <span className="mono-value">{asString(r.event_hash)?.slice(0, 14) ?? "—"}</span>
-        ),
+        cell: (r) => <span className="mono-value">{asString(r.event_hash)?.slice(0, 14) ?? "—"}</span>,
+      },
+      {
+        key: "issues",
+        header: "issues",
+        width: "72px",
+        cell: (r) => String(issueList(r).length),
       },
     ],
     [],
@@ -106,41 +121,58 @@ export default function LedgerPage() {
 
   return (
     <div className="term-page">
-      <h1 className="term-page__title">LEDGER · OPERATOR TAPE</h1>
+      <h1 className="term-page__title">LEDGER · EVIDENCE CHAIN</h1>
       <p className="muted" style={{ fontSize: "10px" }}>
-        GET /ui/operator-actions?readonly=true · CLI owns forensic depth
+        GET /ui/evidence-chain?readonly=true · decision ledger + operator-action journal · read-plane only
       </p>
-      {index.isLoading && <p className="muted">Loading…</p>}
-      {index.isError && (
+      {evidenceChain.isLoading && <p className="muted">Loading…</p>}
+      {evidenceChain.isError && (
         <p className="term-page__banner" style={{ color: "#f85149" }}>
-          {index.error instanceof Error ? index.error.message : String(index.error)}
+          {evidenceChain.error instanceof Error ? evidenceChain.error.message : String(evidenceChain.error)}
         </p>
       )}
 
       {data && (
         <>
-          <Pane
-            title="Chain summary"
-            onInspect={() => openInspector({ title: "Operator index", rawJson: data })}
-          >
-            <TermKV
-              rows={[
-                { k: "events", v: String(asNumber(data.event_count) ?? "—") },
-                { k: "chain_ok", v: String(asBool(data.chain_ok) ?? "—") },
-                { k: "issues", v: String(asNumber(data.chain_issue_count) ?? "—") },
-                { k: "ok_agg", v: String(asBool(data.ok) ?? "—") },
-                { k: "latest_ts", v: latestIso ?? "—" },
-                { k: "db", v: asString(data.database_path)?.slice(-48) ?? "—" },
-              ]}
-            />
-          </Pane>
+          <PaneGrid>
+            <Pane title="Forensic chain summary" onInspect={() => openInspector({ title: "Evidence chain", rawJson: data })}>
+              <TermKV
+                rows={[
+                  { k: "ok", v: String(asBool(data.ok) ?? "—") },
+                  { k: "events_total", v: String(asNumber(summary?.event_count_total) ?? "—") },
+                  { k: "issues_total", v: String(asNumber(summary?.chain_issue_count_total) ?? "—") },
+                  { k: "decision_events", v: String(asNumber(summary?.decision_ledger_event_count) ?? "—") },
+                  { k: "operator_events", v: String(asNumber(summary?.operator_action_event_count) ?? "—") },
+                  { k: "readonly", v: String(asBool(data.readonly) ?? "—") },
+                  { k: "db", v: asString(data.database_path)?.slice(-48) ?? "—" },
+                ]}
+              />
+            </Pane>
+            <Pane title="Authority boundary">
+              <TermKV
+                rows={[
+                  { k: "mutation", v: asString(data.mutation_authority) ?? "—" },
+                  { k: "promotion", v: asString(data.promotion_authority) ?? "—" },
+                  { k: "execution", v: asString(data.execution_authority) ?? "—" },
+                  { k: "degraded", v: String(asStringArray(data.degraded).length) },
+                  { k: "last_hash", v: lastHash?.slice(0, 24) ?? "—" },
+                ]}
+              />
+            </Pane>
+            <Pane title="Stream health" onInspect={() => openInspector({ title: "Evidence streams", rawJson: streams ?? {} })}>
+              <div className="stack-sm">
+                <StatusBadge label="decision ledger" status={asBool(summary?.decision_ledger_chain_ok) ? "ok" : "warn"} />
+                <StatusBadge label="operator journal" status={asBool(summary?.operator_action_chain_ok) ? "ok" : "warn"} />
+              </div>
+            </Pane>
+          </PaneGrid>
 
           {entries.length === 0 ? (
-            <p className="muted">No events · cold journal or empty projection.</p>
+            <p className="muted">No events · cold ledger/journal or readonly storage unavailable.</p>
           ) : (
             <DenseTable
               columns={cols}
-              rows={entries.slice(-80)}
+              rows={entries.slice(-120)}
               rowKey={(r) => r.__id}
               selectedKey={sel}
               onRowClick={(r) => {
@@ -148,13 +180,15 @@ export default function LedgerPage() {
                 const h = asString(r.event_hash);
                 if (h) setLastDigest(h);
                 openInspector({
-                  title: `Action · ${asString(r.action) ?? "—"}`,
+                  title: `${asString(r.stream_family) ?? "stream"} · ${entryKind(r)}`,
                   body: (
                     <TermKV
                       rows={[
                         { k: "status", v: asString(r.status) ?? "—" },
-                        { k: "operator", v: asString(r.operator_id) ?? "—" },
+                        { k: "actor", v: entryActor(r) },
+                        { k: "sequence", v: String(r.sequence_number ?? "—") },
                         { k: "chained", v: String(r.chained ?? "—") },
+                        { k: "issues", v: issueList(r).join(", ") || "—" },
                       ]}
                     />
                   ),
@@ -164,15 +198,15 @@ export default function LedgerPage() {
               }}
             />
           )}
-          {entries.length > 80 && (
+          {entries.length > 120 && (
             <p className="muted" style={{ fontSize: "10px" }}>
-              Showing last 80 of {entries.length} · full JSON in drilldown
+              Showing last 120 of {entries.length} · full JSON in drilldown
             </p>
           )}
         </>
       )}
 
-      {index.data && <JsonDetails summary="Drilldown: full operator-actions JSON" data={index.data} />}
+      {evidenceChain.data && <JsonDetails summary="Drilldown: full evidence-chain JSON" data={evidenceChain.data} />}
     </div>
   );
 }

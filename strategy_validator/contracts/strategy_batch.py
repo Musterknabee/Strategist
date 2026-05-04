@@ -27,7 +27,29 @@ _EXECUTION_REALISM_REQUIRED_KEYS = frozenset(
         "min_average_daily_volume",
     }
 )
-StrategyTypeId = Literal["momentum", "mean_reversion", "volatility_breakout"]
+StrategyTypeId = Literal[
+    "momentum",
+    "mean_reversion",
+    "volatility_breakout",
+    "moving_average_trend",
+    "trendline_volume_breakout",
+    "obv_accumulation_breakout",
+    "rsi_volume_reversal",
+    "bollinger_squeeze_breakout",
+    "vwap_pullback_continuation",
+    "donchian_channel_breakout",
+    "atr_trailing_trend",
+    "macd_volume_momentum",
+    "bollinger_mean_reversion",
+    "vwap_deviation_reversion",
+    "keltner_channel_reversion",
+    "ascending_triangle_breakout",
+    "bull_flag_continuation",
+    "support_resistance_retest",
+    "bullish_engulfing_volume_reversal",
+    "hammer_volume_reversal",
+    "inside_bar_volume_breakout",
+]
 
 StrategyDataSourceConfig = Annotated[
     Union[LocalBarsDataSourceConfig, ProviderSnapshotDataSourceConfig],
@@ -60,6 +82,7 @@ class StrategyCandidateSpec(BaseModel):
     data_requirements: list[str] = Field(default_factory=list)
     provider_preferences: list[str] = Field(default_factory=list)
     data_source: StrategyDataSourceConfig | None = None
+    thesis_path: str | None = None
     execution_assumptions: dict[str, Any] = Field(default_factory=dict)
     execution_realism_assumptions: ExecutionRealismAssumptions | None = None
     robustness_assumptions: dict[str, Any] = Field(default_factory=dict)
@@ -160,6 +183,7 @@ class StrategyGateSummary(BaseModel):
     pit_gate: str = Field(default="UNKNOWN")
     data_gate: str = Field(default="UNKNOWN")
     data_quality_gate: str = Field(default="NOT_RUN")
+    market_data_integrity_gate: str = Field(default="NOT_RUN")
     robustness_gate: str = Field(default="NOT_RUN")
     cpcv_robustness_gate: str = Field(default="NOT_RUN")
     execution_realism_gate: str = Field(default="NOT_RUN")
@@ -167,6 +191,7 @@ class StrategyGateSummary(BaseModel):
     regime_analysis_gate: str = Field(default="NOT_RUN")
     adjudication_gate: str = Field(default="NOT_INVOKED")
     data_coverage_gate: str = Field(default="NOT_RUN")
+    oos_holdout_gate: str = Field(default="NOT_RUN")
     promotion_eligible: bool = False
     promotion_blocked_reasons: list[str] = Field(default_factory=list)
     sample_count: int | None = None
@@ -188,6 +213,7 @@ class StrategyEvidenceReference(BaseModel):
 
 class StrategyRunResult(BaseModel):
     strategy_id: str
+    strategy_type: StrategyTypeId | None = None
     status: StrategyRunStatus = StrategyRunStatus.PENDING
     started_at_utc: datetime | None = None
     completed_at_utc: datetime | None = None
@@ -208,6 +234,10 @@ class StrategyRunResult(BaseModel):
     data_snapshot_manifest_sha256: str | None = None
     data_snapshot_digest: str | None = None
     provider_snapshot_manifest_sha256: str | None = None
+    provider_snapshot_source_manifest_path: str | None = Field(
+        default=None,
+        description="Batch spec path to provider snapshot manifest when data_source is provider_snapshot.",
+    )
     provider_license_scope: str | None = None
     provider_trust_level: str | None = None
     bars_row_count: int | None = None
@@ -231,6 +261,9 @@ class StrategyRunResult(BaseModel):
     cpcv_evidence_sha256: str | None = None
     cpcv_artifact_path: str | None = None
     data_quality_gate_status: str | None = None
+    market_data_integrity_gate_status: str | None = None
+    market_data_integrity_artifact_path: str | None = None
+    market_data_integrity_evidence_sha256: str | None = None
     parameter_sensitivity_gate_status: str | None = None
     regime_analysis_gate_status: str | None = None
     data_quality_artifact_path: str | None = None
@@ -307,6 +340,7 @@ class StrategyBatchRunSummary(BaseModel):
 class StrategyEvidenceManifest(BaseModel):
     schema_version: Literal["strategy_evidence_manifest/v1"] = "strategy_evidence_manifest/v1"
     strategy_id: str
+    strategy_type: StrategyTypeId | None = None
     batch_id: str
     run_id: str
     as_of_utc: datetime
@@ -322,6 +356,10 @@ class StrategyEvidenceManifest(BaseModel):
     data_snapshot_digest: str | None = None
     data_snapshot_manifest_sha256: str | None = None
     provider_snapshot_manifest_sha256: str | None = None
+    provider_snapshot_source_manifest_path: str | None = Field(
+        default=None,
+        description="Operator-resolved path to the provider snapshot manifest ingested into this batch run.",
+    )
     pit_snapshot_status: str | None = None
     bars_row_count: int | None = None
     execution_realism_evidence_sha256: str | None = None
@@ -333,6 +371,8 @@ class StrategyEvidenceManifest(BaseModel):
     cpcv_gate_status: str | None = None
     data_quality_evidence_sha256: str | None = None
     data_quality_gate_status: str | None = None
+    market_data_integrity_evidence_sha256: str | None = None
+    market_data_integrity_gate_status: str | None = None
     parameter_sensitivity_evidence_sha256: str | None = None
     parameter_sensitivity_gate_status: str | None = None
     regime_analysis_evidence_sha256: str | None = None

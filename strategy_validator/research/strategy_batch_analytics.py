@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 import math
-from typing import Any, Literal
+from typing import Any
 
 import numpy as np
 
-from strategy_validator.contracts.strategy_batch import StrategyRunResult, StrategyRunStatus
+from strategy_validator.contracts.strategy_batch import StrategyRunResult, StrategyRunStatus, StrategyTypeId
 from strategy_validator.contracts.strategy_performance_artifacts import (
     PERFORMANCE_DRAWDOWN_SCHEMA,
     PERFORMANCE_EQUITY_SCHEMA,
@@ -17,9 +17,9 @@ from strategy_validator.contracts.strategy_performance_artifacts import (
 )
 from strategy_validator.contracts.strategy_robustness import RobustnessResult
 from strategy_validator.research.strategy_batch_digests import canonical_json_sha256
-from strategy_validator.research.strategy_batch_evaluators import log_returns
+from strategy_validator.research.strategy_batch_evaluators import log_returns, strategy_returns_series
 
-StrategyType = Literal["momentum", "mean_reversion", "volatility_breakout"]
+StrategyType = StrategyTypeId
 
 MAX_CHART_POINTS = 160
 ROLLING_MIN = 5
@@ -29,43 +29,23 @@ def strategy_log_returns_series(
     prices: np.ndarray,
     strategy_type: StrategyType,
     params: dict[str, Any],
+    *,
+    opens: np.ndarray | None = None,
+    highs: np.ndarray | None = None,
+    lows: np.ndarray | None = None,
+    volumes: np.ndarray | None = None,
 ) -> np.ndarray:
     """Per-day strategy log-returns; aligned with ``log_returns(prices)`` (length n-1)."""
 
-    r = log_returns(prices)
-    if r.size == 0:
-        return r
-    if strategy_type == "momentum":
-        window = int(params.get("signal_window", 20))
-        if len(r) < window + 2:
-            return np.zeros_like(r)
-        sig = np.mean(r[-window:])
-        if sig == 0:
-            return r * 0.0
-        return r * float(np.sign(sig))
-    if strategy_type == "mean_reversion":
-        z_e = float(params.get("z_entry", 1.5))
-        w = min(len(prices) - 1, 60)
-        if w < 10:
-            return np.zeros_like(r)
-        window = prices[-w:]
-        mu = float(np.mean(window))
-        sd = float(np.std(window)) or 1e-9
-        z = (float(prices[-1]) - mu) / sd
-        if z > z_e:
-            return -r * 0.5
-        if z < -z_e:
-            return r * 0.5
-        return r * 0.0
-    vw = int(params.get("vol_window", 20))
-    k = float(params.get("breakout_k", 1.25))
-    if len(prices) < vw + 3:
-        return np.zeros_like(r)
-    vol = float(np.std(r[-vw:])) or 1e-9
-    last = abs(float(r[-1]))
-    if last > k * vol:
-        return np.sign(r[-1]) * r * 0.7
-    return r * 0.0
+    return strategy_returns_series(
+        prices,
+        strategy_type,
+        params,
+        opens=opens,
+        highs=highs,
+        lows=lows,
+        volumes=volumes,
+    )
 
 
 def _equity_from_log_returns(strat: np.ndarray) -> np.ndarray:
@@ -154,10 +134,22 @@ def build_chart_artifacts(
     gate_data_quality: str,
     gate_parameter_sensitivity: str,
     gate_regime_analysis: str,
+    opens: np.ndarray | None = None,
+    highs: np.ndarray | None = None,
+    lows: np.ndarray | None = None,
+    volumes: np.ndarray | None = None,
 ) -> dict[str, Any]:
     """Returns paths-relative payloads (caller writes JSON), scorecard body, and compact UI bundle."""
 
-    strat = strategy_log_returns_series(prices, strategy_type, params)
+    strat = strategy_log_returns_series(
+        prices,
+        strategy_type,
+        params,
+        opens=opens,
+        highs=highs,
+        lows=lows,
+        volumes=volumes,
+    )
     n = int(prices.shape[0])
     n_ret = int(strat.size)
     if len(timestamps) >= n:

@@ -11,6 +11,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable, Sequence
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts._path_integrity import absolute_path_preserving_symlink, symlink_components_preserving_path
+
 # Clean handoff archives should contain repository source/config/docs/tests, not
 # generated release packets, scratch experiments, bytecode caches, local virtual
 # environments, or dependency/build outputs.  This mirrors the release-candidate
@@ -29,12 +35,34 @@ EXCLUDED_DIR_NAMES = {
     "node_modules",
     "dist",
     "build",
+    "htmlcov",
+    ".hypothesis",
+    ".nox",
 }
-EXCLUDED_SUFFIXES = {".pyc", ".pyo", ".zip", ".tar", ".gz", ".tgz", ".sqlite", ".sqlite3", ".db", ".db-wal", ".db-shm", ".log", ".jsonl"}
+EXCLUDED_SUFFIXES = {".pyc", ".pyo", ".zip", ".tar", ".gz", ".tgz", ".sqlite", ".sqlite3", ".db", ".db-wal", ".db-shm", ".log", ".jsonl", ".coverage"}
+EXCLUDED_TOP_LEVEL_NAMES = frozenset({".coverage", "coverage.xml"})
 
 
 class UnsafeArchiveOutputError(ValueError):
     """Raised when an archive output path would be included in future archives."""
+
+
+def _safe_repo_root(repo_root: str | Path | None) -> Path:
+    candidate = Path(__file__).resolve().parents[1] if repo_root is None else absolute_path_preserving_symlink(repo_root)
+    symlinks = symlink_components_preserving_path(candidate)
+    if symlinks:
+        final_component = candidate in symlinks
+        if final_component:
+            raise UnsafeArchiveOutputError(f"repo root path is a symlink: {candidate}")
+        raise UnsafeArchiveOutputError(
+            "repo root path has symlinked parent directories: "
+            + ", ".join(str(item) for item in symlinks)
+        )
+    if candidate.exists() and not candidate.is_dir():
+        raise UnsafeArchiveOutputError(f"repo root path is not a directory: {candidate}")
+    if not candidate.is_dir():
+        raise UnsafeArchiveOutputError(f"repo root path is missing: {candidate}")
+    return candidate
 
 
 @dataclass(frozen=True)
@@ -81,6 +109,8 @@ def include_in_clean_repo_archive(path: Path, *, repo_root: Path) -> bool:
         return False
     if any(part in EXCLUDED_DIR_NAMES for part in parts):
         return False
+    if rel.name in EXCLUDED_TOP_LEVEL_NAMES:
+        return False
     if path.suffix in EXCLUDED_SUFFIXES:
         return False
     if path.is_symlink():
@@ -94,10 +124,12 @@ def _would_include_output_path(output: Path, *, repo_root: Path) -> bool:
     ``include_in_clean_repo_archive`` intentionally requires an existing file,
     but archive outputs are validated before they are written.  This name-based
     guard prevents a caller from writing ``repo/handoff.bin`` and making that
-    generated file part of the next clean archive or verification pass.
+    generated file part of the next clean archive or verification pass.  The
+    check deliberately preserves symlink visibility instead of resolving the
+    caller-provided output path.
     """
     try:
-        rel = output.resolve().relative_to(repo_root)
+        rel = output.relative_to(repo_root)
     except ValueError:
         return False
     parts = rel.parts
@@ -112,15 +144,28 @@ def _would_include_output_path(output: Path, *, repo_root: Path) -> bool:
     return True
 
 
-def _validate_output_path(output: Path | None, *, repo_root: Path) -> None:
+def _validate_output_path(output: Path | None, *, repo_root: Path) -> Path | None:
     if output is None:
-        return
-    if _would_include_output_path(output, repo_root=repo_root):
-        rel = output.resolve().relative_to(repo_root).as_posix()
+        return None
+    candidate = absolute_path_preserving_symlink(output)
+    symlinks = symlink_components_preserving_path(candidate)
+    if symlinks:
+        final_component = candidate in symlinks
+        if final_component:
+            raise UnsafeArchiveOutputError(f"archive output path is a symlink: {candidate}")
+        raise UnsafeArchiveOutputError(
+            "archive output path has symlinked parent directories: "
+            + ", ".join(str(item) for item in symlinks)
+        )
+    if candidate.exists() and not candidate.is_file():
+        raise UnsafeArchiveOutputError(f"archive output path is not a regular file: {candidate}")
+    if _would_include_output_path(candidate, repo_root=repo_root):
+        rel = candidate.relative_to(repo_root).as_posix()
         raise UnsafeArchiveOutputError(
             f"archive output would be included in future clean archives: {rel}. "
             "Write outside the repository or use an excluded archive suffix such as .zip."
         )
+    return candidate
 
 
 def _iter_paths_pruned(base: Path, *, repo_root: Path) -> Iterable[Path]:
@@ -155,12 +200,43 @@ def _iter_paths_pruned(base: Path, *, repo_root: Path) -> Iterable[Path]:
             yield current_path / filename
 
 
+def _safe_archive_scan_root(repo_root: Path, raw_root: str | Path) -> Path:
+    """Return a repo-relative archive scan root without following symlinks.
+
+    Archive roots are intentionally narrower than filesystem paths: callers may
+    select repository-relative files or directories, but they may not pass
+    absolute paths, parent traversal, symlinked root components, or roots that
+    escape the reviewed repo.  This keeps the archive member set explainable and
+    prevents ``Path.resolve()`` from laundering an external tree into a handoff.
+    """
+    root_arg = Path(raw_root).expanduser()
+    if root_arg.is_absolute():
+        raise UnsafeArchiveOutputError(f"archive scan root must be repository-relative: {root_arg}")
+    if ".." in root_arg.parts:
+        raise UnsafeArchiveOutputError(f"archive scan root must not contain parent traversal: {raw_root}")
+    target = repo_root / root_arg
+    symlinks = symlink_components_preserving_path(target)
+    if symlinks:
+        final_component = target in symlinks
+        if final_component:
+            raise UnsafeArchiveOutputError(f"archive scan root path is a symlink: {target}")
+        raise UnsafeArchiveOutputError(
+            "archive scan root path has symlinked parent directories: "
+            + ", ".join(str(item) for item in symlinks)
+        )
+    try:
+        target.relative_to(repo_root)
+    except ValueError as exc:  # defensive: should be unreachable after absolute/.. guards.
+        raise UnsafeArchiveOutputError(f"archive scan root escapes repository root: {raw_root}") from exc
+    return target
+
+
 def iter_clean_repo_files(repo_root: str | Path, *, roots: Sequence[str] | None = None) -> Iterable[Path]:
-    root = Path(repo_root).resolve()
+    root = _safe_repo_root(repo_root)
     raw_roots = roots or (".",)
     seen: set[Path] = set()
     for raw in raw_roots:
-        base = (root / raw).resolve()
+        base = _safe_archive_scan_root(root, raw)
         if not base.exists():
             continue
         for path in _iter_paths_pruned(base, repo_root=root):
@@ -190,9 +266,8 @@ def build_clean_repo_zip(
     output_path: str | Path | None = None,
     roots: Sequence[str] | None = None,
 ) -> PackageRepoReport:
-    root = Path(repo_root).resolve() if repo_root is not None else Path(__file__).resolve().parents[1]
-    output = Path(output_path).resolve() if output_path is not None else None
-    _validate_output_path(output, repo_root=root)
+    root = _safe_repo_root(repo_root)
+    output = _validate_output_path(Path(output_path), repo_root=root) if output_path is not None else None
     files = tuple(sorted(iter_clean_repo_files(root, roots=roots), key=lambda item: item.relative_to(root).as_posix()))
     skipped_count, generated_roots = _count_skipped(root)
 
@@ -241,8 +316,8 @@ def main(argv: list[str] | None = None) -> int:
         payload = {
             "schema_version": "clean_repo_archive/v2",
             "status": "FAIL",
-            "repo_root": str(Path(args.repo_root).resolve()) if args.repo_root else str(Path(__file__).resolve().parents[1]),
-            "output_path": str(Path(args.output).resolve()) if args.output else None,
+            "repo_root": str(absolute_path_preserving_symlink(args.repo_root)) if args.repo_root else str(Path(__file__).resolve().parents[1]),
+            "output_path": str(absolute_path_preserving_symlink(args.output)) if args.output else None,
             "generated_at": _utc_now_iso(),
             "included_file_count": 0,
             "skipped_file_count": 0,

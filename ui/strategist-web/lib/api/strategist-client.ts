@@ -6,6 +6,49 @@ function joinBaseAndPath(base: string, path: string): string {
   return `${base}${p}`;
 }
 
+function safeErrorDetail(text: string, maxLength: number): string {
+  return text.slice(0, maxLength);
+}
+
+async function readJsonResponse<T>(response: Response): Promise<T> {
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw new StrategistApiError("Response was not valid JSON", response.status);
+  }
+}
+
+async function raiseForJsonResponse(response: Response, kindLabel: "read-plane" | "mutation"): Promise<void> {
+  if (response.status === 401 || response.status === 403) {
+    const text = await response.text();
+    throw new StrategistApiError(
+      `Not authorized for this ${kindLabel} request`,
+      response.status,
+      safeErrorDetail(text, 500),
+      "unauthorized",
+    );
+  }
+
+  if (response.status === 502 || response.status === 503 || response.status === 504) {
+    const text = await response.text();
+    throw new StrategistApiError(
+      `Backend unavailable (HTTP ${response.status})`,
+      response.status,
+      safeErrorDetail(text, 200),
+      "unavailable",
+    );
+  }
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new StrategistApiError(
+      `Request failed (HTTP ${response.status})`,
+      response.status,
+      safeErrorDetail(text, 500),
+    );
+  }
+}
+
 /**
  * GET JSON from the Strategist API (read-plane). No auth headers in this tranche.
  */
@@ -24,41 +67,56 @@ export async function strategistGetJson<T>(path: string): Promise<{ status: numb
     throw new StrategistApiError(`Backend unreachable: ${msg}`, undefined, msg, "unavailable");
   }
 
-  if (response.status === 401 || response.status === 403) {
-    const text = await response.text();
-    throw new StrategistApiError(
-      "Not authorized for this read-plane request",
-      response.status,
-      text.slice(0, 500),
-      "unauthorized",
-    );
+  await raiseForJsonResponse(response, "read-plane");
+  const data = await readJsonResponse<T>(response);
+  return { status: response.status, data };
+}
+
+export type StrategistMutationOptions = {
+  /** Browser-supplied token. Never read from NEXT_PUBLIC env or bundled configuration. */
+  mutationToken?: string | null;
+  /** Optional operator principal header, validated by the backend. */
+  operatorId?: string | null;
+};
+
+/**
+ * POST JSON to the Strategist mutation plane. Callers must explicitly supply any token at runtime.
+ */
+export async function strategistPostJson<TBody, TResponse>(
+  path: string,
+  body: TBody,
+  options: StrategistMutationOptions = {},
+): Promise<{ status: number; data: TResponse }> {
+  const base = getPublicStrategistApiBaseUrl();
+  const url = joinBaseAndPath(base, path);
+  const headers: Record<string, string> = {
+    accept: "application/json",
+    "content-type": "application/json",
+  };
+  const token = options.mutationToken?.trim();
+  if (token) {
+    headers.authorization = `Bearer ${token}`;
+  }
+  const operatorId = options.operatorId?.trim();
+  if (operatorId) {
+    headers["x-strategy-validator-operator"] = operatorId;
   }
 
-  if (response.status === 502 || response.status === 503 || response.status === 504) {
-    const text = await response.text();
-    throw new StrategistApiError(
-      `Backend unavailable (HTTP ${response.status})`,
-      response.status,
-      text.slice(0, 200),
-      "unavailable",
-    );
-  }
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new StrategistApiError(
-      `Request failed (HTTP ${response.status})`,
-      response.status,
-      text.slice(0, 500),
-    );
-  }
-
-  let data: T;
+  let response: Response;
   try {
-    data = (await response.json()) as T;
-  } catch {
-    throw new StrategistApiError("Response was not valid JSON", response.status);
+    response = await fetch(url, {
+      method: "POST",
+      cache: "no-store",
+      headers,
+      body: JSON.stringify(body),
+    });
+  } catch (cause) {
+    const msg = cause instanceof Error ? cause.message : "Network error";
+    throw new StrategistApiError(`Backend unreachable: ${msg}`, undefined, msg, "unavailable");
   }
+
+  await raiseForJsonResponse(response, "mutation");
+  const data = await readJsonResponse<TResponse>(response);
   return { status: response.status, data };
 }
 

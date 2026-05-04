@@ -19,8 +19,10 @@ from typing import Iterable
 
 from strategy_validator.cli.deployment_env_check import (
     EnvCheckReport,
+    absolute_path_preserving_symlink,
     build_single_tenant_deployment_env_check,
     parse_env_file,
+    symlink_components_preserving_path,
 )
 
 _SCHEMA_VERSION = "single_tenant_deployment_bundle/v1"
@@ -121,6 +123,13 @@ def _atomic_write_text(path: Path, text: str, *, executable: bool = False) -> No
     tmp.replace(path)
 
 
+def _path_symlink_errors(path: Path, *, label: str) -> list[str]:
+    symlinks = symlink_components_preserving_path(path)
+    if not symlinks:
+        return []
+    return [f"{label} contains symlink component(s): " + ", ".join(str(item) for item in symlinks)]
+
+
 def _is_secret_key(key: str) -> bool:
     upper = key.upper()
     return any(marker in upper for marker in _SECRET_KEY_MARKERS)
@@ -149,11 +158,13 @@ def _repo_asset_manifest(repo_root: Path, *, generated_at_utc: str) -> dict[str,
     assets: list[dict[str, object]] = []
     for relative in _REQUIRED_REPO_ASSETS:
         path = repo_root / relative
-        exists = path.is_file()
+        is_symlink = path.is_symlink()
+        exists = path.is_file() and not is_symlink
         assets.append(
             {
                 "path": relative,
                 "exists": exists,
+                "is_symlink": is_symlink,
                 "sha256": _sha256_file(path) if exists else None,
                 "size_bytes": path.stat().st_size if exists else None,
             }
@@ -895,8 +906,14 @@ def _verify_manifest_generated_file_digests(out: Path, manifest: dict[str, objec
             errors.append("manifest generated_files must not include manifest.json self-reference")
             continue
         path = out / relative_str
-        if not path.is_file():
+        if path.is_symlink():
+            errors.append(f"manifest-listed generated file is a symlink: {relative_str}")
+            continue
+        if not path.exists():
             errors.append(f"manifest-listed generated file missing: {relative_str}")
+            continue
+        if not path.is_file():
+            errors.append(f"manifest-listed generated path is not a regular file: {relative_str}")
             continue
 
         expected_size = item.get("size_bytes")
@@ -961,6 +978,8 @@ def _verify_repo_asset_manifest_payload(repo_assets: object) -> list[str]:
             errors.append(f"repo-assets.manifest.json contains duplicate asset path: {relative_str}")
         by_path[relative_str] = item
 
+        if item.get("is_symlink") is True:
+            errors.append(f"repo-assets.manifest.json marks required asset as a symlink: {relative_str}")
         if item.get("exists") is not True:
             errors.append(f"repo-assets.manifest.json marks required asset as missing: {relative_str}")
         if not _is_valid_sha256(item.get("sha256")):
@@ -973,6 +992,23 @@ def _verify_repo_asset_manifest_payload(repo_assets: object) -> list[str]:
         if relative not in by_path:
             errors.append(f"required repo asset missing from repo-assets.manifest.json: {relative}")
 
+    return errors
+
+
+def _verify_generated_file_shapes(out: Path) -> list[str]:
+    """Require every generated bundle member to be a regular file, never a symlink."""
+
+    errors: list[str] = []
+    for relative in _REQUIRED_GENERATED_FILES:
+        path = out / relative
+        if path.is_symlink():
+            errors.append(f"generated file is a symlink: {relative}")
+            continue
+        if not path.exists():
+            errors.append(f"missing generated file: {relative}")
+            continue
+        if not path.is_file():
+            errors.append(f"generated path is not a regular file: {relative}")
     return errors
 
 
@@ -1444,10 +1480,12 @@ def _verify_generated_systemd_runtime_contract(out: Path) -> list[str]:
 
 
 def _collect_generated_files(output_dir: Path) -> tuple[GeneratedFile, ...]:
+    if symlink_components_preserving_path(output_dir):
+        return ()
     files: list[GeneratedFile] = []
     for relative in _REQUIRED_GENERATED_FILES:
         path = output_dir / relative
-        if not path.exists():
+        if path.is_symlink() or not path.is_file():
             continue
         files.append(
             GeneratedFile(
@@ -1468,10 +1506,28 @@ def build_single_tenant_deployment_bundle(
 ) -> DeploymentBundleReport:
     """Generate a secret-safe backend-only deployment bundle."""
 
-    env_path = Path(env_file).expanduser().resolve()
-    out = Path(output_dir).expanduser().resolve()
+    env_path = absolute_path_preserving_symlink(env_file)
+    out = absolute_path_preserving_symlink(output_dir)
     repo = Path(repo_root).expanduser().resolve()
     errors: list[str] = []
+    errors.extend(_path_symlink_errors(out, label="deployment bundle output directory"))
+
+    if errors:
+        env_check = build_single_tenant_deployment_env_check(env_path)
+        return DeploymentBundleReport(
+            schema_version=_SCHEMA_VERSION,
+            ok=False,
+            output_dir=str(out),
+            env_file=str(env_path),
+            generated_at_utc=datetime.now(timezone.utc).isoformat(),
+            deployment_model="single_tenant_backend_only",
+            frontend_expected_package=_FRONTEND_PACKAGE,
+            frontend_package_present=(repo / _FRONTEND_PACKAGE / "package.json").exists(),
+            frontend_readiness_claimed=False,
+            env_check_ok=env_check.ok,
+            generated_files=(),
+            errors=tuple(errors),
+        )
 
     if out.exists() and any(out.iterdir()) and not force:
         errors.append(f"output directory is not empty; pass --force to replace generated files: {out}")
@@ -1526,7 +1582,7 @@ def build_single_tenant_deployment_bundle(
     preliminary_files = _collect_generated_files(out)
     manifest_without_self = {
         "schema_version": _SCHEMA_VERSION,
-        "ok": bool(env_check.ok),
+        "ok": bool(env_check.ok and not repo_asset_errors),
         "generated_at_utc": generated_at,
         "deployment_model": "single_tenant_backend_only",
         "frontend_expected_package": _FRONTEND_PACKAGE,
@@ -1541,11 +1597,26 @@ def build_single_tenant_deployment_bundle(
     }
     _atomic_write_text(out / "manifest.json", json.dumps(manifest_without_self, indent=2, sort_keys=True) + "\n")
 
+    post_generation_check = check_single_tenant_deployment_bundle(out)
+    structural_errors = [
+        error
+        for error in post_generation_check.errors
+        if error != "manifest ok field is not true; regenerate the bundle after fixing deployment readiness issues"
+    ]
+    report_errors = (
+        repo_asset_errors
+        + ([] if env_check.ok else ["deployment env check has ERROR issues; inspect deployment.env.redacted.json"])
+        + structural_errors
+    )
+    final_manifest = dict(manifest_without_self)
+    final_manifest["ok"] = bool(env_check.ok and not repo_asset_errors and not structural_errors)
+    final_manifest["errors"] = report_errors
+    _atomic_write_text(out / "manifest.json", json.dumps(final_manifest, indent=2, sort_keys=True) + "\n")
+
     generated_files = _collect_generated_files(out)
-    report_errors = repo_asset_errors + ([] if env_check.ok else ["deployment env check has ERROR issues; inspect deployment.env.redacted.json"])
     return DeploymentBundleReport(
         schema_version=_SCHEMA_VERSION,
-        ok=bool(env_check.ok and not report_errors),
+        ok=bool(env_check.ok and not repo_asset_errors and not structural_errors),
         output_dir=str(out),
         env_file=str(env_path),
         generated_at_utc=generated_at,
@@ -1562,8 +1633,24 @@ def build_single_tenant_deployment_bundle(
 def check_single_tenant_deployment_bundle(output_dir: str | Path) -> DeploymentBundleReport:
     """Check that a generated bundle has the expected files and schema."""
 
-    out = Path(output_dir).expanduser().resolve()
+    out = absolute_path_preserving_symlink(output_dir)
     errors: list[str] = []
+    errors.extend(_path_symlink_errors(out, label="deployment bundle directory"))
+    if errors:
+        return DeploymentBundleReport(
+            schema_version=_SCHEMA_VERSION,
+            ok=False,
+            output_dir=str(out),
+            env_file="",
+            generated_at_utc="",
+            deployment_model="single_tenant_backend_only",
+            frontend_expected_package=_FRONTEND_PACKAGE,
+            frontend_package_present=False,
+            frontend_readiness_claimed=False,
+            env_check_ok=False,
+            generated_files=(),
+            errors=tuple(errors),
+        )
     manifest_path = out / "manifest.json"
     manifest: dict[str, object] = {}
     if not manifest_path.exists():
@@ -1578,9 +1665,7 @@ def check_single_tenant_deployment_bundle(output_dir: str | Path) -> DeploymentB
         except json.JSONDecodeError as exc:
             errors.append(f"manifest.json is invalid JSON: {exc}")
 
-    for relative in _REQUIRED_GENERATED_FILES:
-        if not (out / relative).exists():
-            errors.append(f"missing generated file: {relative}")
+    errors.extend(_verify_generated_file_shapes(out))
 
     if manifest.get("schema_version") not in {None, _SCHEMA_VERSION}:
         errors.append("manifest schema_version is not single_tenant_deployment_bundle/v1")
