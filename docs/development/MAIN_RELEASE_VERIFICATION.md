@@ -83,6 +83,13 @@ Replay verification is offline integrity only; it is not release approval, signo
 - With `--require-pass`, the evidence pack exits non-zero on required gate failure.
 - Without `--require-pass`, exit code can remain zero while JSON/Markdown status stays `FAIL`.
 
+Release verification evidence is one readiness input, not approval authority:
+
+- It does not imply production deployment approval.
+- It does not imply operator signoff.
+- It does not imply live-trading authorization or profitability.
+- Missing/degraded replay/provider evidence must stay non-OK (`UNKNOWN`/`PENDING`/`DEGRADED`/`BLOCKED`) in readiness interpretation.
+
 ## Evidence pack schema highlights
 
 The JSON evidence includes:

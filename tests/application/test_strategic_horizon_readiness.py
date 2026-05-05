@@ -18,10 +18,13 @@ def test_strategic_horizon_blocks_without_credentialed_burnin(tmp_path: Path) ->
 
     assert report.status == 'BLOCKED'
     payload = report.to_payload()
+    assert payload['canonical_status'] == 'BLOCKED'
     checks = {item['capability']: item for item in payload['checks']}
     assert checks['credentialed_live_provider_burnin']['status'] == 'BLOCKED'
+    assert checks['credentialed_live_provider_burnin']['canonical_status'] == 'BLOCKED'
     assert 'NO_CREDENTIALED_LIVE_PROVIDER_BURNIN_ARTIFACT' in checks['credentialed_live_provider_burnin']['blockers']
     assert checks['frontend_operator_ui']['status'] == 'DEFERRED'
+    assert checks['frontend_operator_ui']['canonical_status'] == 'PENDING'
     assert checks['multi_tenant_scaling']['recommended_action'] == 'DO_NOT_BUILD'
 
 

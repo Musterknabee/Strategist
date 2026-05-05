@@ -182,6 +182,17 @@ def _branch_audit_hint(repo_root: Path) -> DoctorStatus:
     return DoctorStatus("MISSING", "branch cleanup audit not found under artifacts/release_verification/latest.")
 
 
+def _canonical_status(status: str) -> str:
+    normalized = (status or "UNKNOWN").upper()
+    if normalized == "PASS":
+        return "OK"
+    if normalized == "WARN":
+        return "WARN"
+    if normalized == "FAIL":
+        return "BLOCKED"
+    return "UNKNOWN"
+
+
 def build_operator_doctor_report(
     *,
     repo_root: str | Path = ".",
@@ -273,6 +284,7 @@ def build_operator_doctor_report(
         "schema_version": _SCHEMA_VERSION,
         "ok": status == "PASS",
         "status": status,
+        "canonical_status": _canonical_status(status),
         "run_mode": run_mode.to_payload(),
         "env_file_status": file_status.to_payload(),
         "deployment_env_status": deployment_status.to_payload(),
