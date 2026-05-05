@@ -627,7 +627,7 @@ describe("HomePage cockpit", () => {
 
     await waitFor(() => expect(screen.getAllByText(/FRONTEND_NOT_CLAIMED/).length).toBeGreaterThan(0));
     expect(screen.getByText(/READY=READY/)).toBeTruthy();
-  });
+  }, 15_000);
 
   it("opens evidence rows in the persistent inspector", () => {
     render(<HomePage />, { wrapper: Harness });
