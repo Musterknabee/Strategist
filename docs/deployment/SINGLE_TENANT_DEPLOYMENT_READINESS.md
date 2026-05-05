@@ -2,6 +2,23 @@
 
 This repo is ready to be hardened as a **single-tenant backend deployment**. A governed operator UI package lives under **`ui/strategist-web`** and consumes the `/ui/*` read plane; **frontend readiness is not claimed** by backend inventory until explicit evidence gates pass (see `docs/deployment/FRONTEND_OPERATOR_CONSOLE.md`). There is no multi-tenant runtime in this scope.
 
+## Operator sequence map (canonical order)
+
+Use this high-level order across runbooks:
+
+1. configure `deployment.env` from `deployment.env.sample`
+2. validate env (`strategy-validator-deployment-env-check`)
+3. migrate (`strategy-validator-migrate`)
+4. preflight (`strategy-validator-single-tenant-preflight --prepare --require-ready`)
+5. start API (host or Docker)
+6. optional API smoke (`strategy-validator-single-tenant-api-smoke`)
+7. operator doctor (`strategy-validator-operator-doctor`)
+8. local release verification pack (`python scripts/main_release_verification_pack.py`)
+9. local branch cleanup audit (`python scripts/branch_cleanup_audit.py`)
+10. inspect paper replay evidence (`strategy-validator-paper-research-replay-verify`)
+
+Command-oriented version: `docs/operator/OPERATOR_EASE_OF_USE_COMMANDS.md`.
+
 ## Required environment contract
 
 Use `deployment.env.sample` as the operator template. A real deployment must provide:
@@ -157,6 +174,7 @@ The preflight emits `single_tenant_deployment_preflight/v1` and requires all of 
 ## Scope boundary
 
 This is still backend-only. Do not expose it as a multi-tenant SaaS, do not claim `ui/strategist-web` readiness, and do not grant advisory/research routes capital authority.
+Do not interpret these diagnostics as deployment approval, operator signoff, live-trading approval, or profitability evidence.
 
 ## Generate a secret-safe deployment bundle
 

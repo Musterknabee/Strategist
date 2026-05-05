@@ -1,5 +1,7 @@
 # Local single-tenant setup trial (operator notebook)
 
+> Point-in-time trial notebook. For the maintained step order, use `docs/operator/OPERATOR_EASE_OF_USE_COMMANDS.md` and `docs/deployment/SINGLE_TENANT_DEPLOYMENT_READINESS.md`.
+
 **Date (UTC):** 2026-05-05  
 **Tested commit:** `940e1a28953c04127b5c13745161816c3adcea66` (`main`, post PR #4 merge)  
 **Host OS:** Windows 10 (build 26200)  
