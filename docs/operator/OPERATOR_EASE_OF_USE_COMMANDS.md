@@ -10,6 +10,7 @@ This runbook is the canonical single-tenant operator sequence for local diagnost
 - Local diagnostics are not operator signoff.
 - No profitability claim.
 - Missing provider keys can remain `PENDING`/`WARN` depending on the command; they are not universally fatal.
+- Explicit provider sample retrieval for a keyed provider without key setup returns blocked/non-zero so missing setup is not silently reported as success.
 
 ## Canonical operator sequence
 
@@ -125,6 +126,13 @@ Backend readiness APIs may additionally expose canonical status labels:
 - `OK`, `WARN`, `BLOCKED`, `DEGRADED`, `UNKNOWN`, `PENDING`, `NOT_CONFIGURED`, `OPTIONAL_NOT_CONFIGURED`.
 - `UNKNOWN`/`PENDING`/`DEGRADED`/`BLOCKED` are never silently interpreted as `OK`.
 - Optional provider/frontend claim setup may remain `OPTIONAL_NOT_CONFIGURED` without globally failing unrelated local diagnostics.
+
+Provider/evidence status cues:
+
+- `OPTIONAL_NOT_CONFIGURED` or `PENDING_KEY` means local diagnostics can continue but provider-backed intent is not fully configured.
+- `UNKNOWN` means evidence is missing/not yet produced, not pass.
+- `DEGRADED` means evidence exists but verification/provider quality checks failed.
+- Replay digest mismatches are degraded evidence and must be remediated before relying on that replay chain.
 
 ## Windows/PowerShell notes
 

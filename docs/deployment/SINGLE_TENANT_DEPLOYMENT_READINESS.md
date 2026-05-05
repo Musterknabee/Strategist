@@ -188,6 +188,12 @@ Readiness is diagnostic/evidence posture only. It is not deployment approval, op
 This is still backend-only. Do not expose it as a multi-tenant SaaS, do not claim `ui/strategist-web` readiness, and do not grant advisory/research routes capital authority.
 Do not interpret these diagnostics as deployment approval, operator signoff, live-trading approval, or profitability evidence.
 
+Provider/evidence semantics for this flow:
+
+- Optional provider keys may remain pending (`OPTIONAL_NOT_CONFIGURED` / `PENDING_KEY`) during local diagnostics.
+- Missing or stale provider/replay evidence remains `UNKNOWN`, `STALE`, or `DEGRADED`; never silently treated as `OK`.
+- Replay verification is integrity-only evidence and does not grant deployment approval, operator signoff, or live authorization.
+
 ## Generate a secret-safe deployment bundle
 
 After validating a real private `deployment.env`, generate an operator handoff bundle:

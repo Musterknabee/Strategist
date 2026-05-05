@@ -108,6 +108,7 @@ def test_main_require_pass_exit_behavior_and_json_shape(monkeypatch, tmp_path: P
     monkeypatch.setattr("scripts.main_release_verification_pack._git_head_sha", lambda: "abc123")
     monkeypatch.setattr("scripts.main_release_verification_pack._git_branch", lambda: "hardening/test")
     monkeypatch.setattr("scripts.main_release_verification_pack._dirty_tree_status", lambda: "CLEAN")
+    monkeypatch.setenv("STRATEGY_VALIDATOR_ARTIFACT_ROOT", str(tmp_path))
 
     def fake_run(name: str, command: list[str], *, cwd: Path) -> GateResult:
         if name == "bad_step":
