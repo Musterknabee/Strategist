@@ -11,8 +11,10 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+from strategy_validator.application.research_os_paths import resolve_artifact_output_dir, safe_relative_artifact_path
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_OUTPUT_DIR = REPO_ROOT / "artifacts" / "release_verification" / "latest"
+DEFAULT_OUTPUT_SUBDIR = Path("release_verification") / "latest"
 SENSITIVE_ENV_KEYS = ("TOKEN", "KEY", "SECRET", "PASSWORD")
 SAFE_ENV_KEYS = ("STRATEGY_VALIDATOR_MODE", "STRATEGY_VALIDATOR_HOST_PORT", "PYTHONPATH")
 
@@ -131,7 +133,7 @@ def build_markdown_summary(payload: dict[str, object]) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Generate a reproducible main release verification evidence pack.")
-    parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
+    parser.add_argument("--output-dir", default="")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--no-frontend", action="store_true")
     parser.add_argument("--no-pytest-full", action="store_true")
@@ -139,8 +141,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--require-pass", action="store_true")
     args = parser.parse_args(argv)
 
-    output_dir = Path(args.output_dir).resolve()
-    output_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        output_dir = resolve_artifact_output_dir(
+            output_dir=(args.output_dir or None),
+            default_subdir=DEFAULT_OUTPUT_SUBDIR,
+            repo_root=REPO_ROOT,
+            create=True,
+        )
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
 
     python_exe = sys.executable
     gate_results: list[GateResult] = []
@@ -175,7 +185,14 @@ def main(argv: list[str] | None = None) -> int:
     json_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     if args.summary_markdown_output_path:
-        markdown_path = Path(args.summary_markdown_output_path).resolve()
+        raw = Path(args.summary_markdown_output_path).expanduser()
+        if raw.is_absolute():
+            markdown_path = raw.resolve()
+        else:
+            markdown_path = (output_dir / safe_relative_artifact_path(raw)).resolve()
+        if markdown_path != output_dir and output_dir not in markdown_path.parents:
+            print("SUMMARY_PATH_OUTSIDE_OUTPUT_DIR", file=sys.stderr)
+            return 2
         markdown_path.parent.mkdir(parents=True, exist_ok=True)
         markdown_path.write_text(build_markdown_summary(payload), encoding="utf-8")
     else:

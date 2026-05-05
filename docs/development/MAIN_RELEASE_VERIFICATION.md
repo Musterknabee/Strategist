@@ -6,6 +6,12 @@ This runbook defines a reproducible local evidence pack for validating `main` af
 
 This process is local verification evidence only.
 
+Evidence output path governance:
+
+- Default output root is `${STRATEGY_VALIDATOR_ARTIFACT_ROOT}/release_verification/latest`.
+- If `STRATEGY_VALIDATOR_ARTIFACT_ROOT` is unset, fallback is `<repo>/artifacts`.
+- `--output-dir` and branch-audit output paths must stay under artifact root; outside paths are rejected.
+
 ## What this process does
 
 - Runs required repository and contract gates.
@@ -28,9 +34,9 @@ Run the main evidence pack:
 
 ```powershell
 python scripts/main_release_verification_pack.py `
-  --output-dir artifacts/release_verification/latest `
+  --output-dir release_verification/latest `
   --json `
-  --summary-markdown-output-path artifacts/release_verification/latest/main-release-verification-pack.md `
+  --summary-markdown-output-path main-release-verification-pack.md `
   --require-pass
 ```
 
@@ -44,8 +50,8 @@ Run the branch cleanup audit:
 ```powershell
 python scripts/branch_cleanup_audit.py `
   --json `
-  --output-json-path artifacts/release_verification/latest/branch-cleanup-audit.json `
-  --output-markdown-path artifacts/release_verification/latest/branch-cleanup-audit.md
+  --output-json-path release_verification/latest/branch-cleanup-audit.json `
+  --output-markdown-path release_verification/latest/branch-cleanup-audit.md
 ```
 
 ## PASS and FAIL interpretation
@@ -76,3 +82,13 @@ Safe deletion policy:
 
 - Use direct process exit codes for pytest; do not infer pass/fail via `findstr`.
 - `npm run certify` may fail noisily if a dev server is running in parallel; stop dev servers before verification.
+- Relative output paths are resolved under artifact root on Windows and Linux/macOS alike.
+
+## Cleanup
+
+Keep local evidence uncommitted:
+
+```bash
+git status --short
+rm -rf artifacts/release_verification/latest
+```

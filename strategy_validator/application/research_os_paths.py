@@ -5,13 +5,53 @@ import os
 from pathlib import Path
 
 
+def safe_relative_artifact_path(relative_path: str | Path) -> Path:
+    candidate = Path(relative_path).expanduser()
+    if candidate.is_absolute():
+        raise ValueError("ARTIFACT_PATH_MUST_BE_RELATIVE")
+    if ".." in candidate.parts:
+        raise ValueError("ARTIFACT_PATH_TRAVERSAL_FORBIDDEN")
+    return candidate
+
+
+def resolve_artifact_root(repo_root: Path | None = None) -> Path:
+    raw = os.environ.get("STRATEGY_VALIDATOR_ARTIFACT_ROOT", "").strip()
+    base = (repo_root or Path.cwd()).resolve()
+    if not raw:
+        return (base / "artifacts").resolve()
+    candidate = Path(raw).expanduser()
+    if candidate.is_absolute():
+        return candidate.resolve()
+    rel = safe_relative_artifact_path(candidate)
+    return (base / rel).resolve()
+
+
+def resolve_artifact_output_dir(
+    *,
+    output_dir: str | Path | None,
+    default_subdir: str | Path | None = None,
+    repo_root: Path | None = None,
+    create: bool = False,
+) -> Path:
+    artifact_root = resolve_artifact_root(repo_root)
+    if output_dir is None:
+        target = artifact_root if default_subdir is None else artifact_root / safe_relative_artifact_path(default_subdir)
+    else:
+        raw = Path(output_dir).expanduser()
+        if raw.is_absolute():
+            target = raw.resolve()
+        else:
+            target = (artifact_root / safe_relative_artifact_path(raw)).resolve()
+    if target != artifact_root and artifact_root not in target.parents:
+        raise ValueError("ARTIFACT_OUTPUT_OUTSIDE_ROOT")
+    if create:
+        target.mkdir(parents=True, exist_ok=True)
+    return target
+
+
 def artifact_root_directory(repo_root: Path | None = None) -> Path:
     """Canonical governed artifact root (Docker: STRATEGY_VALIDATOR_ARTIFACT_ROOT)."""
-    raw = os.environ.get("STRATEGY_VALIDATOR_ARTIFACT_ROOT", "").strip()
-    if raw:
-        return Path(raw).expanduser().resolve()
-    root = repo_root or Path.cwd()
-    return (root / "artifacts").resolve()
+    return resolve_artifact_root(repo_root)
 
 
 def paper_tracking_root_directory(repo_root: Path | None = None) -> Path:
@@ -57,5 +97,8 @@ __all__ = [
     "provider_historical_snapshot_run_path",
     "provider_paper_loop_manifest_path",
     "research_os_runtime_manifest_path",
+    "resolve_artifact_output_dir",
+    "resolve_artifact_root",
+    "safe_relative_artifact_path",
     "strategy_data_directory",
 ]

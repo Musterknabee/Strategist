@@ -35,6 +35,12 @@ Replay verification checks artifact integrity only. It does not claim strategy q
 strategy-validator-paper-research-replay-verify --replay-manifest artifacts/provider_paper_loop/latest/replay_manifest.json --json
 ```
 
+Path governance note:
+
+- `artifacts/...` in examples means `${STRATEGY_VALIDATOR_ARTIFACT_ROOT}/...`.
+- When `STRATEGY_VALIDATOR_ARTIFACT_ROOT` is unset in local workflows, fallback is `<repo>/artifacts`.
+- Replay verification does not authorize deployment, signoff, or live trading.
+
 Expected behavior:
 
 - no provider network calls,
