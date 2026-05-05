@@ -113,6 +113,7 @@ import { UNKNOWN, boolStatus, digest, entryTime, inspectBody, value } from "./co
 import { WorkboardPane } from "./WorkboardPane";
 import { SystemTopologyPane } from "./SystemTopologyPane";
 import { OperatorModeSwitchboard } from "./OperatorModeSwitchboard";
+import { CandidateWorkbenchPane } from "./CandidateWorkbenchPane";
 
 export function CockpitPageShell() {
   const config = tryGetPublicStrategistApiBaseUrl();
@@ -1242,6 +1243,22 @@ export function CockpitPageShell() {
               setLastDigest={setLastDigest}
               provenance={paperExecutionProvenance}
               inspectorPayload={paperExecutionInspectorPayload}
+            />
+          </div>
+        );
+      case "candidate_workbench":
+        return (
+          <div data-operator-section="candidate_workbench">
+            <CandidateWorkbenchPane
+              strategyMemoryLatest={strategyMemoryLatest.data ?? null}
+              strategyGraveyardLatest={strategyGraveyardLatest.data ?? null}
+              backtestForensicsLatest={backtestForensicsLatest.data ?? null}
+              paperTrackingLatest={paperTrackingLatest.data ?? null}
+              providerSetup={providerSetup.data ?? null}
+              providerHealth={providers.data ?? null}
+              evidenceChain={evidenceChain.data ?? null}
+              openInspector={openInspector}
+              onOpenMode={setOperatorMode}
             />
           </div>
         );
