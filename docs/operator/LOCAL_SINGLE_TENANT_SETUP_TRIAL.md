@@ -183,7 +183,8 @@ For each mode, confirm: renders, no crash, missing data shows **UNKNOWN/PENDING/
 
 ## Fixes made during this trial
 
-- **Repository:** Added this document only (`docs/operator/LOCAL_SINGLE_TENANT_SETUP_TRIAL.md`).
+- **Repository:** Added this document (`docs/operator/LOCAL_SINGLE_TENANT_SETUP_TRIAL.md`).
+- **Repository docs stabilization:** Added explicit PowerShell env-export guidance for `strategy-validator-single-tenant-preflight` in `docs/deployment/SINGLE_TENANT_DEPLOYMENT_READINESS.md` to remove setup ambiguity.
 - **Local-only:** `ui/strategist-web/.env.local` extended with explicit `NEXT_PUBLIC_STRATEGIST_DEMO_MODE=false` (gitignored).
 - **Accidental `package-lock.json` drift:** restored to `HEAD` after `npm install` (no lockfile commit).
 
