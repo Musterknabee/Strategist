@@ -230,8 +230,9 @@ def test_artifact_root_rejects_traversal_and_absolute_relative_guard(tmp_path: P
     except ValueError as exc:
         assert str(exc) == "ARTIFACT_PATH_TRAVERSAL_FORBIDDEN"
 
+    absolute_candidate = str((tmp_path / "abs-path-check").resolve())
     try:
-        safe_relative_artifact_path("C:/abs/path")
+        safe_relative_artifact_path(absolute_candidate)
         assert False, "expected ARTIFACT_PATH_MUST_BE_RELATIVE"
     except ValueError as exc:
         assert str(exc) == "ARTIFACT_PATH_MUST_BE_RELATIVE"
