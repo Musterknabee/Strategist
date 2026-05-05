@@ -89,7 +89,15 @@ export function CandidateWorkbenchPane({
   }, [filter, model.rows]);
 
   const paneBadge =
-    model.candidate_count === 0 ? "UNKNOWN" : model.blocked_count > 0 ? "BLOCKED" : model.needs_review_count > 0 ? "NEEDS_REVIEW" : model.evidence_problem_count > 0 || model.replay_problem_count > 0 ? "DEGRADED" : "OK";
+    model.candidate_count === 0
+      ? "UNKNOWN"
+      : model.blocked_count > 0
+        ? "BLOCKED"
+        : model.needs_review_count > 0
+          ? "NEEDS_REVIEW"
+          : model.evidence_problem_count > 0 || model.replay_problem_count > 0
+            ? "DEGRADED"
+            : "OK";
 
   return (
     <div className="cockpit-candidate-workbench-row" data-testid="cockpit-candidate-workbench">
@@ -137,7 +145,14 @@ export function CandidateWorkbenchPane({
         <div className="term-filter-row" aria-label="Candidate filters">
           {(["ALL", "NEEDS_REVIEW", "PAPER_WINS", "PAPER_LOSSES", "NO_DATA", "BLOCKED", "DUPLICATE", "GRAVEYARDED"] as Filter[]).map(
             (value) => (
-              <button key={value} type="button" className={filter === value ? "is-on" : ""} aria-pressed={filter === value} aria-label={`Show ${value.replace(/_/g, " ").toLowerCase()} candidates`} onClick={() => setFilter(value)}>
+              <button
+                key={value}
+                type="button"
+                className={filter === value ? "is-on" : ""}
+                aria-pressed={filter === value}
+                aria-label={`Show ${value.replace(/_/g, " ").toLowerCase()} candidates`}
+                onClick={() => setFilter(value)}
+              >
                 {value}
               </button>
             ),
@@ -156,7 +171,7 @@ export function CandidateWorkbenchPane({
           }
           empty={
             model.candidate_count === 0
-              ? "UNKNOWN · no candidates yet. Missing strategy memory is not OK; inspect provider setup, research batch, and paper tracking."
+              ? "UNKNOWN · no candidates returned. Paper/research data is absent, not successful."
               : "No rows match the selected filter."
           }
         />
