@@ -67,6 +67,12 @@ strategy-validator-operator-doctor \
 5. `python scripts/main_release_verification_pack.py --output-dir artifacts/release_verification/latest --json --require-pass`
 6. `python scripts/branch_cleanup_audit.py --json --output-json-path artifacts/release_verification/latest/branch-cleanup-audit.json`
 
+The release verification pack status is evidence only:
+
+- `PASS`/`FAIL` describe local gate outcomes.
+- It does not grant deployment approval or operator signoff.
+- Use `--require-pass` when you need non-zero exit on failed required steps.
+
 ## PASS / WARN / FAIL meaning
 
 - `PASS`: no blockers in local diagnostic scope.

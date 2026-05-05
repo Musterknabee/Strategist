@@ -30,6 +30,8 @@ Run the main evidence pack:
 python scripts/main_release_verification_pack.py `
   --output-dir artifacts/release_verification/latest `
   --json `
+  --no-frontend `
+  --no-pytest-full `
   --summary-markdown-output-path artifacts/release_verification/latest/main-release-verification-pack.md `
   --require-pass
 ```
@@ -38,6 +40,7 @@ Optional flags:
 
 - `--no-frontend` skips `npm run certify`.
 - `--no-pytest-full` skips full `python -m pytest -q`.
+- `--summary-markdown-output-path` must stay under `--output-dir`; paths outside are rejected.
 
 Run the branch cleanup audit:
 
@@ -51,8 +54,20 @@ python scripts/branch_cleanup_audit.py `
 ## PASS and FAIL interpretation
 
 - `PASS` means all required gates passed.
-- `FAIL` means one or more required gates failed.
+- `FAIL` means one or more required gates failed; evidence files are still produced for diagnosis.
 - With `--require-pass`, the evidence pack exits non-zero on required gate failure.
+- Without `--require-pass`, exit code can remain zero while JSON/Markdown status stays `FAIL`.
+
+## Evidence pack schema highlights
+
+The JSON evidence includes:
+
+- `schema_version`, `generated_at_utc`, `repo_root`
+- `git_head_sha`, `git_branch`, `dirty_tree_status`
+- `status`, `failed_step`, `warnings`, `blockers`, `disclaimers`
+- `command_results[]` with `name`, `command` (redacted), `cwd`, `exit_code`, `status`, `duration_seconds`, `stdout_tail`, `stderr_tail`
+
+Redaction covers environment snapshots, command arguments, and output tails for token/key/secret/password/bearer patterns.
 
 ## Branch cleanup audit policy
 
@@ -76,3 +91,12 @@ Safe deletion policy:
 
 - Use direct process exit codes for pytest; do not infer pass/fail via `findstr`.
 - `npm run certify` may fail noisily if a dev server is running in parallel; stop dev servers before verification.
+
+## Evidence cleanup
+
+Generated local evidence should stay local and uncommitted:
+
+```bash
+git status --short
+rm -rf artifacts/release_verification/latest
+```
