@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import StrategyLabPage from "./page";
 
@@ -184,6 +184,11 @@ vi.mock("@/lib/terminal/cockpit-context", () => ({
     setLastDigest: vi.fn(),
   }),
 }));
+
+afterEach(() => {
+  cleanup();
+  openInspector.mockClear();
+});
 
 describe("StrategyLabPage", () => {
   it("renders synthetic warning and strategy row", () => {
