@@ -27,9 +27,29 @@ export function asStringArray(v: unknown): string[] {
 export function classifyOperationalStatus(raw: string | undefined | null): "ok" | "warn" | "bad" | "neutral" {
   const u = (raw || "").toUpperCase();
   if (!u) return "neutral";
-  if (["READY", "OK", "TRUE", "LIVE", "FRESH", "PASS", "HEALTHY", "PROVEN"].includes(u)) return "ok";
-  if (["BLOCKED", "FAIL", "FALSE", "ERROR", "STALE", "DEGRADED"].includes(u)) return "bad";
-  if (u === "WARNING" || u === "NOT_APPLICABLE") return "warn";
+  if (
+    [
+      "READY",
+      "OK",
+      "TRUE",
+      "LIVE",
+      "FRESH",
+      "PASS",
+      "HEALTHY",
+      "PROVEN",
+      "VERIFIED",
+      "CHAIN_OK",
+      "LEDGER_OK",
+      "SIGNED",
+      "CURRENT",
+      "GREEN",
+      "AVAILABLE",
+    ].includes(u)
+  )
+    return "ok";
+  if (["BLOCKED", "FAIL", "FALSE", "ERROR", "STALE", "DEGRADED", "CHAIN_DEGRADED", "CHAIN_ISSUES"].includes(u))
+    return "bad";
+  if (u === "WARNING" || u === "NOT_APPLICABLE" || u === "UNVERIFIED") return "warn";
   if (u.includes("WARN") || u.includes("PENDING") || u.includes("LIMIT")) return "warn";
   return "neutral";
 }

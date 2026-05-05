@@ -11,6 +11,7 @@ import { CommandPalette } from "./CommandPalette";
 import { EventTape } from "./EventTape";
 import { InspectorDrawer } from "./InspectorDrawer";
 import { ShortcutHelp } from "./ShortcutHelp";
+import { DemoModeBanner } from "@/components/demo/DemoModeBanner";
 
 const RAIL: { href: string; icon: string; label: string }[] = [
   { href: "/", icon: "O", label: "Overview" },
@@ -168,6 +169,7 @@ export function TerminalShell({ children }: { children: ReactNode }) {
           </div>
         </aside>
         <div className="term-column">
+          <DemoModeBanner />
           <CommandBar />
           <div className="term-workspace">
             <main className="term-main">{children}</main>

@@ -1,7 +1,8 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { strategistGetJson, strategistPostJson } from "@/lib/api/strategist-client";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useReadPlaneJsonQuery } from "@/hooks/useReadPlaneJsonQuery";
+import { strategistPostJson } from "@/lib/api/strategist-client";
 import type {
   UiStrategyIntakeLatestPayload,
   UiStrategyIntakeReceipt,
@@ -10,13 +11,10 @@ import type {
 import { queryKeys } from "@/lib/query/keys";
 
 export function useUiStrategyIntakeLatest() {
-  return useQuery({
-    queryKey: queryKeys.uiStrategyIntakeLatest,
-    queryFn: async () => {
-      const { data } = await strategistGetJson<UiStrategyIntakeLatestPayload>("/ui/strategy-intake/latest");
-      return data;
-    },
-  });
+  return useReadPlaneJsonQuery<UiStrategyIntakeLatestPayload>(
+    queryKeys.uiStrategyIntakeLatest,
+    "/ui/strategy-intake/latest",
+  );
 }
 
 export type UiStrategyIntakeMutationInput = {
@@ -35,8 +33,22 @@ export function useSubmitUiStrategyIntake() {
       );
       return data;
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.uiStrategyIntakeLatest });
+    onSuccess: async (receipt) => {
+      if (receipt.accepted !== true) return;
+      const boardLabel = "operator";
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.uiStrategyIntakeLatest }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.uiStrategyThesisLatest }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.uiStrategyThesisGenerationLatest }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.uiStrategyMemoryLatest }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.uiWorkboard(boardLabel) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.uiOperatorActions }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.uiEvidenceChain }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.uiPaperTrackingLatest }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.uiStrategyGraveyardLatest }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.uiStrategyBatchesLatest }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.uiBacktestForensicsLatest }),
+      ]);
     },
   });
 }

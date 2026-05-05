@@ -27,6 +27,15 @@ describe("classifyOperationalStatus", () => {
     expect(classifyOperationalStatus("NOT_APPLICABLE")).toBe("warn");
     expect(classifyOperationalStatus("WARNING")).toBe("warn");
   });
+
+  it("maps evidence strip trust and chain labels", () => {
+    expect(classifyOperationalStatus("VERIFIED")).toBe("ok");
+    expect(classifyOperationalStatus("UNVERIFIED")).toBe("warn");
+    expect(classifyOperationalStatus("CHAIN_OK")).toBe("ok");
+    expect(classifyOperationalStatus("CHAIN_DEGRADED")).toBe("bad");
+    expect(classifyOperationalStatus("CHAIN_ISSUES")).toBe("bad");
+    expect(classifyOperationalStatus("LEDGER_OK")).toBe("ok");
+  });
 });
 
 describe("classifyProviderClassifiedStatus", () => {

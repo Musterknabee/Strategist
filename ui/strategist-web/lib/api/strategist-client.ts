@@ -1,5 +1,10 @@
-import { getPublicStrategistApiBaseUrl } from "@/lib/config/public-config";
 import { StrategistApiError } from "@/lib/api/strategist-errors";
+import {
+  getPublicStrategistApiBaseUrl,
+  isStrategistDemoModeEnabled,
+  tryGetPublicStrategistApiBaseUrl,
+} from "@/lib/config/public-config";
+import { getDemoReadPlanePayload } from "@/lib/demo/demo-mode";
 
 function joinBaseAndPath(base: string, path: string): string {
   const p = path.startsWith("/") ? path : `/${path}`;
@@ -18,11 +23,32 @@ async function readJsonResponse<T>(response: Response): Promise<T> {
   }
 }
 
+function parseFastApiDetail(text: string): string | undefined {
+  const t = text.trim();
+  if (!t.startsWith("{")) return undefined;
+  try {
+    const j = JSON.parse(t) as { detail?: unknown };
+    if (typeof j.detail === "string") return j.detail;
+    if (Array.isArray(j.detail) && j.detail.length && typeof j.detail[0] === "object" && j.detail[0] !== null) {
+      const msg = (j.detail[0] as { msg?: string }).msg;
+      if (typeof msg === "string") return msg;
+    }
+  } catch {
+    /* ignore */
+  }
+  return undefined;
+}
+
 async function raiseForJsonResponse(response: Response, kindLabel: "read-plane" | "mutation"): Promise<void> {
   if (response.status === 401 || response.status === 403) {
     const text = await response.text();
+    const apiDetail = parseFastApiDetail(text);
+    const label =
+      response.status === 401
+        ? "Mutation rejected (not authorized)"
+        : "Mutation rejected (forbidden by server policy)";
     throw new StrategistApiError(
-      `Not authorized for this ${kindLabel} request`,
+      apiDetail ? `${label}: ${apiDetail}` : `Not authorized for this ${kindLabel} request`,
       response.status,
       safeErrorDetail(text, 500),
       "unauthorized",
@@ -31,8 +57,11 @@ async function raiseForJsonResponse(response: Response, kindLabel: "read-plane" 
 
   if (response.status === 502 || response.status === 503 || response.status === 504) {
     const text = await response.text();
+    const apiDetail = parseFastApiDetail(text);
     throw new StrategistApiError(
-      `Backend unavailable (HTTP ${response.status})`,
+      apiDetail
+        ? `Backend unavailable (HTTP ${response.status}): ${apiDetail}`
+        : `Backend unavailable (HTTP ${response.status})`,
       response.status,
       safeErrorDetail(text, 200),
       "unavailable",
@@ -49,11 +78,23 @@ async function raiseForJsonResponse(response: Response, kindLabel: "read-plane" 
   }
 }
 
+function demoFallback<T>(path: string): { status: number; data: T } | null {
+  const demoPayload = isStrategistDemoModeEnabled() ? getDemoReadPlanePayload(path) : null;
+  if (!demoPayload) return null;
+  return { status: path === "/readyz" ? 503 : 299, data: demoPayload as T };
+}
+
 /**
  * GET JSON from the Strategist API (read-plane). No auth headers in this tranche.
  */
 export async function strategistGetJson<T>(path: string): Promise<{ status: number; data: T }> {
-  const base = getPublicStrategistApiBaseUrl();
+  const baseResult = tryGetPublicStrategistApiBaseUrl();
+  if (!baseResult.ok) {
+    const demo = demoFallback<T>(path);
+    if (demo) return demo;
+    throw baseResult.error;
+  }
+  const base = baseResult.baseUrl;
   const url = joinBaseAndPath(base, path);
   let response: Response;
   try {
@@ -64,6 +105,8 @@ export async function strategistGetJson<T>(path: string): Promise<{ status: numb
     });
   } catch (cause) {
     const msg = cause instanceof Error ? cause.message : "Network error";
+    const demo = demoFallback<T>(path);
+    if (demo) return demo;
     throw new StrategistApiError(`Backend unreachable: ${msg}`, undefined, msg, "unavailable");
   }
 
@@ -72,11 +115,18 @@ export async function strategistGetJson<T>(path: string): Promise<{ status: numb
   return { status: response.status, data };
 }
 
+export type StrategistMutationTokenDelivery = "authorization_bearer" | "x_strategy_validator_token";
+
 export type StrategistMutationOptions = {
   /** Browser-supplied token. Never read from NEXT_PUBLIC env or bundled configuration. */
   mutationToken?: string | null;
   /** Optional operator principal header, validated by the backend. */
   operatorId?: string | null;
+  /**
+   * Default sends `Authorization: Bearer <token>`.
+   * `x_strategy_validator_token` sends `X-Strategy-Validator-Token` (backend accepts either).
+   */
+  tokenDelivery?: StrategistMutationTokenDelivery;
 };
 
 /**
@@ -87,6 +137,14 @@ export async function strategistPostJson<TBody, TResponse>(
   body: TBody,
   options: StrategistMutationOptions = {},
 ): Promise<{ status: number; data: TResponse }> {
+  if (isStrategistDemoModeEnabled()) {
+    throw new StrategistApiError(
+      "Demo mode disables mutation requests; no synthetic mutation success is allowed",
+      undefined,
+      "DEMO_MODE_MUTATION_DISABLED",
+      "unauthorized",
+    );
+  }
   const base = getPublicStrategistApiBaseUrl();
   const url = joinBaseAndPath(base, path);
   const headers: Record<string, string> = {
@@ -95,7 +153,11 @@ export async function strategistPostJson<TBody, TResponse>(
   };
   const token = options.mutationToken?.trim();
   if (token) {
-    headers.authorization = `Bearer ${token}`;
+    if (options.tokenDelivery === "x_strategy_validator_token") {
+      headers["x-strategy-validator-token"] = token;
+    } else {
+      headers.authorization = `Bearer ${token}`;
+    }
   }
   const operatorId = options.operatorId?.trim();
   if (operatorId) {
@@ -129,7 +191,13 @@ export async function strategistProbeGetJson<T>(path: string): Promise<{
   data: T | null;
   rawText: string;
 }> {
-  const base = getPublicStrategistApiBaseUrl();
+  const baseResult = tryGetPublicStrategistApiBaseUrl();
+  if (!baseResult.ok) {
+    const demo = demoFallback<T>(path);
+    if (demo) return { ...demo, rawText: JSON.stringify(demo.data) };
+    throw baseResult.error;
+  }
+  const base = baseResult.baseUrl;
   const url = joinBaseAndPath(base, path);
   let response: Response;
   try {
@@ -140,6 +208,8 @@ export async function strategistProbeGetJson<T>(path: string): Promise<{
     });
   } catch (cause) {
     const msg = cause instanceof Error ? cause.message : "Network error";
+    const demo = demoFallback<T>(path);
+    if (demo) return { ...demo, rawText: JSON.stringify(demo.data) };
     throw new StrategistApiError(`Backend unreachable: ${msg}`, undefined, msg, "unavailable");
   }
   const rawText = await response.text();

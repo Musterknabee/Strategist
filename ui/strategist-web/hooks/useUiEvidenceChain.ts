@@ -1,16 +1,11 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { strategistGetJson } from "@/lib/api/strategist-client";
+import { useReadPlaneJsonQuery } from "@/hooks/useReadPlaneJsonQuery";
 import type { UiEvidenceChainPayload } from "@/lib/api/types";
 import { queryKeys } from "@/lib/query/keys";
 
+const EVIDENCE_CHAIN_PATH = "/ui/evidence-chain?readonly=true&limit=250";
+
 export function useUiEvidenceChain() {
-  return useQuery({
-    queryKey: queryKeys.uiEvidenceChain,
-    queryFn: async () => {
-      const { data } = await strategistGetJson<UiEvidenceChainPayload>("/ui/evidence-chain?readonly=true&limit=250");
-      return data;
-    },
-  });
+  return useReadPlaneJsonQuery<UiEvidenceChainPayload>(queryKeys.uiEvidenceChain, EVIDENCE_CHAIN_PATH);
 }
