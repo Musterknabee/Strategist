@@ -18,6 +18,17 @@ from strategy_validator.contracts.strategy_batch import StrategyBatchRunSummary,
 _SCHEMA = "ui_backtest_forensics/v1"
 
 
+def _replay_evidence_status(replay: dict[str, Any]) -> dict[str, Any]:
+    status = str(replay.get("status") or "UNKNOWN").upper()
+    missing = int(replay.get("missing_artifact_count") or 0)
+    mismatch = int(replay.get("digest_mismatch_count") or 0)
+    if mismatch > 0 or status == "DEGRADED":
+        return {"status": "DEGRADED", "blocked": True}
+    if status == "OK" and missing == 0:
+        return {"status": "OK", "blocked": False}
+    return {"status": "UNKNOWN", "blocked": False}
+
+
 def _upper(v: Any) -> str:
     if v is None:
         return "UNKNOWN"
@@ -197,6 +208,8 @@ def _payload(path: Path | None, summary: StrategyBatchRunSummary | None, *, repo
     if path is None or summary is None:
         degraded.append("NO_BATCH_ARTIFACTS" if route.endswith("latest") else "BATCH_NOT_FOUND")
     rows = [_forensic_row(row) for row in (summary.strategies if summary else [])]
+    replay = latest_replay_verification_summary(repo_root=repo_root)
+    replay_posture = _replay_evidence_status(replay)
     return BacktestForensicsPayload(
         scan_root=str(_default_scan_root(repo_root)),
         summary_path=str(path) if path else None,
@@ -205,7 +218,11 @@ def _payload(path: Path | None, summary: StrategyBatchRunSummary | None, *, repo
         summary=_summary(summary, rows),
         strategies=rows,
         raw_strategy_batch_route=route,
-        artifact_replay=latest_replay_verification_summary(repo_root=repo_root),
+        artifact_replay={
+            **replay,
+            "replay_evidence_status": replay_posture["status"],
+            "replay_evidence_blocked": replay_posture["blocked"],
+        },
     ).model_dump(mode="json")
 
 

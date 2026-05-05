@@ -150,6 +150,8 @@ def test_read_plane_empty_degraded(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     p = build_ui_paper_tracking_latest_payload()
     assert p["latest"] is None
     assert "NO_PAPER_TRACKING_ARTIFACTS" in p["degraded"]
+    assert p["replay_evidence_status"] == "UNKNOWN"
+    assert p["replay_evidence_blocked"] is False
 
 
 def test_synthetic_demo_never_promotion_review_ready(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

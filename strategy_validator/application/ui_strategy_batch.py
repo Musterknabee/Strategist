@@ -13,6 +13,17 @@ from strategy_validator.contracts.strategy_batch import StrategyBatchRunSummary
 _SCHEMA = "ui_strategy_batch/v1"
 
 
+def _replay_evidence_status(replay: dict[str, Any]) -> dict[str, Any]:
+    status = str(replay.get("status") or "UNKNOWN").upper()
+    missing = int(replay.get("missing_artifact_count") or 0)
+    mismatch = int(replay.get("digest_mismatch_count") or 0)
+    if mismatch > 0 or status == "DEGRADED":
+        return {"status": "DEGRADED", "blocked": True}
+    if status == "OK" and missing == 0:
+        return {"status": "OK", "blocked": False}
+    return {"status": "UNKNOWN", "blocked": False}
+
+
 def _default_scan_root(repo_root: Path | None = None) -> Path:
     raw = os.environ.get("STRATEGY_VALIDATOR_STRATEGY_BATCH_OUTPUT_ROOT", "").strip()
     if raw:
@@ -81,6 +92,8 @@ def build_ui_strategy_batch_latest_payload(*, repo_root: Path | None = None) -> 
         for s in summary.strategies:
             if getattr(s, "data_plane", None) == "PROVIDER_SNAPSHOT":
                 provider_rows += 1
+    replay = latest_replay_verification_summary(repo_root=repo_root)
+    replay_posture = _replay_evidence_status(replay)
     return {
         "schema_version": _SCHEMA,
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -89,7 +102,9 @@ def build_ui_strategy_batch_latest_payload(*, repo_root: Path | None = None) -> 
         "degraded": degraded,
         "latest": summary.model_dump(mode="json") if summary else None,
         "portfolio_allocation": _read_portfolio_allocation(run_dir),
-        "artifact_replay": latest_replay_verification_summary(repo_root=repo_root),
+        "artifact_replay": replay,
+        "replay_evidence_status": replay_posture["status"],
+        "replay_evidence_blocked": replay_posture["blocked"],
         "provider_backed_gauntlet": {
             "provider_snapshot_strategy_count": provider_rows,
             "has_provider_strategies": provider_rows > 0,

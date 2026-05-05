@@ -51,7 +51,9 @@ def test_provider_setup_payload_is_secret_safe_and_actionable(tmp_path, monkeypa
     by_id = {row["provider_id"]: row for row in payload["entries"]}
     assert by_id["bls"]["freshness_class"] == "FRESH"
     assert by_id["bls"]["readiness_tier"] == "READY"
+    assert by_id["bls"]["canonical_status"] == "OK"
     assert by_id["tiingo"]["setup_status"] == "MISSING_OPTIONAL_SECRET"
+    assert by_id["tiingo"]["canonical_status"] == "OPTIONAL_NOT_CONFIGURED"
     assert "TIINGO_API_KEY" in by_id["tiingo"]["expected_env_vars"]
 
 
@@ -86,4 +88,5 @@ def test_provider_setup_marks_stale_samples(tmp_path) -> None:
     bls = next(row for row in payload["entries"] if row["provider_id"] == "bls")
     assert bls["freshness_class"] == "STALE"
     assert bls["readiness_tier"] == "STALE"
+    assert bls["canonical_status"] == "STALE"
     assert bls["freshness_age_seconds"] >= 7200

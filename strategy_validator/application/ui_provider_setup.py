@@ -52,7 +52,17 @@ def _freshness_age_seconds(raw: str | None, now: datetime) -> int | None:
 
 def _freshness_class(*, classified_status: str, age_seconds: int | None, max_age_seconds: int) -> str:
     status = classified_status.upper()
-    if status in {"AUTH_FAILED", "PLAN_LIMITED", "RATE_LIMITED", "ERROR", "HTTP_ERROR"}:
+    if status in {
+        "AUTH_FAILED",
+        "PLAN_LIMITED",
+        "RATE_LIMITED",
+        "ERROR",
+        "HTTP_ERROR",
+        "ENDPOINT_CHANGED",
+        "PARSE_ERROR",
+        "NETWORK_BLOCKED",
+        "TEMPORARILY_UNAVAILABLE",
+    }:
         return "DEGRADED"
     if status in {"PENDING_KEY", "PENDING_MANUAL_BROKER_SETUP"}:
         return "PENDING_SETUP"
@@ -63,6 +73,34 @@ def _freshness_class(*, classified_status: str, age_seconds: int | None, max_age
     if age_seconds > max_age_seconds:
         return "STALE"
     return "FRESH"
+
+
+def _canonical_status(
+    *,
+    requires_secret: bool,
+    configured: bool,
+    classified_status: str,
+    blockers: tuple[str, ...],
+    freshness_class: str,
+) -> str:
+    status = classified_status.upper()
+    if blockers:
+        return "BLOCKED"
+    if requires_secret and not configured:
+        return "OPTIONAL_NOT_CONFIGURED"
+    if status in {"PENDING_KEY", "PENDING_MANUAL_BROKER_SETUP"}:
+        return "PENDING_KEY"
+    if status in {"TEMPORARILY_UNAVAILABLE", "NETWORK_BLOCKED"}:
+        return "UNAVAILABLE"
+    if freshness_class == "STALE":
+        return "STALE"
+    if status in {"AUTH_FAILED", "PLAN_LIMITED", "RATE_LIMITED", "ENDPOINT_CHANGED", "PARSE_ERROR", "ERROR", "HTTP_ERROR"}:
+        return "DEGRADED"
+    if status in {"NOT_CHECKED", "SKIPPED_NO_NETWORK"}:
+        return "UNKNOWN"
+    if status == "OK":
+        return "OK"
+    return "UNKNOWN"
 
 
 def _setup_status(*, requires_secret: bool, configured: bool, classified_status: str, blockers: tuple[str, ...]) -> str:
@@ -129,6 +167,7 @@ def build_ui_provider_setup_payload(
         "public_no_signup_count": 0,
         "keyed_provider_count": 0,
         "pit_strong_count": 0,
+        "canonical_status_counts": {},
     }
 
     for health in snap.entries:
@@ -159,6 +198,13 @@ def build_ui_provider_setup_payload(
             blockers=blockers,
         )
         tier = _readiness_tier(setup_status=setup, freshness_class=freshness)
+        canonical_status = _canonical_status(
+            requires_secret=cap.requires_secret,
+            configured=health.configured,
+            classified_status=health.classified_status,
+            blockers=blockers,
+            freshness_class=freshness,
+        )
         entry = ProviderSetupEntry(
             provider_id=cap.provider_id,
             display_name=cap.display_name,
@@ -175,6 +221,7 @@ def build_ui_provider_setup_payload(
             configured=health.configured,
             reachable=health.reachable,
             classified_status=health.classified_status,
+            canonical_status=canonical_status,
             setup_status=setup,
             readiness_tier=tier,
             freshness_class=freshness,
@@ -210,6 +257,9 @@ def build_ui_provider_setup_payload(
             counts["keyed_provider_count"] += 1
         if entry.pit_suitability == "STRONG_PIT_SOURCE":
             counts["pit_strong_count"] += 1
+        counts["canonical_status_counts"][canonical_status] = (
+            int(counts["canonical_status_counts"].get(canonical_status, 0)) + 1
+        )
 
     entries.sort(key=lambda e: (e.readiness_tier != "BLOCKED", e.recommended_priority, e.provider_id))
     payload = ProviderSetupConsolePayload(

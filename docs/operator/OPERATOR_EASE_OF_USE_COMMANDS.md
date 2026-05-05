@@ -10,6 +10,7 @@ This runbook is the canonical single-tenant operator sequence for local diagnost
 - Local diagnostics are not operator signoff.
 - No profitability claim.
 - Missing provider keys can remain `PENDING`/`WARN` depending on the command; they are not universally fatal.
+- Explicit provider sample retrieval for a keyed provider without key setup returns blocked/non-zero so missing setup is not silently reported as success.
 
 ## Canonical operator sequence
 
@@ -119,6 +120,13 @@ The release verification pack status is evidence only:
 - `PASS`: no blockers in local diagnostic scope.
 - `WARN`: non-blocking issues remain (for example optional provider keys pending).
 - `FAIL`: blocking setup or readiness issues detected.
+
+Provider/evidence status cues:
+
+- `OPTIONAL_NOT_CONFIGURED` or `PENDING_KEY` means local diagnostics can continue but provider-backed intent is not fully configured.
+- `UNKNOWN` means evidence is missing/not yet produced, not pass.
+- `DEGRADED` means evidence exists but verification/provider quality checks failed.
+- Replay digest mismatches are degraded evidence and must be remediated before relying on that replay chain.
 
 ## Windows/PowerShell notes
 
