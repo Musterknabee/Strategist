@@ -2,13 +2,35 @@
 
 ## Purpose
 
-This runbook gives a solo single-tenant operator a clear, read-only command sequence for local diagnostics and evidence hygiene.
+This runbook is the canonical single-tenant operator sequence for local diagnostics and backend evidence hygiene.
 
 - No live trading.
 - No broker orders.
 - Local diagnostics are not production deployment approval.
 - Local diagnostics are not operator signoff.
 - No profitability claim.
+- Missing provider keys can remain `PENDING`/`WARN` depending on the command; they are not universally fatal.
+
+## Canonical operator sequence
+
+Use this order and then branch into detailed runbooks:
+
+1. Clone/install (`python -m pip install -e ".[dev]"`; optional UI handled separately).
+2. Configure env (`deployment.env` from `deployment.env.sample`).
+3. Check env (`strategy-validator-deployment-env-check deployment.env --require-valid --json`).
+4. Migrate (`strategy-validator-migrate --json`).
+5. Preflight (`strategy-validator-single-tenant-preflight --prepare --require-ready --json`).
+6. Start API (`strategy-validator-api --host 127.0.0.1 --port 8000` or Docker flow).
+7. Optional API smoke (`strategy-validator-single-tenant-api-smoke --env-file deployment.env --token-source env-file --require-pass --json`).
+8. Operator doctor (`strategy-validator-operator-doctor --json --require-ready`).
+9. Release verification pack (`python scripts/main_release_verification_pack.py ...`).
+10. Branch cleanup audit (`python scripts/branch_cleanup_audit.py ...`).
+11. Inspect paper replay evidence (`strategy-validator-paper-research-replay-verify ...`).
+12. UI/cockpit runbooks are separate and do not replace backend gates.
+
+For detailed deployment packaging, acceptance, and final evidence: `docs/deployment/SINGLE_TENANT_DEPLOYMENT_READINESS.md`.
+For local setup trial notes: `docs/operator/LOCAL_SINGLE_TENANT_SETUP_TRIAL.md`.
+For replay integrity semantics: `docs/operator/PAPER_RESEARCH_REPLAY_MANIFEST.md`.
 
 ## Quickstart
 
@@ -17,6 +39,8 @@ This runbook gives a solo single-tenant operator a clear, read-only command sequ
 ```powershell
 cd <repo-root>
 python scripts/setup_local_deployment.py --force
+strategy-validator-deployment-env-check deployment.env --require-valid --json
+strategy-validator-single-tenant-preflight --prepare --require-ready --repo-root . --json
 strategy-validator-operator-doctor --json --require-ready
 ```
 
@@ -25,12 +49,14 @@ strategy-validator-operator-doctor --json --require-ready
 ```bash
 cd <repo-root>
 python scripts/setup_local_deployment.py --force
+strategy-validator-deployment-env-check deployment.env --require-valid --json
+strategy-validator-single-tenant-preflight --prepare --require-ready --json
 strategy-validator-operator-doctor --json --require-ready
 ```
 
-## Operator Doctor
+## Operator doctor details
 
-`strategy-validator-operator-doctor` is a read-only diagnostic command. It reports configured state, blockers, warnings, and deterministic next commands.
+`strategy-validator-operator-doctor` is read-only and reports configured state, blockers, warnings, and deterministic next commands.
 
 ### JSON output
 
@@ -60,12 +86,16 @@ strategy-validator-operator-doctor \
 
 ## Recommended command sequence
 
+Use canonical paths so evidence stays predictable:
+
 1. `strategy-validator-deployment-env-check deployment.env --require-valid --json`
 2. `strategy-validator-migrate --json`
 3. `strategy-validator-single-tenant-preflight --prepare --require-ready --json`
-4. `strategy-validator-single-tenant-api-smoke --env-file deployment.env --token-source env-file --require-pass --json`
-5. `python scripts/main_release_verification_pack.py --output-dir artifacts/release_verification/latest --json --require-pass`
-6. `python scripts/branch_cleanup_audit.py --json --output-json-path artifacts/release_verification/latest/branch-cleanup-audit.json`
+4. `strategy-validator-single-tenant-api-smoke --env-file deployment.env --token-source env-file --require-pass --json` (optional but recommended before command mutations)
+5. `strategy-validator-operator-doctor --json --require-ready --summary-markdown-output-path artifacts/release_verification/latest/operator-doctor.md`
+6. `python scripts/main_release_verification_pack.py --output-dir artifacts/release_verification/latest --json --require-pass`
+7. `python scripts/branch_cleanup_audit.py --json --output-json-path artifacts/release_verification/latest/branch-cleanup-audit.json --output-markdown-path artifacts/release_verification/latest/branch-cleanup-audit.md`
+8. `strategy-validator-paper-research-replay-verify --replay-manifest artifacts/provider_paper_loop/latest/replay_manifest.json --json`
 
 The release verification pack status is evidence only:
 
@@ -84,11 +114,20 @@ The release verification pack status is evidence only:
 - `strategy-validator-single-tenant-preflight` reads process env. Load `deployment.env` into the current shell before preflight.
 - Production-style `/var/...` paths map to the current drive on Windows when using local host processes.
 - Use direct process exit codes for pytest; avoid `findstr` pass/fail inference.
+- PowerShell command continuations in this repo use backticks (`` ` ``); Bash uses `\`.
+
+## Linux/macOS notes
+
+- Keep `deployment.env` private (`chmod 600 deployment.env`) before env checks.
+- Use `--token-source env-file` with API smoke when container/API token source is the env file to avoid shell-token drift.
 
 ## Evidence location
 
-Default local evidence location:
+Primary local evidence location:
 
 - `artifacts/release_verification/latest/`
 
-Use operator doctor plus release verification and branch audit outputs to keep post-merge evidence reproducible.
+Deployment bundle and deployment evidence live separately under `scratch/`:
+
+- `scratch/single-tenant-deployment-bundle/`
+- `scratch/single-tenant-deployment-evidence/`

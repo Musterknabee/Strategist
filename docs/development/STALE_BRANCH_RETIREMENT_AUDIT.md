@@ -1,5 +1,7 @@
 # Stale Branch Retirement Audit
 
+> Historical snapshot only. Re-run `python scripts/branch_cleanup_audit.py --json --output-markdown-path artifacts/release_verification/latest/branch-cleanup-audit.md` for current branch state before any deletion decision.
+
 - Date (UTC): 2026-05-05
 - Main SHA: `05e3b64`
 - Audit scope: local and remote non-main branches visible from `origin/main`
@@ -11,6 +13,7 @@
 - No production deployment approval.
 - No operator signoff.
 - No live trading implication.
+- No automatic deletion authority.
 
 ## Classification Meanings
 
@@ -75,6 +78,11 @@ Run only after confirming branch is merged and has no open PR:
 git branch -d fix/post-merge-pr-queue-stabilization
 git branch -d integration-main
 ```
+
+For routine operations, prefer writing current audit outputs under:
+
+- `artifacts/release_verification/latest/branch-cleanup-audit.json`
+- `artifacts/release_verification/latest/branch-cleanup-audit.md`
 
 ## Remote Deletion Commands (Manual Suggestion Only)
 

@@ -14,6 +14,22 @@ class ReplayArtifactEntry(BaseModel):
     path: str
     sha256: str
 
+    @field_validator("kind", "path")
+    @classmethod
+    def _non_empty(cls, value: str) -> str:
+        text = value.strip()
+        if not text:
+            raise ValueError("artifact fields must be non-empty")
+        return text
+
+    @field_validator("sha256")
+    @classmethod
+    def _sha256_hex(cls, value: str) -> str:
+        text = value.strip()
+        if len(text) != 64 or any(ch not in "0123456789abcdefABCDEF" for ch in text):
+            raise ValueError("sha256 must be a 64-character hex digest")
+        return text.lower()
+
 
 class PaperResearchReplayManifest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -48,6 +64,27 @@ class PaperResearchReplayManifest(BaseModel):
     def _tz_aware(cls, value: datetime) -> datetime:
         if value.tzinfo is None:
             raise ValueError("generated_at_utc must be timezone-aware")
+        return value
+
+    @field_validator("replayable_offline")
+    @classmethod
+    def _replayable_offline_true(cls, value: bool) -> bool:
+        if value is not True:
+            raise ValueError("replayable_offline must be true")
+        return value
+
+    @field_validator("paper_only")
+    @classmethod
+    def _paper_only_true(cls, value: bool) -> bool:
+        if value is not True:
+            raise ValueError("paper_only must be true")
+        return value
+
+    @field_validator("live_trading_blocked")
+    @classmethod
+    def _live_trading_blocked_true(cls, value: bool) -> bool:
+        if value is not True:
+            raise ValueError("live_trading_blocked must be true")
         return value
 
 
