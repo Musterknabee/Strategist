@@ -62,6 +62,12 @@ python scripts/branch_cleanup_audit.py `
   --output-markdown-path release_verification/latest/branch-cleanup-audit.md
 ```
 
+Optional discovery index over local evidence outputs:
+
+```powershell
+strategy-validator-evidence-index --json --artifact-root artifacts --output-path artifacts/evidence-index.json
+```
+
 Optional full-repo handoff archive steps are documented in:
 
 - `docs/development/REPOSITORY_ARCHIVE_REPRODUCIBILITY.md`
@@ -100,6 +106,8 @@ The JSON evidence includes:
 - `git_head_sha`, `git_branch`, `dirty_tree_status`
 - `status`, `failed_step`, `warnings`, `blockers`, `disclaimers`
 - `command_results[]` with `name`, `command` (redacted), `cwd`, `exit_code`, `status`, `duration_seconds`, `stdout_tail`, `stderr_tail`
+
+Use the evidence index to discover generated artifacts; discovery is not verification, approval, or signoff authority by itself.
 
 Redaction covers environment snapshots, command arguments, and output tails for token/key/secret/password/bearer patterns.
 
