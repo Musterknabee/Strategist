@@ -51,10 +51,10 @@ vi.mock("@/hooks/useUiEvidenceChain", () => ({
       execution_authority: "z",
       readonly: true,
       ok: true,
-      degraded: [],
+      degraded: ["REPLAY_MANIFEST_DIGEST_MISMATCH"],
       summary: {
         event_count_total: 0,
-        chain_issue_count_total: 0,
+        chain_issue_count_total: 1,
         decision_ledger_event_count: 0,
         decision_ledger_stream_count: 0,
         operator_action_event_count: 0,
@@ -390,7 +390,12 @@ vi.mock("@/hooks/useUiStrategyMemory", () => ({
       generated_at_utc: "2026-05-01T10:00:00Z",
       degraded: [],
       index_path: "/tmp/memory_index.json",
-      latest: { index_sha256: "0123456789abcdef0123456789abcdef", duplicate_variant_count: 0, killed_count: 1 },
+      latest: {
+        index_sha256: "0123456789abcdef0123456789abcdef",
+        duplicate_variant_count: 0,
+        killed_count: 1,
+        memory_records: [{ strategy_id: "STRAT-ALPHA-1", latest_manifest_sha256: "0123456789abcdef0123456789abcdef", updated_at_utc: "2026-05-01T10:00:00Z" }],
+      },
     },
     isError: false,
     isLoading: false,
@@ -563,9 +568,25 @@ describe("HomePage cockpit", () => {
     render(<HomePage />, { wrapper: Harness });
 
     expect(screen.getByTestId("cockpit-operator-home")).toBeTruthy();
+    expect(screen.getByTestId("cockpit-home-safety").textContent).toMatch(/Paper\/research only/i);
+    expect(screen.getByTestId("cockpit-home-safety").textContent).toMatch(/No live trading/i);
+    expect(screen.getByTestId("cockpit-home-safety").textContent).toMatch(/Missing data remains UNKNOWN or NO_PAPER_DATA/i);
+    expect(screen.getByTestId("cockpit-open-candidate-workbench")).toBeTruthy();
+    expect(screen.getByTestId("cockpit-flow-capital")).toBeTruthy();
+    expect(screen.getByTestId("cockpit-flow-release")).toBeTruthy();
     expect(screen.queryByTestId("cockpit-mode-switchboard")).toBeNull();
+    fireEvent.click(screen.getByTestId("cockpit-open-candidate-workbench"));
+    expect(screen.getByTestId("cockpit-mode-switchboard")).toBeTruthy();
+    expect(screen.getByTestId("cockpit-mode-current-label").textContent).toMatch(/Research Review/i);
+    expect(screen.getByTestId("cockpit-candidate-workbench")).toBeTruthy();
+    expect(screen.getByTestId("candidate-workbench-safety").textContent).toMatch(/Paper\/research only/i);
+    expect(screen.getByTestId("candidate-workbench-safety").textContent).toMatch(/no broker orders/i);
+    expect(screen.getByTestId("candidate-workbench-evidence-degraded").textContent).toMatch(/DEGRADED/i);
+    expect(within(screen.getByTestId("candidate-workbench-links")).getByText("Capital Firewall")).toBeTruthy();
+    expect(screen.getByTestId("cockpit-release-control-frontend-claim-note").textContent).not.toMatch(/production approved|operator signed off/i);
     fireEvent.click(screen.getByTestId("cockpit-show-advanced"));
     expect(screen.getByTestId("cockpit-mode-switchboard")).toBeTruthy();
+    fireEvent.click(screen.getByTestId("cockpit-mode-select-DAILY_OPS"));
     expect(screen.getByTestId("cockpit-mode-current-label").textContent).toMatch(/Daily Ops/i);
     expect(screen.getByTestId("cockpit-mode-command-banner")).toBeTruthy();
 
