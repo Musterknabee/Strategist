@@ -48,6 +48,10 @@ python scripts/branch_cleanup_audit.py `
   --output-markdown-path artifacts/release_verification/latest/branch-cleanup-audit.md
 ```
 
+Optional full-repo handoff archive steps are documented in:
+
+- `docs/development/REPOSITORY_ARCHIVE_REPRODUCIBILITY.md`
+
 ## PASS and FAIL interpretation
 
 - `PASS` means all required gates passed.
