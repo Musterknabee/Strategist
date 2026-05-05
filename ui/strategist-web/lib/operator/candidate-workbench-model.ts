@@ -257,20 +257,20 @@ export function buildCandidateWorkbenchModel(input: {
   const nextAction: CandidateNextAction =
     blockedCount > 0
       ? "REVIEW_CANDIDATE"
-      : noPaperCount > 0
-        ? "RUN_PAPER_TRACKING"
-        : provider === "PENDING_KEY"
-          ? "ADD_PROVIDER_KEY"
+      : provider === "PENDING_KEY"
+        ? "ADD_PROVIDER_KEY"
+        : noPaperCount > 0
+          ? "RUN_PAPER_TRACKING"
           : evidenceProblems > 0
             ? "CHECK_EVIDENCE"
             : "WAIT_FOR_MORE_DATA";
   const nextReason =
     blockedCount > 0
       ? "One or more candidates contain explicit blockers."
-      : noPaperCount > 0
-        ? "Candidates have no explicit paper outcome evidence yet."
-        : provider === "PENDING_KEY"
-          ? "Provider setup indicates missing keys."
+      : provider === "PENDING_KEY"
+        ? "Provider setup indicates missing keys; this is pending/action-required, not success."
+        : noPaperCount > 0
+          ? "Candidates have no explicit paper outcome evidence yet."
           : evidenceProblems > 0
             ? "Evidence/replay checks are not fully verified."
             : "No urgent unsafe condition detected in read-plane candidate data.";
