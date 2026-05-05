@@ -7,10 +7,13 @@ export function DemoModeBanner() {
   return (
     <div className="demo-mode-banner" role="status" aria-label="Demo mode safety banner">
       <strong>DEMO MODE</strong>
-      <span>No real backend evidence</span>
+      <span>Synthetic read-plane data only</span>
+      <span>No backend readiness claim</span>
+      <span>No provider credentials</span>
       <span>No deployment approval</span>
-      <span>No live execution</span>
-      <span>Synthetic data only</span>
+      <span>No operator signoff</span>
+      <span>No live trading or broker orders</span>
+      <span>No profitability claim</span>
     </div>
   );
 }
