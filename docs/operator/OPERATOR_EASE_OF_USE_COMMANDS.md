@@ -56,7 +56,7 @@ strategy-validator-operator-doctor --json --require-ready
 
 ## Operator doctor details
 
-`strategy-validator-operator-doctor` is read-only and reports configured state, blockers, warnings, and deterministic next commands.
+`strategy-validator-operator-doctor` is read-only and reports configured state, blockers, warnings, deterministic next commands, and a readiness summary that reuses backend readiness application payloads (runtime, deployment, strategic horizon) instead of re-implementing those gates independently.
 
 ## Operator command table
 
@@ -116,9 +116,11 @@ The release verification pack status is evidence only:
 
 ## PASS / WARN / FAIL meaning
 
-- `PASS`: no blockers in local diagnostic scope.
-- `WARN`: non-blocking issues remain (for example optional provider keys pending).
-- `FAIL`: blocking setup or readiness issues detected.
+- `PASS`: required readiness signals map to `OK` in the doctor scope.
+- `WARN`: unresolved `WARN`/`PENDING`/`UNKNOWN`/`OPTIONAL_NOT_CONFIGURED` signals remain (for example optional provider keys pending).
+- `FAIL`: required signals include `BLOCKED`/`DEGRADED`/`NOT_CONFIGURED`; this is still diagnostic and not deployment approval authority.
+
+Canonical readiness labels surfaced in doctor JSON and markdown summary include: `OK`, `WARN`, `BLOCKED`, `DEGRADED`, `UNKNOWN`, `PENDING`, `NOT_CONFIGURED`, and `OPTIONAL_NOT_CONFIGURED`.
 
 ## Windows/PowerShell notes
 

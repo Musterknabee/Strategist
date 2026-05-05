@@ -30,6 +30,8 @@ Evidence output path governance:
 - Not profitability evidence.
 - Not a declaration that optional provider keys are mandatory for every diagnostic lane.
 
+The operator doctor consumes release-verification and branch-audit presence as readiness hints only. Missing hints should surface as `PENDING` guidance and follow-up commands, not as deployment approval or rejection authority.
+
 ## Commands
 
 Run the main evidence pack:

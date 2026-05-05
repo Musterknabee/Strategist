@@ -11,6 +11,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from strategy_validator.application.readiness import (
+    get_deployment_readiness_payload,
+    get_readiness_health_payload,
+)
+from strategy_validator.application.strategic_horizon_readiness import (
+    get_strategic_horizon_readiness_payload,
+)
 from strategy_validator.cli.deployment_env_check import (
     build_single_tenant_deployment_env_check,
     parse_env_file,
@@ -53,6 +60,31 @@ class DoctorStatus:
 
     def to_payload(self) -> dict[str, str]:
         return {"status": self.status, "detail": self.detail}
+
+
+def _canonical_status(value: str | None) -> str:
+    normalized = (value or "UNKNOWN").strip().upper()
+    if normalized in {"OK", "WARN", "BLOCKED", "DEGRADED", "UNKNOWN", "PENDING", "NOT_CONFIGURED", "OPTIONAL_NOT_CONFIGURED"}:
+        return normalized
+    if normalized in {"READY", "PASS", "CURRENT", "FOUND", "OPTIONAL_KEYS_PRESENT"}:
+        return "OK"
+    if normalized in {"MISSING", "OUTDATED", "PENDING_KEY", "PENDING_SETUP"}:
+        return "PENDING"
+    if normalized in {"FAIL", "ERROR"}:
+        return "BLOCKED"
+    if normalized in {"NOT_RUN"}:
+        return "UNKNOWN"
+    return "UNKNOWN"
+
+
+def _doctor_top_level_status(*, required_statuses: list[str], has_warnings: bool) -> str:
+    if any(item in {"BLOCKED", "DEGRADED", "NOT_CONFIGURED"} for item in required_statuses):
+        return "FAIL"
+    if any(item in {"UNKNOWN", "PENDING"} for item in required_statuses):
+        return "WARN"
+    if has_warnings:
+        return "WARN"
+    return "PASS"
 
 
 def _redact_key_value(key: str, value: str) -> str:
@@ -135,9 +167,12 @@ def _deployment_env_status(env_file: Path) -> tuple[DoctorStatus, dict[str, Any]
         return DoctorStatus("MISSING", "deployment env check skipped because env file is missing."), None
     report = build_single_tenant_deployment_env_check(env_file)
     payload = report.to_payload()
-    if report.ok:
-        return DoctorStatus("PASS", "deployment env check passed."), payload
-    return DoctorStatus("FAIL", f"deployment env check failed with {report.issue_count} error(s)."), payload
+    canonical = _canonical_status(payload.get("canonical_status") if isinstance(payload, dict) else None)
+    if canonical == "OK":
+        return DoctorStatus("OK", "deployment env check passed."), payload
+    if canonical == "WARN":
+        return DoctorStatus("WARN", "deployment env check passed with warnings."), payload
+    return DoctorStatus("BLOCKED", f"deployment env check failed with {report.issue_count} error(s)."), payload
 
 
 def _api_smoke_status(
@@ -151,7 +186,7 @@ def _api_smoke_status(
     operator_id: str,
 ) -> DoctorStatus:
     if not include_api_smoke:
-        return DoctorStatus("NOT_RUN", "API smoke not requested. Use --include-api-smoke to run it.")
+        return DoctorStatus("PENDING", "API smoke not requested. Use --include-api-smoke to run it.")
     try:
         resolved_base = resolve_smoke_base_url(base_url=base_url or None, env_file=env_file)
         resolution = resolve_smoke_token(
@@ -162,24 +197,24 @@ def _api_smoke_status(
         )
         report = build_single_tenant_api_smoke(base_url=resolved_base, token=resolution.token, operator_id=operator_id)
     except Exception as exc:
-        return DoctorStatus("FAIL", f"API smoke failed to start: {type(exc).__name__}: {_safe_detail(str(exc))}")
+        return DoctorStatus("DEGRADED", f"API smoke failed to start: {type(exc).__name__}: {_safe_detail(str(exc))}")
     if report.ok:
-        return DoctorStatus("PASS", "API smoke checks passed.")
-    return DoctorStatus("FAIL", f"API smoke failed with {report.failed_step_count} failing step(s).")
+        return DoctorStatus("OK", "API smoke checks passed.")
+    return DoctorStatus("DEGRADED", f"API smoke failed with {report.failed_step_count} failing step(s).")
 
 
 def _release_verification_hint(repo_root: Path) -> DoctorStatus:
     json_path = repo_root / "artifacts" / "release_verification" / "latest" / "main-release-verification-pack.json"
     if json_path.exists():
-        return DoctorStatus("FOUND", f"release verification evidence found at {json_path}.")
-    return DoctorStatus("MISSING", "release verification evidence not found under artifacts/release_verification/latest.")
+        return DoctorStatus("OK", f"release verification evidence found at {json_path}.")
+    return DoctorStatus("PENDING", "release verification evidence not found under artifacts/release_verification/latest.")
 
 
 def _branch_audit_hint(repo_root: Path) -> DoctorStatus:
     json_path = repo_root / "artifacts" / "release_verification" / "latest" / "branch-cleanup-audit.json"
     if json_path.exists():
-        return DoctorStatus("FOUND", f"branch cleanup audit found at {json_path}.")
-    return DoctorStatus("MISSING", "branch cleanup audit not found under artifacts/release_verification/latest.")
+        return DoctorStatus("OK", f"branch cleanup audit found at {json_path}.")
+    return DoctorStatus("PENDING", "branch cleanup audit not found under artifacts/release_verification/latest.")
 
 
 def build_operator_doctor_report(
@@ -207,6 +242,9 @@ def build_operator_doctor_report(
     artifact_status = _path_status(parsed_values.get("STRATEGY_VALIDATOR_ARTIFACT_ROOT", ""), "artifact root")
     backup_status = _path_status(parsed_values.get("STRATEGY_VALIDATOR_LEDGER_BACKUP_DIR", ""), "backup directory")
     migration_status = _migration_status(parsed_values.get("STRATEGY_VALIDATOR_LEDGER_DB_PATH", ""))
+    runtime_readiness = get_readiness_health_payload()
+    deployment_readiness = get_deployment_readiness_payload(repo_root=root)
+    strategic_horizon_readiness = get_strategic_horizon_readiness_payload(repo_root=root)
     release_hint = _release_verification_hint(root)
     branch_hint = _branch_audit_hint(root)
     api_smoke = _api_smoke_status(
@@ -227,12 +265,28 @@ def build_operator_doctor_report(
         blockers.append(file_status.detail)
         recommendations.append("python scripts/setup_local_deployment.py --force")
         recommendations.append("See docs/deployment/SINGLE_TENANT_DEPLOYMENT_READINESS.md")
-    if deployment_status.status == "FAIL":
+    if deployment_status.status in {"BLOCKED", "DEGRADED"}:
         blockers.append(deployment_status.detail)
         recommendations.append("strategy-validator-deployment-env-check deployment.env --require-valid --json")
     if run_mode.status != "OK":
         blockers.append(run_mode.detail)
         recommendations.append("Set STRATEGY_VALIDATOR_MODE=PRODUCTION in deployment.env")
+    runtime_status = _canonical_status(str(runtime_readiness.get("canonical_status") or runtime_readiness.get("status")))
+    deployment_runtime_status = _canonical_status(str(deployment_readiness.get("status")))
+    strategic_status = _canonical_status(str(strategic_horizon_readiness.get("canonical_status") or strategic_horizon_readiness.get("status")))
+    if runtime_status in {"BLOCKED", "DEGRADED", "NOT_CONFIGURED"}:
+        blockers.append(f"Runtime readiness is {runtime_status}.")
+        recommendations.append("Inspect /readyz and strategy-validator-single-tenant-preflight --require-ready output")
+    elif runtime_status in {"UNKNOWN", "PENDING"}:
+        warnings.append(f"Runtime readiness is {runtime_status}.")
+    if deployment_runtime_status in {"BLOCKED", "DEGRADED", "NOT_CONFIGURED"}:
+        blockers.append(f"Deployment readiness is {deployment_runtime_status}.")
+        recommendations.append("Review deployment readiness checks in docs/deployment/SINGLE_TENANT_DEPLOYMENT_READINESS.md")
+    elif deployment_runtime_status in {"UNKNOWN", "PENDING"}:
+        warnings.append(f"Deployment readiness is {deployment_runtime_status}.")
+    if strategic_status in {"BLOCKED", "DEGRADED"}:
+        warnings.append(f"Strategic horizon readiness is {strategic_status}.")
+        recommendations.append("Satisfy strategic horizon prerequisite evidence before treating horizon items as ready")
     if deployment_payload:
         values = deployment_payload.get("values", {})
         if isinstance(values, dict):
@@ -249,31 +303,58 @@ def build_operator_doctor_report(
     if migration_status.status in {"MISSING", "OUTDATED", "FAIL"}:
         warnings.append(migration_status.detail)
         recommendations.append("strategy-validator-migrate --json")
-    if api_smoke.status == "NOT_RUN":
+    if api_smoke.status == "PENDING":
         recommendations.append("strategy-validator-single-tenant-api-smoke --env-file deployment.env --token-source env-file --require-pass --json")
-    if release_hint.status == "MISSING":
+    if release_hint.status == "PENDING":
         recommendations.append(
             "python scripts/main_release_verification_pack.py --output-dir artifacts/release_verification/latest --json --require-pass"
         )
-    if branch_hint.status == "MISSING":
+    if branch_hint.status == "PENDING":
         recommendations.append(
             "python scripts/branch_cleanup_audit.py --json --output-json-path artifacts/release_verification/latest/branch-cleanup-audit.json"
         )
     if provider_posture.status == "PENDING_KEY":
         warnings.append(provider_posture.detail)
+        recommendations.append("Optional provider keys can stay pending for local diagnostics; configure only for explicit provider flows")
+
+    replay_status = _canonical_status(str(runtime_readiness.get("replay_readiness_status")))
+    if replay_status in {"PENDING", "UNKNOWN"}:
+        warnings.append("Replay evidence is missing or pending.")
+        recommendations.append("strategy-validator-paper-research-replay-verify --replay-manifest artifacts/provider_paper_loop/latest/replay_manifest.json --json")
+    elif replay_status in {"DEGRADED", "BLOCKED"}:
+        blockers.append("Replay evidence is degraded or blocked.")
+        recommendations.append("Repair replay evidence digest/path issues before relying on replay posture")
 
     dedup_recommendations = list(dict.fromkeys(recommendations))
-    status = "PASS"
-    if blockers:
-        status = "FAIL"
-    elif warnings:
-        status = "WARN"
+    required_statuses = [
+        _canonical_status(file_status.status),
+        _canonical_status(deployment_status.status),
+        runtime_status,
+        deployment_runtime_status,
+        replay_status,
+    ]
+    status = _doctor_top_level_status(required_statuses=required_statuses, has_warnings=bool(warnings))
 
     payload = {
         "schema_version": _SCHEMA_VERSION,
         "ok": status == "PASS",
         "status": status,
+        "status_mapping": {
+            "PASS": ["OK"],
+            "WARN": ["WARN", "UNKNOWN", "PENDING", "OPTIONAL_NOT_CONFIGURED"],
+            "FAIL": ["BLOCKED", "DEGRADED", "NOT_CONFIGURED"],
+        },
         "run_mode": run_mode.to_payload(),
+        "readiness_summary": {
+            "runtime_readiness_status": runtime_status,
+            "deployment_readiness_status": deployment_runtime_status,
+            "strategic_horizon_readiness_status": strategic_status,
+            "replay_readiness_status": replay_status,
+            "provider_key_posture_status": _canonical_status(provider_posture.status),
+        },
+        "runtime_readiness": runtime_readiness,
+        "deployment_readiness": deployment_readiness,
+        "strategic_horizon_readiness": strategic_horizon_readiness,
         "env_file_status": file_status.to_payload(),
         "deployment_env_status": deployment_status.to_payload(),
         "ledger_path_status": ledger_status.to_payload(),
@@ -284,7 +365,7 @@ def build_operator_doctor_report(
         "branch_audit_hint": branch_hint.to_payload(),
         "provider_key_posture": provider_posture.to_payload(),
         "frontend_hint": {
-            "status": "BACKEND_ONLY",
+            "status": "OPTIONAL_NOT_CONFIGURED",
             "detail": "Frontend/cockpit readiness is separate and not implied by local backend diagnostics.",
         },
         "api_smoke_status": api_smoke.to_payload(),
@@ -309,7 +390,20 @@ def write_markdown(path: str | Path, payload: dict[str, Any]) -> None:
         "# Operator Doctor Summary",
         "",
         f"- Status: `{payload.get('status', 'UNKNOWN')}`",
+        f"- Runtime readiness: `{payload.get('readiness_summary', {}).get('runtime_readiness_status', 'UNKNOWN')}`",
+        f"- Deployment readiness: `{payload.get('readiness_summary', {}).get('deployment_readiness_status', 'UNKNOWN')}`",
+        f"- Strategic horizon readiness: `{payload.get('readiness_summary', {}).get('strategic_horizon_readiness_status', 'UNKNOWN')}`",
         f"- Ok: `{payload.get('ok', False)}`",
+        "",
+        "## Readiness Summary",
+        "",
+        "| Area | Status |",
+        "|---|---|",
+        f"| Runtime | `{payload.get('readiness_summary', {}).get('runtime_readiness_status', 'UNKNOWN')}` |",
+        f"| Deployment | `{payload.get('readiness_summary', {}).get('deployment_readiness_status', 'UNKNOWN')}` |",
+        f"| Strategic horizon | `{payload.get('readiness_summary', {}).get('strategic_horizon_readiness_status', 'UNKNOWN')}` |",
+        f"| Replay evidence | `{payload.get('readiness_summary', {}).get('replay_readiness_status', 'UNKNOWN')}` |",
+        f"| Provider keys | `{payload.get('readiness_summary', {}).get('provider_key_posture_status', 'UNKNOWN')}` |",
         "",
         "## Disclaimers",
         "",
