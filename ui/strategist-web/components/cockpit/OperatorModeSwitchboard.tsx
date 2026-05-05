@@ -1,7 +1,7 @@
 "use client";
 
 import type { OperatorModeDefinition, OperatorModeId } from "@/lib/operator/operator-modes";
-import { OPERATOR_MODE_IDS } from "@/lib/operator/operator-modes";
+import { getOperatorModeDefinition } from "@/lib/operator/operator-modes";
 
 export type OperatorModeSwitchboardProps = {
   mode: OperatorModeId;
@@ -11,6 +11,15 @@ export type OperatorModeSwitchboardProps = {
   /** Post-grid section order for the active mode (for transparency). */
   postGridOrderPreview: readonly string[];
 };
+
+const MODE_GROUPS: { title: string; description: string; modes: OperatorModeId[] }[] = [
+  { title: "Setup", description: "Credential and first-run posture.", modes: ["FIRST_RUN"] },
+  { title: "Daily operations", description: "Triage, health, and workboard posture.", modes: ["DAILY_OPS"] },
+  { title: "Research review", description: "Candidate, lifecycle, and paper/research evidence.", modes: ["RESEARCH_REVIEW"] },
+  { title: "Evidence / release", description: "Integrity, runbook, and release evidence inspection.", modes: ["FORENSIC_AUDIT", "RELEASE_CONTROL"] },
+  { title: "Incident / capital", description: "Degraded state triage and paper-only capital firewall.", modes: ["INCIDENT_RESPONSE", "CAPITAL_FIREWALL"] },
+  { title: "Topology", description: "Pane, hook, route, and contract map.", modes: ["SYSTEM_TOPOLOGY"] },
+];
 
 export function OperatorModeSwitchboard({
   mode,
@@ -30,17 +39,33 @@ export function OperatorModeSwitchboard({
         </span>
       </header>
 
-      <div className="operator-mode-switchboard__toolbar">
-        {OPERATOR_MODE_IDS.map((id) => (
-          <button
-            key={id}
-            type="button"
-            className={`operator-mode-chip${id === mode ? " operator-mode-chip--active" : ""}`}
-            data-testid={`cockpit-mode-select-${id}`}
-            onClick={() => onChange(id)}
-          >
-            {id.replace(/_/g, " ")}
-          </button>
+      <div className="operator-mode-switchboard__groups" aria-label="Advanced cockpit mode groups">
+        {MODE_GROUPS.map((group) => (
+          <section className="operator-mode-switchboard__group" key={group.title} aria-label={`${group.title} modes`}>
+            <div className="operator-mode-switchboard__group-head">
+              <strong>{group.title}</strong>
+              <span>{group.description}</span>
+            </div>
+            <div className="operator-mode-switchboard__toolbar">
+              {group.modes.map((id) => {
+                const modeDefinition = getOperatorModeDefinition(id);
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`operator-mode-chip${id === mode ? " operator-mode-chip--active" : ""}`}
+                    data-testid={`cockpit-mode-select-${id}`}
+                    aria-label={modeDefinition.label.toUpperCase()}
+                    aria-pressed={id === mode}
+                    onClick={() => onChange(id)}
+                  >
+                    <span>{modeDefinition.label}</span>
+                    <em>{modeDefinition.safety === "COMMAND_CAPABLE" ? "Command-capable" : "Read-plane only"}</em>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
         ))}
       </div>
 
