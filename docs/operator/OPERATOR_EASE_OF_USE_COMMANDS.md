@@ -24,10 +24,11 @@ Use this order and then branch into detailed runbooks:
 6. Start API (`strategy-validator-api --host 127.0.0.1 --port 8000` or Docker flow).
 7. Optional API smoke (`strategy-validator-single-tenant-api-smoke --env-file deployment.env --token-source env-file --require-pass --json`).
 8. Operator doctor (`strategy-validator-operator-doctor --json --require-ready`).
-9. Release verification pack (`python scripts/main_release_verification_pack.py ...`).
-10. Branch cleanup audit (`python scripts/branch_cleanup_audit.py ...`).
-11. Inspect paper replay evidence (`strategy-validator-paper-research-replay-verify ...`).
-12. UI/cockpit runbooks are separate and do not replace backend gates.
+9. Evidence discovery index (`strategy-validator-evidence-index --json`).
+10. Release verification pack (`python scripts/main_release_verification_pack.py ...`).
+11. Branch cleanup audit (`python scripts/branch_cleanup_audit.py ...`).
+12. Inspect paper replay evidence (`strategy-validator-paper-research-replay-verify ...`).
+13. UI/cockpit runbooks are separate and do not replace backend gates.
 
 For detailed deployment packaging, acceptance, and final evidence: `docs/deployment/SINGLE_TENANT_DEPLOYMENT_READINESS.md`.
 For local setup trial notes: `docs/operator/LOCAL_SINGLE_TENANT_SETUP_TRIAL.md`.
@@ -64,6 +65,7 @@ strategy-validator-operator-doctor --json --require-ready
 | Command | Purpose | Mode | Requires token? | Writes artifacts? | Safety notes |
 |---|---|---|---|---|---|
 | `strategy-validator-operator-doctor` | Local backend diagnostics + next steps | Read-only | No | Optional (`--summary-markdown-output-path`) | No live trading, no signoff authority |
+| `strategy-validator-evidence-index` | Discover local evidence artifacts under artifact root | Read-only | No | Optional (`--output-path`) | Discovery only; not verification/approval/signoff |
 | `strategy-validator-deployment-env-check` | Validate `deployment.env` contract | Read-only | No | No | Fail-closed linting; not deployment approval |
 | `strategy-validator-migrate` | Apply governed sqlite schema migrations | Mutation-capable | No | No | Schema authority only; not release approval |
 | `strategy-validator-single-tenant-preflight` | Readiness/preflight with optional prepare | Mutation-capable | No | Optional summaries | Backend readiness only; no profitability claim |
@@ -105,9 +107,10 @@ Use canonical paths so evidence stays predictable:
 3. `strategy-validator-single-tenant-preflight --prepare --require-ready --json`
 4. `strategy-validator-single-tenant-api-smoke --env-file deployment.env --token-source env-file --require-pass --json` (optional but recommended before command mutations)
 5. `strategy-validator-operator-doctor --json --require-ready --summary-markdown-output-path artifacts/release_verification/latest/operator-doctor.md`
-6. `python scripts/main_release_verification_pack.py --output-dir artifacts/release_verification/latest --json --require-pass`
-7. `python scripts/branch_cleanup_audit.py --json --output-json-path artifacts/release_verification/latest/branch-cleanup-audit.json --output-markdown-path artifacts/release_verification/latest/branch-cleanup-audit.md`
-8. `strategy-validator-paper-research-replay-verify --replay-manifest artifacts/provider_paper_loop/latest/replay_manifest.json --json`
+6. `strategy-validator-evidence-index --json --artifact-root artifacts --output-path artifacts/evidence-index.json`
+7. `python scripts/main_release_verification_pack.py --output-dir artifacts/release_verification/latest --json --require-pass`
+8. `python scripts/branch_cleanup_audit.py --json --output-json-path artifacts/release_verification/latest/branch-cleanup-audit.json --output-markdown-path artifacts/release_verification/latest/branch-cleanup-audit.md`
+9. `strategy-validator-paper-research-replay-verify --replay-manifest artifacts/provider_paper_loop/latest/replay_manifest.json --json`
 
 The release verification pack status is evidence only:
 

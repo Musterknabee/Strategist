@@ -7,12 +7,19 @@ from pathlib import Path
 COMPATIBILITY_FILE_MARKERS = ('_compat_', '_compat', 'compat_')
 RUNTIME_COMMAND_SUFFIX = '_runtime_commands.py'
 CLI_SURFACE_BUDGETS: Mapping[str, int] = {
-    'cli_file_count': 195,
+    'cli_file_count': 196,
     'compatibility_file_count': 37,
     'runtime_command_file_count': 24,
 }
 
 OPERATOR_COMMAND_REGISTRY: Mapping[str, Mapping[str, str]] = {
+    "strategy-validator-evidence-index": {
+        "purpose": "Discover local evidence artifacts under governed artifact roots",
+        "mode": "READ_ONLY",
+        "requires_token": "no",
+        "writes_artifacts": "optional",
+        "safety_notes": "Discovery only; artifact presence is not verification or signoff authority.",
+    },
     "strategy-validator-operator-doctor": {
         "purpose": "Read-only local diagnostics and next-step guidance",
         "mode": "READ_ONLY",

@@ -309,6 +309,9 @@ def build_operator_doctor_report(
         recommendations.append(
             "python scripts/main_release_verification_pack.py --output-dir artifacts/release_verification/latest --json --require-pass"
         )
+        recommendations.append(
+            "strategy-validator-evidence-index --json --artifact-root artifacts --output-path artifacts/evidence-index.json"
+        )
     if branch_hint.status == "PENDING":
         recommendations.append(
             "python scripts/branch_cleanup_audit.py --json --output-json-path artifacts/release_verification/latest/branch-cleanup-audit.json"
