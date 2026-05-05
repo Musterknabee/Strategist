@@ -79,7 +79,7 @@ export function ReleaseControlPane({
   return (
     <div className="cockpit-release-control-row" data-testid="cockpit-release-control">
       <Pane
-        title="Release control & operator signoff"
+        title="Release evidence control"
         dense
         badge={<StatusBadge raw={paneBadge(model, queryFailed)} />}
         onInspect={() =>
@@ -116,7 +116,7 @@ export function ReleaseControlPane({
           <strong>Frontend readiness</strong> is separate from package detection: <code>frontend_package_present</code> only means
           the UI subtree exists on disk. <code>frontend_readiness_claimed</code> (facade + deployment evidence) is an opt-in operator
           signal that the frontend adopted the read-plane contract — it is <strong>not</strong> automatic production certification
-          and <strong>not</strong> deployment approval.
+          and <strong>not</strong> deployment approval, production approval, or operator signoff.
         </div>
         <DenseTable
           columns={columns}

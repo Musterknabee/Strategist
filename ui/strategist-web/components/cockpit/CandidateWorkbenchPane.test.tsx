@@ -23,7 +23,7 @@ describe("CandidateWorkbenchPane", () => {
     );
     expect(screen.getByTestId("cockpit-candidate-workbench")).toBeTruthy();
     expect(screen.getByText(/Paper\/research only/)).toBeTruthy();
-    expect(screen.getByText(/UNKNOWN · no candidates returned/)).toBeTruthy();
+    expect(screen.getByTestId("candidate-workbench-empty").textContent).toMatch(/UNKNOWN .* no candidates/i);
   });
 
   it("filters to blocked rows and keeps details accessible", () => {
@@ -50,7 +50,7 @@ describe("CandidateWorkbenchPane", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: /show blocked candidates/i }));
     expect(screen.getByText(/strat-x/)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Strategy Lifecycle" }));
+    fireEvent.click(screen.getByRole("button", { name: "Research Review" }));
     expect(onOpenMode).toHaveBeenCalledWith("RESEARCH_REVIEW");
   });
 });
