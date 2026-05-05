@@ -1,0 +1,424 @@
+{
+  "mutation_route": "/ui/commands/{action}",
+  "read_plane_only": true,
+  "route_count": 59,
+  "routes": [
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/backtest-forensics",
+      "payload_schema": "ui_backtest_forensics/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/backtest-forensics/latest",
+      "payload_schema": "ui_backtest_forensics/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/backtest-forensics/{run_id}",
+      "payload_schema": "ui_backtest_forensics/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/burnin",
+      "payload_schema": "ui_burnin/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/burnin/forensic",
+      "payload_schema": "ui_burnin/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/burnin/providers",
+      "payload_schema": "ui_burnin/v1"
+    },
+    {
+      "auth_required": true,
+      "kind": "mutation",
+      "method": "POST",
+      "path": "/ui/commands/{action}",
+      "payload_schema": "ui_command_mutation/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/daily-operator-run",
+      "payload_schema": "ui_daily_operator_run/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/daily-operator-run/latest",
+      "payload_schema": "ui_daily_operator_run/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/evidence",
+      "payload_schema": "ui_evidence/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/evidence-chain",
+      "payload_schema": "ui_evidence_chain/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "metadata",
+      "method": "GET",
+      "path": "/ui/facade",
+      "payload_schema": "ui_public_facade_inventory/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "metadata",
+      "method": "GET",
+      "path": "/ui/health",
+      "payload_schema": "ui_health/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/operator-actions",
+      "payload_schema": "operator_action_event_projection_index/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/packs/detail",
+      "payload_schema": "ui_pack_detail/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/paper-broker/status",
+      "payload_schema": "ui_paper_broker/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/paper-execution",
+      "payload_schema": "ui_paper_execution_cockpit/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/paper-execution/latest",
+      "payload_schema": "ui_paper_execution_cockpit/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/paper-tracking/latest",
+      "payload_schema": "ui_paper_tracking/v2"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/paper-tracking/{tracking_id}",
+      "payload_schema": "ui_paper_tracking/v2"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/provider-health",
+      "payload_schema": "provider_health_snapshot/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/provider-setup",
+      "payload_schema": "ui_provider_setup_console/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/research-compute",
+      "payload_schema": "ui_research_compute/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/research-os/attestation/latest",
+      "payload_schema": "ui_research_os_attestation/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/research-os/briefing/latest",
+      "payload_schema": "ui_research_os_briefing/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/research-os/catalog/latest",
+      "payload_schema": "ui_research_os_evidence_catalog/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/research-os/closure/latest",
+      "payload_schema": "ui_research_os_closure/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/research-os/drift/latest",
+      "payload_schema": "ui_research_os_evidence_drift/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/research-os/exceptions/latest",
+      "payload_schema": "ui_research_os_exception/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/research-os/export/latest",
+      "payload_schema": "ui_research_os_export/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/research-os/handoff-signoff/latest",
+      "payload_schema": "ui_research_os_handoff_signoff/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/research-os/handoff/latest",
+      "payload_schema": "ui_research_os_handoff/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/research-os/policy-gate/latest",
+      "payload_schema": "ui_research_os_policy_gate/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/research-os/release-readiness/latest",
+      "payload_schema": "ui_research_os_release_readiness/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/research-os/remediation/latest",
+      "payload_schema": "ui_research_os_remediation/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/research-os/review-journal/latest",
+      "payload_schema": "ui_research_os_review_journal/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/research-os/run/latest",
+      "payload_schema": "ui_research_os_operator_run/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/research-os/status",
+      "payload_schema": "ui_research_os_status/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/runtime",
+      "payload_schema": "ui_runtime_status/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/shadow-book/latest",
+      "payload_schema": "ui_shadow_book/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/strategy-batches",
+      "payload_schema": "ui_strategy_batch/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/strategy-batches/latest",
+      "payload_schema": "ui_strategy_batch/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/strategy-batches/{run_id}",
+      "payload_schema": "ui_strategy_batch/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/strategy-graveyard",
+      "payload_schema": "ui_strategy_graveyard/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/strategy-graveyard/latest",
+      "payload_schema": "ui_strategy_graveyard/v1"
+    },
+    {
+      "auth_required": true,
+      "kind": "mutation",
+      "method": "POST",
+      "path": "/ui/strategy-intake",
+      "payload_schema": "strategy_intake_receipt/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/strategy-intake/latest",
+      "payload_schema": "ui_strategy_intake/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/strategy-memory/latest",
+      "payload_schema": "ui_strategy_memory/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/strategy-thesis/generation/latest",
+      "payload_schema": "ui_strategy_thesis_generation/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/strategy-thesis/latest",
+      "payload_schema": "ui_strategy_thesis/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/tribunal",
+      "payload_schema": "ui_tribunal/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/workboard",
+      "payload_schema": "ui_workboard_dashboard/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "export",
+      "method": "GET",
+      "path": "/ui/workboard/export",
+      "payload_schema": "oracle_operator_board_export_payload/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "export",
+      "method": "GET",
+      "path": "/ui/workboard/export/document",
+      "payload_schema": "oracle_operator_board_export_document/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "export",
+      "method": "HEAD",
+      "path": "/ui/workboard/export/document",
+      "payload_schema": "oracle_operator_board_export_document/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "metadata",
+      "method": "OPTIONS",
+      "path": "/ui/workboard/export/document",
+      "payload_schema": "ui_workboard_export_options/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "export",
+      "method": "GET",
+      "path": "/ui/workboard/export/index",
+      "payload_schema": "oracle_operator_board_export_index/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "export",
+      "method": "HEAD",
+      "path": "/ui/workboard/export/index",
+      "payload_schema": "oracle_operator_board_export_index/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "metadata",
+      "method": "OPTIONS",
+      "path": "/ui/workboard/export/index",
+      "payload_schema": "ui_workboard_export_options/v1"
+    }
+  ],
+  "routes_sha256": "8746e001a864db3152e605c7b16f8e808e4e7afe01147e6b3a292f2feffa148a",
+  "schema_version": "ui_strategist_web_facade_contract/v1",
+  "source_schema_version": "ui_public_facade_inventory/v1",
+  "source_snapshot_schema_version": "ui_public_facade_snapshot/v1"
+}

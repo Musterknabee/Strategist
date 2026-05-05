@@ -152,6 +152,8 @@ def build_ui_evidence_cockpit_fields(
         if ci_local_verify_ok is None:
             ci_local_verify_ok = _loose_report_tri_ok(cv)
 
+    deployment_evidence_manifest_path: str | None = str(manifest_path) if manifest_path is not None else None
+
     if manifest is not None:
         deployment_evidence_ok = manifest.get("ok") if isinstance(manifest.get("ok"), bool) else None
         if deployment_evidence_ok is True:
@@ -199,6 +201,7 @@ def build_ui_evidence_cockpit_fields(
 
     return {
         "deployment_status": deployment_status,
+        "deployment_evidence_manifest_path": deployment_evidence_manifest_path,
         "deployment_evidence_ok": deployment_evidence_ok,
         "operator_decision": operator_decision,
         "manual_operator_signoff_present": manual_operator_signoff_present,

@@ -11,11 +11,13 @@ import { PaneGrid } from "@/components/terminal/PaneGrid";
 import { TermKV } from "@/components/terminal/TermKV";
 import { useTerminalPageBind } from "@/hooks/useTerminalPageBind";
 import { useUiFacade } from "@/hooks/useUiFacade";
+import { useUiRuntime } from "@/hooks/useUiRuntime";
 import { useUiWorkboard } from "@/hooks/useUiWorkboard";
 import { StrategistApiError } from "@/lib/api/strategist-errors";
 import { deriveWorkboardDegradedReason, type UiWorkboardQueueEntry } from "@/lib/api/types";
 import { tryGetPublicStrategistApiBaseUrl } from "@/lib/config/public-config";
-import { asString } from "@/lib/operator/payload-utils";
+import { asRecord, asString } from "@/lib/operator/payload-utils";
+import { parseMutationSafety } from "@/lib/operator/operator-mutation-guard";
 import { useTerminalCockpit } from "@/lib/terminal/cockpit-context";
 import type { TapeLine } from "@/lib/terminal/cockpit-context";
 import { useMemo, useState } from "react";
@@ -51,8 +53,12 @@ export default function WorkboardPage() {
   const config = tryGetPublicStrategistApiBaseUrl();
   const { openInspector } = useTerminalCockpit();
   const facadeQuery = useUiFacade();
+  const runtimeQuery = useUiRuntime("operator");
   const workboardQuery = useUiWorkboard("operator");
   const [sel, setSel] = useState<string | null>(null);
+
+  const runtimeBody = runtimeQuery.data != null ? asRecord(runtimeQuery.data) : null;
+  const commandMutationSafety = parseMutationSafety(runtimeBody?.mutation_safety);
 
   const facadeError = facadeQuery.isError ? formatError(facadeQuery.error) : null;
   const workboardError = workboardQuery.isError ? formatError(workboardQuery.error) : null;
@@ -113,7 +119,7 @@ export default function WorkboardPage() {
     );
   }
 
-  const loading = facadeQuery.isLoading || workboardQuery.isLoading;
+  const loading = facadeQuery.isLoading || runtimeQuery.isLoading || workboardQuery.isLoading;
   const frontendClaimed = facadeQuery.data?.frontend_readiness_claimed === true;
 
   return (
@@ -149,7 +155,16 @@ export default function WorkboardPage() {
 
       {workboardQuery.data && !workboardError && (
         <>
-          <OperatorCommandPanel target={selectedTarget} boardLabel="operator" />
+          <OperatorCommandPanel
+            target={selectedTarget}
+            boardLabel="operator"
+            mutationSafety={commandMutationSafety}
+            mutationRoute={facadeQuery.data?.mutation_route ?? null}
+            readPlaneOnly={facadeQuery.data?.read_plane_only ?? null}
+            runtimeEnvironment={asString(runtimeBody?.environment) ?? null}
+            onInspectPosture={openInspector}
+            onInspectReceipt={openInspector}
+          />
 
           <PaneGrid cols={2}>
             <Pane

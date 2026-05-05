@@ -26,6 +26,7 @@ from strategy_validator.application.ui_view_helpers import (
     nested_float,
     utc_now_iso,
 )
+from strategy_validator.api.auth import get_mutation_auth_runtime_status
 from strategy_validator.core.config import load_config
 from strategy_validator.projections.artifact_registry import (
     build_projection_artifact_registry,
@@ -132,6 +133,7 @@ def build_ui_runtime_status_payload(*, role: str = 'operator') -> dict[str, Any]
         },
     }
     active_policy = policy_map.get(normalized_role, policy_map['operator'])
+    mutation_safety = get_mutation_auth_runtime_status()
     return {
         'schema_version': 'ui_runtime_status/v1',
         'generated_at_utc': _utc_now(),
@@ -169,6 +171,7 @@ def build_ui_runtime_status_payload(*, role: str = 'operator') -> dict[str, Any]
             'allowed_actions': active_policy['allowed_actions'],
             'operator_hint': active_policy['operator_hint'],
         },
+        'mutation_safety': mutation_safety.model_dump(mode='json'),
     }
 
 

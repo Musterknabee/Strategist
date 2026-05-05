@@ -1,17 +1,13 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { strategistGetJson } from "@/lib/api/strategist-client";
+import { useReadPlaneJsonQuery } from "@/hooks/useReadPlaneJsonQuery";
 import { queryKeys } from "@/lib/query/keys";
+import { readPlaneProbeQueryDefaults } from "@/lib/query/read-plane-query";
 
 /** GET / on the API host (operator banner JSON), not the Next.js app root. */
 export function useProbeApiRoot() {
-  return useQuery({
-    queryKey: queryKeys.probeApiRoot,
-    queryFn: async () => {
-      const { data } = await strategistGetJson<Record<string, unknown>>("/");
-      return data;
-    },
+  return useReadPlaneJsonQuery<Record<string, unknown>>(queryKeys.probeApiRoot, "/", {
+    ...readPlaneProbeQueryDefaults(),
     retry: false,
   });
 }

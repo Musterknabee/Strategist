@@ -1,28 +1,19 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { strategistGetJson } from "@/lib/api/strategist-client";
+import { useReadPlaneJsonQuery } from "@/hooks/useReadPlaneJsonQuery";
 import { queryKeys } from "@/lib/query/keys";
 
 export function useUiPaperTrackingLatest() {
-  return useQuery({
-    queryKey: queryKeys.uiPaperTrackingLatest,
-    queryFn: async () => {
-      const { data } = await strategistGetJson<Record<string, unknown>>("/ui/paper-tracking/latest");
-      return data;
-    },
-  });
+  return useReadPlaneJsonQuery<Record<string, unknown>>(
+    queryKeys.uiPaperTrackingLatest,
+    "/ui/paper-tracking/latest",
+  );
 }
 
 export function useUiPaperTrackingDetail(trackingId: string | null) {
-  return useQuery({
-    queryKey: queryKeys.uiPaperTrackingDetail(trackingId ?? ""),
-    queryFn: async () => {
-      const { data } = await strategistGetJson<Record<string, unknown>>(
-        `/ui/paper-tracking/${encodeURIComponent(trackingId ?? "")}`,
-      );
-      return data;
-    },
+  const id = trackingId ?? "";
+  const path = `/ui/paper-tracking/${encodeURIComponent(id)}`;
+  return useReadPlaneJsonQuery<Record<string, unknown>>(queryKeys.uiPaperTrackingDetail(id), path, {
     enabled: Boolean(trackingId && trackingId.length > 0),
   });
 }

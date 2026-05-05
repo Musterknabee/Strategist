@@ -10,7 +10,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "smoke": "node ./scripts/smoke-frontend.mjs",
-    "validate": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "contract:check": "python ../../scripts/frontend_ui_contract_check.py",
+    "contract:generate": "python ../../scripts/generate_frontend_ui_facade_contract.py",
+    "validate": "npm run contract:check && npm run lint && npm run typecheck && npm run test && npm run build",
     "certify": "npm run validate"
   },
   "dependencies": {

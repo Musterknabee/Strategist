@@ -8,6 +8,7 @@ import re
 import sys
 import tomllib
 from dataclasses import asdict, dataclass
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Iterable
 
@@ -16,6 +17,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from scripts._path_integrity import PathIntegrityError, safe_input_dir, symlink_components_preserving_path  # noqa: E402
+from scripts.sample_secret_hygiene import collect_sample_secret_hygiene_violations  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -50,6 +52,75 @@ def _read_text(path: Path) -> str:
 def _load_pyproject(repo_root: Path) -> dict[str, object]:
     with (repo_root / "pyproject.toml").open("rb") as handle:
         return tomllib.load(handle)
+
+
+_LOCAL_OPS_REGISTRY_SCHEMA = "local_ops_command_registry/v1"
+_LOCAL_OPS_REGISTRY_REL = Path("ui/strategist-web/lib/operator/local-ops-command-registry.json")
+_LOCAL_OPS_SAFETY = frozenset({"READ_ONLY", "LOCAL_OPERATOR_ACTION", "PRODUCTION_SENSITIVE", "AUTH_REQUIRED"})
+
+
+def _local_ops_registry_errors(repo_root: Path, scripts: Mapping[str, object], registry: dict[str, object]) -> list[str]:
+    """Validate cockpit local-ops JSON registry against packaged console scripts and repo paths."""
+    errors: list[str] = []
+    if registry.get("schema_version") != _LOCAL_OPS_REGISTRY_SCHEMA:
+        errors.append(f"unexpected schema_version {registry.get('schema_version')!r} (expected {_LOCAL_OPS_REGISTRY_SCHEMA!r})")
+    commands = registry.get("commands")
+    if not isinstance(commands, list):
+        errors.append("commands must be a non-empty list")
+        return errors
+    for item in commands:
+        if not isinstance(item, dict):
+            errors.append("each command must be an object")
+            continue
+        cid = str(item.get("id") or "?")
+        pcs = str(item.get("primaryConsoleScript") or "").strip()
+        py_paths_raw = item.get("pythonScriptPaths")
+        py_paths: tuple[str, ...] = ()
+        if isinstance(py_paths_raw, list):
+            py_paths = tuple(str(p).strip().replace("\\", "/") for p in py_paths_raw if isinstance(p, str) and str(p).strip())
+        elif py_paths_raw is not None:
+            errors.append(f"{cid}: pythonScriptPaths must be a list")
+
+        if pcs and pcs not in scripts:
+            errors.append(f"{cid}: primaryConsoleScript {pcs!r} not in pyproject [project.scripts]")
+        for rel in py_paths:
+            candidate = repo_root / rel
+            if not candidate.is_file():
+                errors.append(f"{cid}: missing pythonScriptPaths file {rel}")
+
+        if not pcs and not py_paths:
+            errors.append(f"{cid}: set primaryConsoleScript and/or pythonScriptPaths")
+
+        doc_path = item.get("docPath")
+        if isinstance(doc_path, str) and doc_path.strip():
+            doc_candidate = repo_root / doc_path.strip().replace("\\", "/")
+            if not doc_candidate.is_file():
+                errors.append(f"{cid}: missing docPath {doc_path.strip()}")
+
+        command_text = str(item.get("commandText") or "")
+        lowered = command_text.lower()
+        for banned in (
+            "x-strategy-validator-token",
+            "bearer ",
+            "password=",
+            "secret=",
+            "api_key=",
+            "private_key",
+            "-----begin",
+        ):
+            if banned in lowered:
+                errors.append(f"{cid}: commandText contains disallowed pattern {banned!r}")
+
+        safety = item.get("safetyClass")
+        if safety not in _LOCAL_OPS_SAFETY:
+            errors.append(f"{cid}: invalid safetyClass {safety!r}")
+            continue
+        warning = item.get("productionWarning")
+        warning_ok = isinstance(warning, str) and bool(warning.strip())
+        if safety == "PRODUCTION_SENSITIVE" and not warning_ok:
+            errors.append(f"{cid}: PRODUCTION_SENSITIVE requires non-empty productionWarning")
+
+    return errors
 
 
 def _function_defined(path: Path, function_name: str) -> bool:
@@ -374,6 +445,36 @@ def run_repository_truth_check(repo_root: str | Path | None = None) -> Repositor
                     f"{entrypoint} callable is not defined",
                 )
             )
+
+    local_ops_registry_path = root / _LOCAL_OPS_REGISTRY_REL
+    if local_ops_registry_path.is_file():
+        local_ops_errors: list[str] = []
+        try:
+            local_ops_payload = json.loads(_read_text(local_ops_registry_path))
+        except json.JSONDecodeError as exc:
+            local_ops_errors.append(f"invalid JSON in {_LOCAL_OPS_REGISTRY_REL.as_posix()}: {exc}")
+        else:
+            if not isinstance(local_ops_payload, dict):
+                local_ops_errors.append("local ops registry root must be a JSON object")
+            else:
+                local_ops_errors.extend(_local_ops_registry_errors(root, scripts, local_ops_payload))
+        checks.append(
+            _check(
+                not local_ops_errors,
+                "local_ops_command_registry_mapped",
+                "cockpit local-ops registry maps to pyproject scripts, scripts/, and docs",
+                "local ops registry issues: " + "; ".join(local_ops_errors),
+            )
+        )
+    else:
+        checks.append(
+            _check(
+                False,
+                "local_ops_command_registry_present",
+                f"{_LOCAL_OPS_REGISTRY_REL.as_posix()} exists",
+                f"missing {_LOCAL_OPS_REGISTRY_REL.as_posix()} (cockpit command registry)",
+            )
+        )
 
     documented_commands = sorted(set(_iter_documented_console_commands(root, docs_markdown_root)))
     missing_documented_commands = [name for name in documented_commands if name not in scripts]
@@ -1073,6 +1174,7 @@ def run_repository_truth_check(repo_root: str | Path | None = None) -> Repositor
 
     checks.append(_check_ui_public_facade_contract(root))
     checks.append(_check_ui_public_facade_snapshot_contract(root))
+    checks.append(_check_frontend_ui_facade_contract_gate(root))
 
 
     single_tenant_cli = root / "strategy_validator/cli/single_tenant_preflight.py"
@@ -1105,6 +1207,15 @@ def run_repository_truth_check(repo_root: str | Path | None = None) -> Repositor
             "single_tenant_env_sample_present",
             "single-tenant deployment environment sample names required production backend contract",
             "single-tenant deployment environment sample is missing required variables",
+        )
+    )
+    sample_secret_violations = collect_sample_secret_hygiene_violations(root)
+    checks.append(
+        _check(
+            not sample_secret_violations,
+            "sample_secret_hygiene",
+            "tracked *.env.sample, docs markdown, and scripts contain no plausible committed secrets (Alpaca-style key material, opaque tokens, PEM blobs)",
+            "committed sample/docs/script hygiene: plausible secret material: " + "; ".join(sample_secret_violations),
         )
     )
     checks.append(
@@ -1326,12 +1437,16 @@ def _check_ui_public_facade_snapshot_contract(repo_root: Path) -> TruthCheck:
     snapshot_script = repo_root / "scripts" / "ui_facade_contract_snapshot.py"
     snapshot_file = repo_root / "docs" / "api" / "ui-public-facade.snapshot.json"
     snapshot_test = repo_root / "tests" / "api" / "test_ui_public_facade_snapshot_contract.py"
+    frontend_routes_contract = repo_root / "ui" / "strategist-web" / "lib" / "contracts" / "ui-facade-routes.json"
+    script_text = _read_text(snapshot_script) if snapshot_script.exists() else ""
     ci_file = repo_root / ".github" / "workflows" / "ci.yml"
     ci_text = _read_text(ci_file) if ci_file.exists() else ""
     checks = (
         snapshot_script.exists(),
         snapshot_file.exists(),
         snapshot_test.exists(),
+        frontend_routes_contract.exists(),
+        "build_frontend_ui_facade_routes_contract" in script_text,
         "ui_facade_contract_snapshot.py --check" in ci_text,
     )
     return _check(
@@ -1340,6 +1455,35 @@ def _check_ui_public_facade_snapshot_contract(repo_root: Path) -> TruthCheck:
         "UI facade contract snapshot, generator, test, and CI check are present.",
         "UI facade contract snapshot, generator, test, or CI check is missing.",
     )
+
+
+def _check_frontend_ui_facade_contract_gate(repo_root: Path) -> TruthCheck:
+    """Frontend generated facade contract + hook validation tooling is present and wired."""
+    gen_json = repo_root / "ui" / "strategist-web" / "lib" / "generated" / "ui-facade-contract.json"
+    gen_ts = repo_root / "ui" / "strategist-web" / "lib" / "generated" / "ui-facade-contract.ts"
+    check_script = repo_root / "scripts" / "frontend_ui_contract_check.py"
+    emit_script = repo_root / "scripts" / "generate_frontend_ui_facade_contract.py"
+    docs = repo_root / "docs" / "frontend" / "ui-facade-contract.md"
+    pkg = repo_root / "ui" / "strategist-web" / "package.json"
+    ci_file = repo_root / ".github" / "workflows" / "ci.yml"
+    pkg_text = _read_text(pkg) if pkg.exists() else ""
+    ci_text = _read_text(ci_file) if ci_file.exists() else ""
+    checks = (
+        check_script.exists(),
+        emit_script.exists(),
+        gen_json.exists(),
+        gen_ts.exists(),
+        docs.exists(),
+        '"contract:check"' in pkg_text,
+        "frontend_ui_contract_check.py" in ci_text,
+    )
+    return _check(
+        all(checks),
+        "frontend_ui_facade_contract_gate",
+        "Frontend UI facade generated contract, hook check script, docs, npm contract:check, and CI gate are present.",
+        "Frontend UI facade contract gate artifacts or wiring are missing.",
+    )
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Validate repository metadata/config truth against files on disk.")

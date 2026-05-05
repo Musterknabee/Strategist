@@ -1,25 +1,23 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { strategistGetJson } from "@/lib/api/strategist-client";
+import { useReadPlaneJsonQuery } from "@/hooks/useReadPlaneJsonQuery";
 import { queryKeys } from "@/lib/query/keys";
 
 export function useUiStrategyBatchLatest() {
-  return useQuery({
-    queryKey: queryKeys.uiStrategyBatchesLatest,
-    queryFn: async () => {
-      const { data } = await strategistGetJson<Record<string, unknown>>("/ui/strategy-batches/latest");
-      return data;
-    },
-  });
+  return useReadPlaneJsonQuery<Record<string, unknown>>(
+    queryKeys.uiStrategyBatchesLatest,
+    "/ui/strategy-batches/latest",
+  );
 }
 
 export function useUiStrategyBatchList() {
-  return useQuery({
-    queryKey: queryKeys.uiStrategyBatchesList,
-    queryFn: async () => {
-      const { data } = await strategistGetJson<Record<string, unknown>>("/ui/strategy-batches");
-      return data;
-    },
-  });
+  return useReadPlaneJsonQuery<Record<string, unknown>>(queryKeys.uiStrategyBatchesList, "/ui/strategy-batches");
+}
+
+export function useUiStrategyBatchesLatest() {
+  return useUiStrategyBatchLatest();
+}
+
+export function useUiStrategyBatches() {
+  return useUiStrategyBatchList();
 }

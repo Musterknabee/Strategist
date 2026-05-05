@@ -18,6 +18,8 @@ if str(_REPO_ROOT) not in sys.path:
 from scripts._path_integrity import PathIntegrityError, path_error_payload, safe_input_dir, safe_input_file, safe_output_file
 
 DEFAULT_SNAPSHOT = Path('docs/api/ui-public-facade.snapshot.json')
+FRONTEND_UI_FACADE_ROUTES_CONTRACT = Path('ui/strategist-web/lib/contracts/ui-facade-routes.json')
+OPENAPI_CONTRACT_SNAPSHOT = Path('docs/architecture/openapi.snapshot.json')
 UI_ROUTE_DECLARATION_ROOT = Path('strategy_validator/api/routes')
 UI_ROUTE_MODULE_PATTERNS = ('ui.py', 'ui_routes_*.py')
 HTTP_DECORATORS = {
@@ -74,6 +76,34 @@ def _normalise_route(route: dict[str, object]) -> dict[str, object]:
 def _route_hash(routes: Iterable[dict[str, object]]) -> str:
     text = json.dumps(list(routes), sort_keys=True, separators=(',', ':'))
     return hashlib.sha256(text.encode('utf-8')).hexdigest()
+
+
+def build_frontend_ui_facade_routes_contract(facade_snapshot_payload: dict[str, object]) -> dict[str, object]:
+    """Minimal route list artifact consumed by ``ui/strategist-web`` contract tests."""
+    return {
+        'schema_version': 'ui_facade_frontend_routes_contract/v1',
+        'routes_sha256': facade_snapshot_payload['routes_sha256'],
+        'route_count': facade_snapshot_payload['route_count'],
+        'routes': facade_snapshot_payload['routes'],
+    }
+
+
+def _collect_openapi_ui_facade_drift(facade_routes: list[dict[str, object]], openapi: dict[str, object]) -> list[str]:
+    """Each facade route must be registered under ``openapi['paths']`` with the same HTTP method."""
+    errors: list[str] = []
+    paths_block = openapi.get('paths')
+    if not isinstance(paths_block, dict):
+        return ['OpenAPI snapshot paths block missing or invalid']
+    for route in facade_routes:
+        path = str(route['path'])
+        method = str(route['method']).lower()
+        entry = paths_block.get(path)
+        if not isinstance(entry, dict):
+            errors.append(f'OpenAPI paths missing {path}')
+            continue
+        if method not in entry:
+            errors.append(f'OpenAPI paths[{path!r}] missing operation {method.upper()}')
+    return errors
 
 
 def collect_declared_ui_routes_static(repo_root: Path) -> list[dict[str, str]]:
@@ -172,6 +202,61 @@ def build_ui_facade_contract_snapshot(
             f'missing_from_facade={missing_from_facade!r} extra_in_facade={extra_in_facade!r}'
         )
 
+    facade_by_key = {(str(route['method']), str(route['path'])): route for route in facade_routes}
+    semantic_errors: list[str] = []
+    for route in facade_routes:
+        kind = str(route['kind'])
+        method = str(route['method'])
+        auth_required = bool(route['auth_required'])
+        path = str(route['path'])
+        payload_schema = str(route['payload_schema']).strip()
+        if not payload_schema:
+            semantic_errors.append(f'{method} {path}: empty payload_schema')
+        if kind == 'mutation':
+            if method != 'POST':
+                semantic_errors.append(f'{method} {path}: kind=mutation requires POST')
+            if not auth_required:
+                semantic_errors.append(f'{method} {path}: mutation routes must declare auth_required=true')
+        if auth_required and (kind != 'mutation' or method != 'POST'):
+            semantic_errors.append(f'{method} {path}: auth_required=true is only allowed for POST mutation routes')
+        if kind in {'read', 'metadata', 'export'} and auth_required:
+            semantic_errors.append(
+                f'{method} {path}: kind={kind} must not set auth_required=true (no mutation auth on read plane)'
+            )
+    for method, path in registered_route_keys:
+        facade_route = facade_by_key[(method, path)]
+        if method == 'POST':
+            if not bool(facade_route['auth_required']) or str(facade_route['kind']) != 'mutation':
+                semantic_errors.append(
+                    f'{method} {path}: declared POST UI route must match facade mutation+auth_required contract'
+                )
+        elif bool(facade_route['auth_required']):
+            semantic_errors.append(f'{method} {path}: non-POST route must not require mutation auth in facade')
+
+    from scripts.ui_route_mutation_auth_ast import (
+        collect_ui_mutation_post_auth_violations,
+        collect_ui_read_plane_mutation_auth_violations,
+    )
+
+    semantic_errors.extend(collect_ui_mutation_post_auth_violations(root))
+    semantic_errors.extend(collect_ui_read_plane_mutation_auth_violations(root))
+
+    openapi_path = root / OPENAPI_CONTRACT_SNAPSHOT
+    if not openapi_path.exists():
+        semantic_errors.append(
+            f'OpenAPI contract snapshot missing at {openapi_path.as_posix()}; cannot cross-check UI facade routes'
+        )
+    else:
+        try:
+            openapi_payload = json.loads(openapi_path.read_text(encoding='utf-8'))
+        except json.JSONDecodeError as exc:
+            semantic_errors.append(f'OpenAPI snapshot JSON invalid: {exc}')
+        else:
+            semantic_errors.extend(_collect_openapi_ui_facade_drift(facade_routes, openapi_payload))
+
+    if semantic_errors:
+        raise SystemExit('UI facade semantic contract failed: ' + '; '.join(semantic_errors))
+
     return {
         'schema_version': 'ui_public_facade_snapshot/v1',
         'source_endpoint': '/ui/facade',
@@ -230,6 +315,13 @@ def main(argv: list[str] | None = None) -> int:
         allow_static_fallback=not args.no_static_fallback,
     )
     text = json.dumps(payload, indent=2, sort_keys=True) + '\n'
+    frontend_rel = FRONTEND_UI_FACADE_ROUTES_CONTRACT
+    if not frontend_rel.is_absolute():
+        frontend_output = repo_root / frontend_rel
+    else:
+        frontend_output = frontend_rel
+    frontend_payload = build_frontend_ui_facade_routes_contract(payload)
+    frontend_text = json.dumps(frontend_payload, indent=2, sort_keys=True) + '\n'
 
     if args.check:
         if not output.exists():
@@ -239,12 +331,34 @@ def main(argv: list[str] | None = None) -> int:
         if current != text:
             print(f'UI facade contract snapshot drift: {output}')
             return 1
+        try:
+            checked_frontend = safe_input_file(frontend_output, label='UI_FACADE_FRONTEND_ROUTES_CONTRACT', required=True)
+        except PathIntegrityError as exc:
+            print(json.dumps(path_error_payload(exc, schema_version='ui_facade_contract_snapshot_path_error/v1'), sort_keys=True))
+            return 1
+        assert checked_frontend is not None
+        frontend_output = checked_frontend
+        fe_current = frontend_output.read_text(encoding='utf-8')
+        if fe_current != frontend_text:
+            print(f'frontend UI facade routes contract drift: {frontend_output}')
+            return 1
         print(f'UI facade contract snapshot OK: {output}')
+        print(f'frontend UI facade routes contract OK: {frontend_output}')
         return 0
 
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(text, encoding='utf-8')
+    try:
+        safe_fe = safe_output_file(frontend_output, label='UI_FACADE_FRONTEND_ROUTES_CONTRACT_OUTPUT')
+    except PathIntegrityError as exc:
+        print(json.dumps(path_error_payload(exc, schema_version='ui_facade_contract_snapshot_path_error/v1'), sort_keys=True))
+        return 1
+    assert safe_fe is not None
+    frontend_output = safe_fe
+    frontend_output.parent.mkdir(parents=True, exist_ok=True)
+    frontend_output.write_text(frontend_text, encoding='utf-8')
     print(str(output))
+    print(str(frontend_output))
     return 0
 
 

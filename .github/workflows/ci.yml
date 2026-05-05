@@ -250,6 +250,8 @@ jobs:
         run: python scripts/openapi_contract_snapshot.py --check
       - name: UI facade contract snapshot gate
         run: python scripts/ui_facade_contract_snapshot.py --check --no-static-fallback
+      - name: Frontend UI hook / generated facade contract gate
+        run: python scripts/frontend_ui_contract_check.py
       - name: Full test suite
         run: pytest -v
       - name: Anti-regression invariants (fast constitutional gate)

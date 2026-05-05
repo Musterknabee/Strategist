@@ -18,6 +18,7 @@ def test_cockpit_fields_unknown_when_no_artifacts(tmp_path: Path) -> None:
     )
     assert fields["deployment_status"] == "UNKNOWN"
     assert fields["deployment_evidence_ok"] is None
+    assert fields.get("deployment_evidence_manifest_path") is None
     assert fields["api_smoke_status"] == "UNKNOWN"
     assert fields["api_smoke_ok"] is None
     assert fields["frontend_readiness_status"] == "UNKNOWN"
@@ -53,6 +54,8 @@ def test_cockpit_from_deployment_manifest(tmp_path: Path) -> None:
     assert fields["ci_local_verify_ok"] is True
     assert fields["frontend_readiness_status"] == "NOT_CLAIMED"
     assert fields["evidence_generated_at_utc"] == "2026-04-01T12:00:00Z"
+    assert fields.get("deployment_evidence_manifest_path")
+    assert str(tmp_path / "deployment-evidence.json") in str(fields["deployment_evidence_manifest_path"])
 
 
 def test_cockpit_ignores_wrong_manifest_schema(tmp_path: Path) -> None:
@@ -66,6 +69,8 @@ def test_cockpit_ignores_wrong_manifest_schema(tmp_path: Path) -> None:
         disk_runtime_review=None,
     )
     assert fields["deployment_status"] == "UNKNOWN"
+    assert fields.get("deployment_evidence_manifest_path")
+    assert "deployment-evidence.json" in str(fields["deployment_evidence_manifest_path"])
 
 
 def test_cockpit_loose_api_smoke_without_manifest(tmp_path: Path) -> None:
@@ -98,6 +103,7 @@ def test_build_ui_evidence_payload_includes_cockpit_keys(tmp_path: Path, monkeyp
     assert "deployment_evidence_ok" in payload
     assert "api_smoke_ok" in payload
     assert "evidence_generated_at_utc" in payload
+    assert "deployment_evidence_manifest_path" in payload
 
 
 def test_cockpit_payload_has_no_raw_secrets_from_manifest(tmp_path: Path) -> None:

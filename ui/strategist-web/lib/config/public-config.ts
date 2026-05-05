@@ -54,3 +54,7 @@ export function tryGetPublicStrategistApiBaseUrl():
     throw e;
   }
 }
+
+export function isStrategistDemoModeEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_STRATEGIST_DEMO_MODE?.trim().toLowerCase() === "true";
+}

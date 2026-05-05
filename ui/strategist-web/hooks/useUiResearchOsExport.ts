@@ -1,15 +1,11 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { strategistGetJson } from "@/lib/api/strategist-client";
+import { useReadPlaneJsonQuery } from "@/hooks/useReadPlaneJsonQuery";
 import { queryKeys } from "@/lib/query/keys";
 
 export function useUiResearchOsExportLatest() {
-  return useQuery({
-    queryKey: queryKeys.uiResearchOsExportLatest,
-    queryFn: async () => {
-      const { data } = await strategistGetJson<Record<string, unknown>>("/ui/research-os/export/latest");
-      return data;
-    },
-  });
+  return useReadPlaneJsonQuery<Record<string, unknown>>(
+    queryKeys.uiResearchOsExportLatest,
+    "/ui/research-os/export/latest",
+  );
 }

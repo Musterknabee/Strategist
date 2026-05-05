@@ -4,6 +4,7 @@ export const queryKeys = {
   probeHealthz: ["strategist", "probe", "healthz"] as const,
   probeLivez: ["strategist", "probe", "livez"] as const,
   probeReadyz: ["strategist", "probe", "readyz"] as const,
+  readinessDeployment: ["strategist", "readiness", "deployment"] as const,
   probeApiRoot: ["strategist", "probe", "api-root"] as const,
   uiHealth: ["strategist", "ui", "health"] as const,
   uiEvidence: (searchRoot: string | undefined) => ["strategist", "ui", "evidence", searchRoot ?? ""] as const,

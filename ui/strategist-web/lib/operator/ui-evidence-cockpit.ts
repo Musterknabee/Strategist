@@ -5,6 +5,8 @@ import { asString } from "@/lib/operator/payload-utils";
 
 export type UiEvidenceCockpitFields = {
   deployment_status: string | undefined;
+  /** Latest deployment-evidence.json path under search root (read-plane; no secret material). */
+  deployment_evidence_manifest_path?: string | undefined;
   deployment_evidence_ok: boolean | null | undefined;
   operator_decision: string | undefined;
   manual_operator_signoff_present: boolean | null | undefined;
@@ -28,6 +30,7 @@ export function readUiEvidenceCockpit(ev: Record<string, unknown> | null | undef
   if (!ev) return null;
   return {
     deployment_status: asString(ev.deployment_status),
+    deployment_evidence_manifest_path: asString(ev.deployment_evidence_manifest_path) ?? undefined,
     deployment_evidence_ok: triBool(ev.deployment_evidence_ok),
     operator_decision: asString(ev.operator_decision),
     manual_operator_signoff_present: triBool(ev.manual_operator_signoff_present),

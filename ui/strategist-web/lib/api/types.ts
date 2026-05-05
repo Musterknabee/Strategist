@@ -58,6 +58,15 @@ export type UiWorkboardPayload = {
 };
 
 
+/** GET /ui/runtime `mutation_safety` — no token material, posture only. */
+export type UiMutationSafetyStatus = {
+  runtime_mode: string;
+  authorization_mode: string;
+  token_configured: boolean;
+  mutation_routes_safe: boolean;
+  detail_code: string;
+};
+
 export type UiOperatorCommandAction = "claim-item" | "acknowledge-reentry" | "renew-lease";
 
 export type UiOperatorCommandRequest = {
