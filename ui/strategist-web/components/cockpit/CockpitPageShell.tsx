@@ -113,6 +113,8 @@ import { UNKNOWN, boolStatus, digest, entryTime, inspectBody, value } from "./co
 import { WorkboardPane } from "./WorkboardPane";
 import { SystemTopologyPane } from "./SystemTopologyPane";
 import { OperatorModeSwitchboard } from "./OperatorModeSwitchboard";
+import { OperatorHomePane } from "./OperatorHomePane";
+import { buildOperatorHomeSummary } from "@/lib/operator/operator-home-summary-model";
 
 export function CockpitPageShell() {
   const config = tryGetPublicStrategistApiBaseUrl();
@@ -157,6 +159,7 @@ export function CockpitPageShell() {
   const researchOsPolicyGateLatest = useUiResearchOsPolicyGateLatest();
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [operatorMode, setOperatorMode] = useState<OperatorModeId>("DAILY_OPS");
+  const [showAdvancedCockpit, setShowAdvancedCockpit] = useState(false);
 
   const readyBody = readyz.data?.data != null ? asRecord(readyz.data.data) : null;
   const readyStatus = readyBody ? asString(readyBody.status) ?? UNKNOWN : UNKNOWN;
@@ -958,6 +961,39 @@ export function CockpitPageShell() {
     () => deriveOperatorModeNextFocusLines(operatorMode, modeFocusContext),
     [operatorMode, modeFocusContext],
   );
+  const operatorHomeSummary = useMemo(
+    () =>
+      buildOperatorHomeSummary({
+        strategyIntakeLatest: strategyIntakeLatest.data ?? null,
+        strategyThesisLatest: strategyThesisLatest.data ?? null,
+        strategyThesisGenerationLatest: strategyThesisGenerationLatest.data ?? null,
+        strategyMemoryLatest: strategyMemoryLatest.data ?? null,
+        strategyGraveyardLatest: strategyGraveyardLatest.data ?? null,
+        paperTrackingLatest: paperTrackingLatest.data ?? null,
+        backtestForensicsLatest: backtestForensicsLatest.data ?? null,
+        strategyBatchLatest: strategyBatchLatest.data ?? null,
+        workboard: workboard.data ?? null,
+        evidenceChain: evidenceChain.data ?? null,
+        providerHealth: providers.data ?? null,
+        providerSetup: providerSetup.data ?? null,
+        anyError,
+      }),
+    [
+      strategyIntakeLatest.data,
+      strategyThesisLatest.data,
+      strategyThesisGenerationLatest.data,
+      strategyMemoryLatest.data,
+      strategyGraveyardLatest.data,
+      paperTrackingLatest.data,
+      backtestForensicsLatest.data,
+      strategyBatchLatest.data,
+      workboard.data,
+      evidenceChain.data,
+      providers.data,
+      providerSetup.data,
+      anyError,
+    ],
+  );
 
   const postGridSectionOrder = useMemo(() => {
     const o = getPostGridSectionOrder(operatorMode);
@@ -1504,13 +1540,23 @@ export function CockpitPageShell() {
           DEGRADED · one or more read-plane queries failed; missing data remains UNKNOWN.
         </div>
       )}
-      <OperatorModeSwitchboard
-        mode={operatorMode}
-        onChange={setOperatorMode}
-        definition={getOperatorModeDefinition(operatorMode)}
-        nextFocusLines={modeNextFocusLines}
-        postGridOrderPreview={postGridSectionOrder}
+      <OperatorHomePane
+        summary={operatorHomeSummary}
+        onShowAdvanced={() => setShowAdvancedCockpit(true)}
+        onOpenDetail={(mode) => {
+          setOperatorMode(mode);
+          setShowAdvancedCockpit(true);
+        }}
       />
+      {showAdvancedCockpit && (
+        <>
+          <OperatorModeSwitchboard
+            mode={operatorMode}
+            onChange={setOperatorMode}
+            definition={getOperatorModeDefinition(operatorMode)}
+            nextFocusLines={modeNextFocusLines}
+            postGridOrderPreview={postGridSectionOrder}
+          />
       <div className="cockpit-grid" data-testid="cockpit-seven-pane-grid">
         <OverviewPane
           overviewTiles={overviewTiles}
@@ -1591,9 +1637,11 @@ export function CockpitPageShell() {
           openInspector={openInspector}
         />
       </div>
-      {postGridSectionOrder.map((k) => (
-        <Fragment key={k}>{renderPostGridSection(k)}</Fragment>
-      ))}
+          {postGridSectionOrder.map((k) => (
+            <Fragment key={k}>{renderPostGridSection(k)}</Fragment>
+          ))}
+        </>
+      )}
     </div>
   );
 }
