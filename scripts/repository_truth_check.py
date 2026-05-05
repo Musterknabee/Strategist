@@ -18,6 +18,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 from scripts._path_integrity import PathIntegrityError, safe_input_dir, symlink_components_preserving_path  # noqa: E402
 from scripts.sample_secret_hygiene import collect_sample_secret_hygiene_violations  # noqa: E402
+from strategy_validator.cli.public_surface import OPERATOR_COMMAND_EXEMPTIONS, OPERATOR_COMMAND_REGISTRY  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -409,6 +410,23 @@ def run_repository_truth_check(repo_root: str | Path | None = None) -> Repositor
     if not isinstance(scripts, dict):
         scripts = {}
     checks.append(_check(bool(scripts), "project_scripts_declared", f"{len(scripts)} console scripts declared", "no console scripts declared"))
+    operator_scripts = sorted(name for name in scripts if isinstance(name, str) and name.startswith("strategy-validator-"))
+    registry_keys = sorted(OPERATOR_COMMAND_REGISTRY.keys())
+    exemptions = set(OPERATOR_COMMAND_EXEMPTIONS)
+    missing_registry_or_exemption = [name for name in operator_scripts if name not in OPERATOR_COMMAND_REGISTRY and name not in exemptions]
+    stale_registry_names = [name for name in registry_keys if name not in scripts]
+    stale_exemption_names = [name for name in sorted(exemptions) if name not in scripts]
+    checks.append(
+        _check(
+            not missing_registry_or_exemption and not stale_registry_names and not stale_exemption_names,
+            "operator_command_registry_consistent",
+            f"operator CLI registry/exemptions aligned ({len(operator_scripts)} scripts, {len(registry_keys)} registry entries, {len(exemptions)} exemptions)",
+            "operator CLI registry drift: "
+            + ("missing registry/exemption for " + ", ".join(missing_registry_or_exemption) if missing_registry_or_exemption else "")
+            + ("; stale registry entries " + ", ".join(stale_registry_names) if stale_registry_names else "")
+            + ("; stale exemption entries " + ", ".join(stale_exemption_names) if stale_exemption_names else ""),
+        )
+    )
 
     optional_dependencies = project.get("optional-dependencies", {}) if isinstance(project, dict) else {}
     dev_dependencies = optional_dependencies.get("dev", []) if isinstance(optional_dependencies, dict) else []

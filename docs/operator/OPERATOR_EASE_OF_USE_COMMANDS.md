@@ -58,6 +58,17 @@ strategy-validator-operator-doctor --json --require-ready
 
 `strategy-validator-operator-doctor` is read-only and reports configured state, blockers, warnings, and deterministic next commands.
 
+## Operator command table
+
+| Command | Purpose | Mode | Requires token? | Writes artifacts? | Safety notes |
+|---|---|---|---|---|---|
+| `strategy-validator-operator-doctor` | Local backend diagnostics + next steps | Read-only | No | Optional (`--summary-markdown-output-path`) | No live trading, no signoff authority |
+| `strategy-validator-deployment-env-check` | Validate `deployment.env` contract | Read-only | No | No | Fail-closed linting; not deployment approval |
+| `strategy-validator-migrate` | Apply governed sqlite schema migrations | Mutation-capable | No | No | Schema authority only; not release approval |
+| `strategy-validator-single-tenant-preflight` | Readiness/preflight with optional prepare | Mutation-capable | No | Optional summaries | Backend readiness only; no profitability claim |
+| `strategy-validator-single-tenant-api-smoke` | HTTP smoke for health/readiness/auth boundaries | Read-only | Optional (for authenticated checks) | Optional reports | Smoke evidence only; not operator signoff |
+| `strategy-validator-paper-research-replay-verify` | Offline replay digest verification | Read-only | No | No | Integrity only; no live authorization |
+
 ### JSON output
 
 ```bash
