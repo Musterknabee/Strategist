@@ -35,6 +35,16 @@ Read-plane payloads should surface replay/integrity summaries:
 
 When replay metadata is absent, payloads should degrade honestly (`UNKNOWN`/`PENDING`), never pass silently.
 
+Replay verification remains an offline integrity check:
+
+- no provider keys required,
+- no network calls,
+- no ledger mutation,
+- no artifact creation/deletion/mutation,
+- no deployment approval or operator signoff authority,
+- no live-trading authorization,
+- no profitability claims.
+
 ## Safety boundary
 
 - Paper-only research evidence is not live execution authority.
