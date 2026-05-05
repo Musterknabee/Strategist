@@ -562,6 +562,9 @@ describe("HomePage cockpit", () => {
   it("renders the terminal cockpit shell panes and keeps raw JSON in the inspector drilldown", async () => {
     render(<HomePage />, { wrapper: Harness });
 
+    expect(screen.getByTestId("cockpit-operator-home")).toBeTruthy();
+    expect(screen.queryByTestId("cockpit-mode-switchboard")).toBeNull();
+    fireEvent.click(screen.getByTestId("cockpit-show-advanced"));
     expect(screen.getByTestId("cockpit-mode-switchboard")).toBeTruthy();
     expect(screen.getByTestId("cockpit-mode-current-label").textContent).toMatch(/Daily Ops/i);
     expect(screen.getByTestId("cockpit-mode-command-banner")).toBeTruthy();
@@ -631,6 +634,7 @@ describe("HomePage cockpit", () => {
 
   it("opens evidence rows in the persistent inspector", () => {
     render(<HomePage />, { wrapper: Harness });
+    fireEvent.click(screen.getByTestId("cockpit-show-advanced"));
     fireEvent.click(screen.getAllByText("API Smoke")[1]);
     expect(screen.getByText("Evidence · API Smoke")).toBeTruthy();
   });
