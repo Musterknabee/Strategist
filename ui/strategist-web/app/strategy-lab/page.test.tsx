@@ -5,6 +5,14 @@ import { describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import StrategyLabPage from "./page";
 
+function createQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { gcTime: Infinity, retry: false },
+    },
+  });
+}
+
 vi.mock("@/lib/config/public-config", () => ({
   tryGetPublicStrategistApiBaseUrl: () => ({ ok: true as const, baseUrl: "http://127.0.0.1:8000" }),
 }));
@@ -180,7 +188,7 @@ vi.mock("@/lib/terminal/cockpit-context", () => ({
 describe("StrategyLabPage", () => {
   it("renders synthetic warning and strategy row", () => {
     openInspector.mockClear();
-    const client = new QueryClient();
+    const client = createQueryClient();
     render(
       <QueryClientProvider client={client}>
         <StrategyLabPage />
@@ -193,7 +201,7 @@ describe("StrategyLabPage", () => {
 
   it("renders real-data row with PIT_VERIFIED and REAL badge", () => {
     openInspector.mockClear();
-    const client = new QueryClient();
+    const client = createQueryClient();
     render(
       <QueryClientProvider client={client}>
         <StrategyLabPage />
@@ -207,7 +215,7 @@ describe("StrategyLabPage", () => {
 
   it("renders execution realism PROVEN and BLOCKED badges", () => {
     openInspector.mockClear();
-    const client = new QueryClient();
+    const client = createQueryClient();
     render(
       <QueryClientProvider client={client}>
         <StrategyLabPage />
@@ -221,7 +229,7 @@ describe("StrategyLabPage", () => {
 
   it("inspector payload includes data snapshot digest", () => {
     openInspector.mockClear();
-    const client = new QueryClient();
+    const client = createQueryClient();
     render(
       <QueryClientProvider client={client}>
         <StrategyLabPage />
@@ -237,7 +245,7 @@ describe("StrategyLabPage", () => {
 
   it("renders robustness PROVEN and BLOCKED badges", () => {
     openInspector.mockClear();
-    const client = new QueryClient();
+    const client = createQueryClient();
     render(
       <QueryClientProvider client={client}>
         <StrategyLabPage />
@@ -250,7 +258,7 @@ describe("StrategyLabPage", () => {
 
   it("inspector includes robustness fields", () => {
     openInspector.mockClear();
-    const client = new QueryClient();
+    const client = createQueryClient();
     render(
       <QueryClientProvider client={client}>
         <StrategyLabPage />
@@ -266,7 +274,7 @@ describe("StrategyLabPage", () => {
 
   it("inspector shows promotion blocked for robustness", () => {
     openInspector.mockClear();
-    const client = new QueryClient();
+    const client = createQueryClient();
     render(
       <QueryClientProvider client={client}>
         <StrategyLabPage />
@@ -281,7 +289,7 @@ describe("StrategyLabPage", () => {
 
   it("inspector includes execution realism slippage and capacity", () => {
     openInspector.mockClear();
-    const client = new QueryClient();
+    const client = createQueryClient();
     render(
       <QueryClientProvider client={client}>
         <StrategyLabPage />
@@ -296,7 +304,7 @@ describe("StrategyLabPage", () => {
   });
 
   it("renders analytics charts and batch ranking", () => {
-    const client = new QueryClient();
+    const client = createQueryClient();
     render(
       <QueryClientProvider client={client}>
         <StrategyLabPage />
@@ -312,7 +320,7 @@ describe("StrategyLabPage", () => {
 
   it("inspector includes gauntlet artifact gates", () => {
     openInspector.mockClear();
-    const client = new QueryClient();
+    const client = createQueryClient();
     render(
       <QueryClientProvider client={client}>
         <StrategyLabPage />
@@ -327,7 +335,7 @@ describe("StrategyLabPage", () => {
 
   it("inspector includes chart_inspector with evidence paths", () => {
     openInspector.mockClear();
-    const client = new QueryClient();
+    const client = createQueryClient();
     render(
       <QueryClientProvider client={client}>
         <StrategyLabPage />

@@ -959,6 +959,7 @@ def main(argv: list[str] | None = None) -> int:
     if ns.manifest_json:
         manifest = {
             "entries": [r.as_manifest_dict() for r in sorted(records, key=lambda r: r.provider_id)],
+            "generated_at_utc": datetime.now(timezone.utc).isoformat(),
             "schema_version": "provider_samples_manifest/v1",
         }
         (out_dir / "manifest.json").write_text(
