@@ -5,6 +5,7 @@
 This runbook defines a reproducible local evidence pack for validating `main` after PR queue merges and auditing stale branches safely for a single-tenant operator workflow.
 
 This process is local verification evidence only.
+Use `docs/operator/OPERATOR_EASE_OF_USE_COMMANDS.md` as the canonical end-to-end sequence (setup -> env check -> migrate -> preflight -> smoke -> doctor -> verification pack -> branch audit -> replay verification).
 
 ## What this process does
 
@@ -21,6 +22,7 @@ This process is local verification evidence only.
 - Not operator signoff.
 - Not live trading authorization.
 - Not profitability evidence.
+- Not a declaration that optional provider keys are mandatory for every diagnostic lane.
 
 ## Commands
 
@@ -30,6 +32,8 @@ Run the main evidence pack:
 python scripts/main_release_verification_pack.py `
   --output-dir artifacts/release_verification/latest `
   --json `
+  --no-frontend `
+  --no-pytest-full `
   --summary-markdown-output-path artifacts/release_verification/latest/main-release-verification-pack.md `
   --require-pass
 ```
@@ -38,6 +42,8 @@ Optional flags:
 
 - `--no-frontend` skips `npm run certify`.
 - `--no-pytest-full` skips full `python -m pytest -q`.
+- `--summary-markdown-output-path` must stay under `--output-dir`; paths outside are rejected.
+- `--output-dir` should normally remain `artifacts/release_verification/latest` for stable local evidence paths.
 
 Run the branch cleanup audit:
 
@@ -52,11 +58,35 @@ Optional full-repo handoff archive steps are documented in:
 
 - `docs/development/REPOSITORY_ARCHIVE_REPRODUCIBILITY.md`
 
+## Related integrity check (paper replay evidence)
+
+When provider paper artifacts are present, run replay verification separately:
+
+```powershell
+strategy-validator-paper-research-replay-verify `
+  --replay-manifest artifacts/provider_paper_loop/latest/replay_manifest.json `
+  --json
+```
+
+Replay verification is offline integrity only; it is not release approval, signoff, or profitability evidence.
+
 ## PASS and FAIL interpretation
 
 - `PASS` means all required gates passed.
-- `FAIL` means one or more required gates failed.
+- `FAIL` means one or more required gates failed; evidence files are still produced for diagnosis.
 - With `--require-pass`, the evidence pack exits non-zero on required gate failure.
+- Without `--require-pass`, exit code can remain zero while JSON/Markdown status stays `FAIL`.
+
+## Evidence pack schema highlights
+
+The JSON evidence includes:
+
+- `schema_version`, `generated_at_utc`, `repo_root`
+- `git_head_sha`, `git_branch`, `dirty_tree_status`
+- `status`, `failed_step`, `warnings`, `blockers`, `disclaimers`
+- `command_results[]` with `name`, `command` (redacted), `cwd`, `exit_code`, `status`, `duration_seconds`, `stdout_tail`, `stderr_tail`
+
+Redaction covers environment snapshots, command arguments, and output tails for token/key/secret/password/bearer patterns.
 
 ## Branch cleanup audit policy
 
@@ -80,3 +110,17 @@ Safe deletion policy:
 
 - Use direct process exit codes for pytest; do not infer pass/fail via `findstr`.
 - `npm run certify` may fail noisily if a dev server is running in parallel; stop dev servers before verification.
+
+## Linux/macOS notes
+
+- Keep `deployment.env` permission-restricted when used in the same session (`chmod 600 deployment.env`).
+- Use explicit `--token-source env-file` for API smoke if the API was started from `deployment.env`.
+
+## Evidence cleanup
+
+Generated local evidence should stay local and uncommitted:
+
+```bash
+git status --short
+rm -rf artifacts/release_verification/latest
+```

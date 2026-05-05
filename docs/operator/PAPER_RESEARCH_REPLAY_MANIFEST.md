@@ -2,6 +2,8 @@
 
 `paper_research_replay_manifest/v1` is the offline integrity contract for provider-backed paper research artifacts.
 
+In the single-tenant operator flow, replay verification is a late integrity step after env check, preflight, API smoke, operator doctor, and release verification pack (see `docs/operator/OPERATOR_EASE_OF_USE_COMMANDS.md`).
+
 ## Purpose
 
 The replay manifest answers:
@@ -38,18 +40,32 @@ strategy-validator-paper-research-replay-verify --replay-manifest artifacts/prov
 Expected behavior:
 
 - no provider network calls,
-- no provider key requirement,
+- no provider key requirement for replay verification itself,
 - no ledger mutation,
-- returns non-zero on missing files or digest mismatch.
+- returns non-zero on missing manifest, missing files, digest mismatch, and unsafe paths.
+- rejects path traversal/symlink escape outside allowed roots.
 
 ## What replay verifies
 
 - presence of declared input/output artifacts,
 - byte-level SHA256 digest match against manifest entries.
+- safe path containment under the allowed artifact root.
 
 ## What replay does not verify
 
 - alpha validity or profitability,
 - data licensing legal sufficiency beyond recorded caveats,
 - production readiness or deployment approval,
+- operator signoff,
 - live-trading safety authorization.
+
+## Discovery and portability
+
+Replay-manifest discovery is portable and explicit:
+
+1. explicit `--replay-manifest` path
+2. explicit `--artifact-root` (if provided to the CLI)
+3. `STRATEGY_VALIDATOR_ARTIFACT_ROOT`
+4. repo-root relative `artifacts/provider_paper_loop/latest/replay_manifest.json`
+
+Missing replay evidence is never treated as OK; read-plane payloads remain `UNKNOWN`/`PENDING` until evidence exists.

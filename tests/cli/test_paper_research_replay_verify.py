@@ -66,3 +66,42 @@ def test_replay_verify_cli_fails_on_missing_artifact(tmp_path: Path, monkeypatch
     out.unlink()
     monkeypatch.chdir(tmp_path)
     assert main(["--replay-manifest", str(replay_path)]) == 1
+
+
+def test_replay_verify_cli_fails_on_missing_manifest(tmp_path: Path, capsys) -> None:  # type: ignore[no-untyped-def]
+    code = main(["--replay-manifest", str(tmp_path / "missing.json"), "--json"])
+    assert code == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert "REPLAY_MANIFEST_NOT_FOUND" in payload["blockers"]
+
+
+def test_replay_verify_cli_fails_on_unsafe_path(tmp_path: Path, monkeypatch, capsys) -> None:  # type: ignore[no-untyped-def]
+    repo_root = tmp_path
+    outside = tmp_path.parent / "unsafe.txt"
+    outside.write_text("x", encoding="utf-8")
+    replay = build_replay_manifest(
+        repo_root=repo_root,
+        artifact_id="cli-unsafe",
+        command="strategy-validator-provider-paper-loop",
+        command_args_redacted=("--token", "SUPER_SECRET_VALUE"),
+        provider_id="demo_provider",
+        provider_name="Demo Provider",
+        provider_mode="OFFLINE_REPLAY",
+        provider_key_required=False,
+        provider_key_present=False,
+        trust_banner="SYNTHETIC_FIXTURE_RESEARCH_ONLY",
+        license_usage_caveat="fixture_research_only",
+        source_label="tests/fixtures/provider_snapshots",
+        config_fingerprint=config_fingerprint_from_env({}),
+        input_paths=(("input", outside),),
+        output_paths=(),
+    )
+    replay_path = tmp_path / "replay_manifest.json"
+    replay_path.write_text(json.dumps(replay.model_dump(mode="json"), indent=2), encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    code = main(["--replay-manifest", str(replay_path), "--json"])
+    assert code == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert any(item.startswith("UNSAFE_PATH:") for item in payload["blockers"])
+    rendered = json.dumps(payload, sort_keys=True)
+    assert "SUPER_SECRET_VALUE" not in rendered
