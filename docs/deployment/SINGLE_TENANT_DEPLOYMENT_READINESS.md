@@ -71,6 +71,22 @@ strategy-validator-single-tenant-preflight \
 
 `--prepare` creates the ledger parent, backup directory, artifact root, and applies SQLite migrations. Without `--prepare`, the command only verifies existing deployment state.
 
+### PowerShell note (local host runs)
+
+`strategy-validator-single-tenant-preflight` reads runtime config from the current process environment (and optional explicit path arguments), not directly from `deployment.env`. On Windows/PowerShell, load the env file into the session first:
+
+```powershell
+cd <repo-root>
+Get-Content .\deployment.env | ForEach-Object {
+  if ($_ -match '^\s*([^#][^=]+)=(.*)$') {
+    Set-Item -Path "env:$($matches[1].Trim())" -Value $matches[2].Trim()
+  }
+}
+strategy-validator-single-tenant-preflight --prepare --require-ready --repo-root . --json
+```
+
+If you skip this export step, preflight can report `mode_is_production=false` / `api_token_configured=false` even when `deployment.env` itself is valid.
+
 ## Container smoke command
 
 ```bash
