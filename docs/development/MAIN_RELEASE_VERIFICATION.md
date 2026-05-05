@@ -5,6 +5,7 @@
 This runbook defines a reproducible local evidence pack for validating `main` after PR queue merges and auditing stale branches safely for a single-tenant operator workflow.
 
 This process is local verification evidence only.
+Use `docs/operator/OPERATOR_EASE_OF_USE_COMMANDS.md` as the canonical end-to-end sequence (setup -> env check -> migrate -> preflight -> smoke -> doctor -> verification pack -> branch audit -> replay verification).
 
 ## What this process does
 
@@ -21,6 +22,7 @@ This process is local verification evidence only.
 - Not operator signoff.
 - Not live trading authorization.
 - Not profitability evidence.
+- Not a declaration that optional provider keys are mandatory for every diagnostic lane.
 
 ## Commands
 
@@ -38,6 +40,7 @@ Optional flags:
 
 - `--no-frontend` skips `npm run certify`.
 - `--no-pytest-full` skips full `python -m pytest -q`.
+- `--output-dir` should normally remain `artifacts/release_verification/latest` for stable local evidence paths.
 
 Run the branch cleanup audit:
 
@@ -47,6 +50,18 @@ python scripts/branch_cleanup_audit.py `
   --output-json-path artifacts/release_verification/latest/branch-cleanup-audit.json `
   --output-markdown-path artifacts/release_verification/latest/branch-cleanup-audit.md
 ```
+
+## Related integrity check (paper replay evidence)
+
+When provider paper artifacts are present, run replay verification separately:
+
+```powershell
+strategy-validator-paper-research-replay-verify `
+  --replay-manifest artifacts/provider_paper_loop/latest/replay_manifest.json `
+  --json
+```
+
+Replay verification is offline integrity only; it is not release approval, signoff, or profitability evidence.
 
 ## PASS and FAIL interpretation
 
@@ -76,3 +91,8 @@ Safe deletion policy:
 
 - Use direct process exit codes for pytest; do not infer pass/fail via `findstr`.
 - `npm run certify` may fail noisily if a dev server is running in parallel; stop dev servers before verification.
+
+## Linux/macOS notes
+
+- Keep `deployment.env` permission-restricted when used in the same session (`chmod 600 deployment.env`).
+- Use explicit `--token-source env-file` for API smoke if the API was started from `deployment.env`.
