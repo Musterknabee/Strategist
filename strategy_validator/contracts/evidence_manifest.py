@@ -19,6 +19,12 @@ class ProviderEvidenceManifest(BaseModel):
 
     manifest_version: str = "provider_evidence_manifest/v1"
     generated_at_utc: str
+    command: str = "python scripts/build_provider_evidence_manifest.py"
+    command_args_redacted: tuple[str, ...] = ()
+    paper_only: bool = True
+    live_trading_blocked: bool = True
+    replayable_offline: bool = True
+    replay_manifest_path: str | None = None
     source_run_id: str
     provider_sample_manifest_digest: str
     normalized_records_digest: str

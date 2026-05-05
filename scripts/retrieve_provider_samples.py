@@ -957,9 +957,19 @@ def main(argv: list[str] | None = None) -> int:
             sys.stderr.write(f"No fetcher registered for {pid!r}\n")
 
     if ns.manifest_json:
+        generated_at = datetime.now(timezone.utc).isoformat()
+        command_args_redacted = [
+            "<redacted>" if any(tok in str(arg).lower() for tok in ("key", "secret", "token", "password")) else str(arg)
+            for arg in (argv or [])
+        ]
         manifest = {
             "entries": [r.as_manifest_dict() for r in sorted(records, key=lambda r: r.provider_id)],
-            "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+            "generated_at_utc": generated_at,
+            "paper_only": True,
+            "live_trading_blocked": True,
+            "replayable_offline": True,
+            "command": "python scripts/retrieve_provider_samples.py",
+            "command_args_redacted": command_args_redacted,
             "schema_version": "provider_samples_manifest/v1",
         }
         (out_dir / "manifest.json").write_text(

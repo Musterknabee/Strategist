@@ -11,6 +11,12 @@ from pathlib import Path
 from typing import Any
 
 from strategy_validator.application.promotion_review_ops import build_promotion_review_packet
+from strategy_validator.application.paper_research_replay import (
+    build_replay_manifest,
+    config_fingerprint_from_env,
+    redact_command_args,
+    verify_replay_manifest,
+)
 from strategy_validator.application.research_os_paths import artifact_root_directory
 from strategy_validator.application.strategy_batch_loader import load_strategy_batch_spec
 from strategy_validator.application.paper_tracking_ops import (
@@ -133,6 +139,11 @@ def main(argv: list[str] | None = None) -> int:
         "paper_broker": None,
         "daily_tracking": None,
         "portfolio": None,
+        "artifact_descriptor": None,
+        "replay_manifest_path": None,
+        "replayable_offline": True,
+        "paper_only": True,
+        "live_trading_blocked": True,
         "warnings": [],
         "blockers": [],
         "digests": {},
@@ -231,6 +242,81 @@ def main(argv: list[str] | None = None) -> int:
     digest_body.pop("digests", None)
     manifest["digests"]["full_manifest_sha256"] = _digest_obj(digest_body)
     out_path = (art / "provider_paper_loop" / "latest" / "provider_paper_loop_manifest.json").resolve()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    _write_json(out_path, json.loads(json.dumps(manifest, default=str)))
+
+    provider_mode = "SYNTHETIC" if not bool(ns.allow_network) else "KEYED"
+    provider_name = ns.provider.strip() or "UNKNOWN"
+    input_paths: list[tuple[str, Path]] = [
+        ("batch_spec", batch_path),
+        ("fixture_provider_snapshot", fixture),
+    ]
+    sample_manifest_env = env.get("STRATEGY_VALIDATOR_PROVIDER_SAMPLES_MANIFEST", "").strip()
+    if sample_manifest_env:
+        sample_path = Path(sample_manifest_env)
+        if not sample_path.is_absolute():
+            sample_path = (repo_root / sample_path).resolve()
+        input_paths.append(("provider_samples_manifest", sample_path))
+    run_dir = Path((manifest.get("gauntlet_run") or {}).get("output_dir", "")) if manifest.get("gauntlet_run") else None
+    output_paths: list[tuple[str, Path]] = []
+    if run_dir and run_dir.is_dir():
+        output_paths.append(("batch_summary", run_dir / "batch_summary.json"))
+        output_paths.append(("portfolio_allocation", run_dir / "portfolio_allocation_result.json"))
+    if manifest.get("paper_broker"):
+        output_paths.append(("paper_broker_status", Path(str(manifest["paper_broker"]["artifact_path"]))))
+    replay_path = (art / "provider_paper_loop" / "latest" / "replay_manifest.json").resolve()
+    replay_model = build_replay_manifest(
+        repo_root=repo_root,
+        artifact_id=ns.run_id.strip(),
+        command="strategy-validator-provider-paper-loop",
+        command_args_redacted=redact_command_args(argv or []),
+        provider_id=provider_name,
+        provider_name=provider_name,
+        provider_mode=provider_mode,
+        provider_key_required=bool(ns.allow_network),
+        provider_key_present=bool(ns.allow_network),
+        trust_banner="SYNTHETIC_FIXTURE_RESEARCH_ONLY" if provider_mode == "SYNTHETIC" else "UNKNOWN",
+        license_usage_caveat="fixture_research_only" if provider_mode == "SYNTHETIC" else "provider_license_required",
+        source_label="tests/fixtures/provider_snapshots",
+        config_fingerprint=config_fingerprint_from_env(env),
+        input_paths=input_paths,
+        output_paths=output_paths,
+        warnings=manifest.get("warnings", ()),
+        blockers=manifest.get("blockers", ()),
+    )
+    _write_json(replay_path, json.loads(replay_model.model_dump_json()))
+    replay_verify = verify_replay_manifest(replay_path, repo_root=repo_root).model_dump(mode="json")
+    manifest["artifact_descriptor"] = {
+        "schema_version": "paper_research_artifact_descriptor/v1",
+        "artifact_id": ns.run_id.strip(),
+        "artifact_kind": "provider_paper_loop",
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+        "command": "strategy-validator-provider-paper-loop",
+        "command_args_redacted": list(redact_command_args(argv or [])),
+        "code_fingerprint": replay_model.code_fingerprint,
+        "git_commit": replay_model.git_commit,
+        "config_fingerprint": replay_model.config_fingerprint,
+        "provider_id": replay_model.provider_id,
+        "provider_name": replay_model.provider_name,
+        "provider_mode": replay_model.provider_mode,
+        "provider_key_required": replay_model.provider_key_required,
+        "provider_key_present": replay_model.provider_key_present,
+        "trust_banner": replay_model.trust_banner,
+        "license_usage_caveat": replay_model.license_usage_caveat,
+        "source_label": replay_model.source_label,
+        "input_artifact_count": len(replay_model.input_artifacts),
+        "output_artifact_count": len(replay_model.output_artifacts),
+        "paper_only": True,
+        "live_trading_blocked": True,
+        "replayable_offline": True,
+        "replay_manifest_path": str(replay_path),
+        "replay_verification": replay_verify,
+    }
+    manifest["replay_manifest_path"] = str(replay_path)
+    manifest["digests"]["replay_manifest_sha256"] = _digest_obj(json.loads(replay_model.model_dump_json()))
+    digest_body = json.loads(json.dumps(manifest, default=str))
+    digest_body.pop("digests", None)
+    manifest["digests"]["full_manifest_sha256"] = _digest_obj(digest_body)
     try:
         loop = ProviderPaperLoopManifest.model_validate(manifest)
         _write_json(out_path, json.loads(loop.model_dump_json()))
