@@ -18,6 +18,7 @@ export type OperatorModeId =
 export type CockpitPostGridSectionKey =
   | "topology"
   | "research_paper_drilldown"
+  | "candidate_workbench"
   | "capital_firewall"
   | "operator_health"
   | "remediation"
@@ -35,6 +36,7 @@ export type CockpitPostGridSectionKey =
 export const COCKPIT_POST_GRID_SECTION_ORDER: CockpitPostGridSectionKey[] = [
   "topology",
   "research_paper_drilldown",
+  "candidate_workbench",
   "capital_firewall",
   "operator_health",
   "remediation",
@@ -78,6 +80,7 @@ export const OPERATOR_MODE_DEFINITIONS: Record<OperatorModeId, OperatorModeDefin
     primary_panes: [
       "Seven-pane grid (Overview, Readiness, Evidence chain, Providers, Operator actions, Workboard, Runtime)",
       "Operator health / alerts",
+      "Candidate workbench",
       "Research OS + Paper execution drilldowns",
       "Capital / execution firewall",
     ],
@@ -107,7 +110,7 @@ export const OPERATOR_MODE_DEFINITIONS: Record<OperatorModeId, OperatorModeDefin
     mode_id: "RESEARCH_REVIEW",
     label: "Research Review",
     purpose: "Strategy lifecycle, batches, backtests, paper tracking, and research OS evidence rows.",
-    primary_panes: ["Strategy lifecycle", "Research batch forensics", "Research OS + Paper drilldowns"],
+    primary_panes: ["Candidate workbench", "Strategy lifecycle", "Research batch forensics", "Research OS + Paper drilldowns"],
     secondary_panes: ["Seven-pane grid", "Evidence runbook", "Promotion dossier", "Topology"],
     recommended_next_action_source: "GET /ui/research-os/status (aggregated), strategy batch + backtest forensics routes, lifecycle payloads.",
     safety: "READ_PLANE_ONLY",
@@ -186,6 +189,7 @@ export function getPostGridSectionOrder(mode: OperatorModeId): CockpitPostGridSe
       return moveKeysToFront(base, ["first_run", "provider_setup", "operator_health", "remediation", "topology"]);
     case "RESEARCH_REVIEW":
       return moveKeysToFront(base, [
+        "candidate_workbench",
         "strategy_lifecycle",
         "research_batch",
         "research_paper_drilldown",
