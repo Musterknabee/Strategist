@@ -45,6 +45,12 @@ strategy-validator-deployment-env-check deployment.env --require-valid --json
 
 The env checker emits `single_tenant_deployment_env_check/v1` and blocks common deployment mistakes before container startup. For the generated Docker/systemd bundle, the writable root policy is intentionally strict: ledger and artifact paths must stay under `/var/lib/strategy-validator`, and backups must stay under `/var/backups/strategy-validator`. The optional `STRATEGY_VALIDATOR_HOST_PORT` is also validated here so Compose, systemd, and API smoke agree on the same loopback port before first boot.
 
+Artifact path governance:
+
+- Runtime evidence writers should target `${STRATEGY_VALIDATOR_ARTIFACT_ROOT}` (or explicit subpaths under it).
+- Local helper scripts that accept relative output paths resolve them under artifact root.
+- Avoid writing durable evidence into tracked source directories outside artifact root.
+
 - missing required production variables,
 - non-production mode,
 - placeholder or low-entropy-looking API tokens,

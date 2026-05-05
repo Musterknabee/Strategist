@@ -5,9 +5,12 @@ import argparse
 import json
 import shutil
 import subprocess
+import sys
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+
+from strategy_validator.application.research_os_paths import resolve_artifact_output_dir, safe_relative_artifact_path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -202,21 +205,50 @@ def _markdown_summary(payload: dict[str, object]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _resolve_output_path(raw_path: str, *, artifact_root: Path) -> Path:
+    raw = Path(raw_path).expanduser()
+    if raw.is_absolute():
+        resolved = raw.resolve()
+    else:
+        resolved = (artifact_root / safe_relative_artifact_path(raw)).resolve()
+    if resolved != artifact_root and artifact_root not in resolved.parents:
+        raise ValueError("ARTIFACT_OUTPUT_OUTSIDE_ROOT")
+    return resolved
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Audit local/remote branches for safe manual cleanup.")
     parser.add_argument("--output-json-path", default="")
     parser.add_argument("--output-markdown-path", default="")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
+    try:
+        artifact_root = resolve_artifact_output_dir(
+            output_dir=None,
+            default_subdir=None,
+            repo_root=REPO_ROOT,
+            create=False,
+        )
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
 
     payload = build_branch_cleanup_audit()
 
     if args.output_json_path:
-        out = Path(args.output_json_path).resolve()
+        try:
+            out = _resolve_output_path(args.output_json_path, artifact_root=artifact_root)
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     if args.output_markdown_path:
-        out_md = Path(args.output_markdown_path).resolve()
+        try:
+            out_md = _resolve_output_path(args.output_markdown_path, artifact_root=artifact_root)
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
         out_md.parent.mkdir(parents=True, exist_ok=True)
         out_md.write_text(_markdown_summary(payload), encoding="utf-8")
 
