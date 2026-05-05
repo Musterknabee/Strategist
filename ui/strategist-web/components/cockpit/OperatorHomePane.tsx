@@ -10,25 +10,63 @@ type Props = { summary: OperatorHomeSummary; onShowAdvanced: () => void; onOpenD
 const v = (n: number | null) => (n == null ? "UNKNOWN" : String(n));
 
 export function OperatorHomePane({ summary, onShowAdvanced, onOpenDetail }: Props) {
+  const evidenceState = summary.replay_problem_count > 0 ? "DEGRADED" : summary.replay_verified_count > 0 ? "INSPECTABLE" : "UNKNOWN";
+  const providerState =
+    summary.provider_pending_key_count > 0
+      ? "PENDING_KEY"
+      : summary.provider_ok_count > 0
+        ? "OK"
+        : summary.stale_data_count > 0
+          ? "STALE"
+          : "UNKNOWN";
+
   return (
     <section className="cockpit-home" data-testid="cockpit-operator-home">
       <Pane title="Operator Home" dense badge={<StatusBadge raw={summary.overall_status} />}>
-        <p className="cockpit-home__intro" data-testid="cockpit-home-safety">
-          Paper/research only. No live trading, no broker orders, no production deployment approval, no operator signoff,
-          and no profitability claim. Missing data remains UNKNOWN or NO_PAPER_DATA; evidence/replay verifies integrity,
-          not strategy quality.
+        <header className="cockpit-home__hero">
+          <div>
+            <h2>Operator Home</h2>
+            <p>Calm triage for current read-plane status, attention items, review paths, and safety boundaries.</p>
+          </div>
+          <span className="cockpit-safety-chip" data-testid="cockpit-home-safety">
+            Paper/research only · No live trading · No broker orders · No production deployment approval · No operator signoff · No profitability claim · Missing data remains UNKNOWN or NO_PAPER_DATA
+          </span>
+        </header>
+        <p className="cockpit-home__intro">
+          Missing data remains UNKNOWN or NO_PAPER_DATA. Evidence/replay verifies artifact integrity, not strategy quality.
         </p>
         <OperatorFlowStrip onOpenDetail={onOpenDetail} />
-        <div className="cockpit-home__cards">
-          <article className="cockpit-home__card"><span>Strategies</span><strong>{v(summary.strategy_count)}</strong></article>
-          <article className="cockpit-home__card"><span>Candidates</span><strong>{v(summary.active_candidate_count)}</strong></article>
-          <article className="cockpit-home__card"><span>Paper Wins</span><strong>{summary.paper_win_count}</strong></article>
-          <article className="cockpit-home__card"><span>Paper Losses</span><strong>{summary.paper_loss_count}</strong></article>
-          <article className="cockpit-home__card"><span>Paper Unknown</span><strong>{summary.paper_unknown_count}</strong></article>
-          <article className="cockpit-home__card"><span>Blocked</span><strong>{summary.blocked_count}</strong></article>
-          <article className="cockpit-home__card"><span>Needs Review</span><strong>{summary.warning_count}</strong></article>
-          <article className="cockpit-home__card"><span>Replay Issues</span><strong>{summary.replay_problem_count}</strong></article>
-          <article className="cockpit-home__card"><span>Provider Health</span><strong>OK:{summary.provider_ok_count} · Pending:{summary.provider_pending_key_count}</strong></article>
+        <div className="cockpit-home__cards" aria-label="Operator status summary">
+          <article className="cockpit-home__card cockpit-home__card--primary">
+            <span>Overall status</span>
+            <strong><StatusBadge raw={summary.overall_status} /></strong>
+            <em>{summary.next_action_reason}</em>
+          </article>
+          <article className="cockpit-home__card">
+            <span>Needs attention</span>
+            <strong>{summary.blocked_count + summary.warning_count}</strong>
+            <em>Blocked {summary.blocked_count} · review {summary.warning_count}</em>
+          </article>
+          <article className="cockpit-home__card">
+            <span>Candidates / strategies</span>
+            <strong>{v(summary.active_candidate_count)} / {v(summary.strategy_count)}</strong>
+            <em>Review candidates before judging quality</em>
+          </article>
+          <article className="cockpit-home__card">
+            <span>Paper data</span>
+            <strong>{summary.paper_unknown_count > 0 ? "NO_PAPER_DATA" : `${summary.paper_win_count}W / ${summary.paper_loss_count}L`}</strong>
+            <em>Missing paper data is not success</em>
+          </article>
+          <article className="cockpit-home__card">
+            <span>Evidence / replay</span>
+            <strong>{evidenceState}</strong>
+            <em>{summary.replay_problem_count} replay issues</em>
+          </article>
+          <article className="cockpit-home__card">
+            <span>Provider / data</span>
+            <strong>{providerState}</strong>
+            <em>OK {summary.provider_ok_count} · pending key {summary.provider_pending_key_count}</em>
+          </article>
         </div>
         <div className="cockpit-home__split">
           <div>
@@ -43,19 +81,22 @@ export function OperatorHomePane({ summary, onShowAdvanced, onOpenDetail }: Prop
             <p className="cockpit-home__meta">Generated: {summary.generated_at_utc}</p>
           </div>
         </div>
-        <div className="cockpit-home__table-wrap">
-          <table className="term-dense-table" data-testid="cockpit-home-scoreboard">
-            <thead><tr><th>Strategy</th><th>Paper result</th><th>Evidence</th><th>Replay</th><th>Data health</th><th>Status</th><th>Next action</th><th>Details</th></tr></thead>
-            <tbody>
-              {summary.strategy_rows.length > 0 ? summary.strategy_rows.map((row) => (
-                <tr key={row.strategy_id}>
-                  <td>{row.label}</td><td>{row.paper_result_label}</td><td>{row.evidence_status}</td><td>{row.replay_status}</td><td>{row.provider_status}</td><td><StatusBadge raw={row.status} /></td><td>{row.next_action}</td>
-                  <td><button type="button" className="linkish" aria-label={`Open ${row.label} details in ${row.detail_target.replace(/_/g, " ")}`} onClick={() => onOpenDetail((row.detail_target as OperatorModeId) || "DAILY_OPS")}>Open {row.detail_target.replace(/_/g, " ").toLowerCase()}</button></td>
-                </tr>
-              )) : <tr><td colSpan={8}>UNKNOWN · no strategy rows available from read-plane payloads.</td></tr>}
-            </tbody>
-          </table>
-        </div>
+        <details className="cockpit-home__scoreboard">
+          <summary>Show strategy scoreboard detail</summary>
+          <div className="cockpit-home__table-wrap">
+            <table className="term-dense-table" data-testid="cockpit-home-scoreboard">
+              <thead><tr><th>Strategy</th><th>Paper result</th><th>Evidence</th><th>Replay</th><th>Data health</th><th>Status</th><th>Next action</th><th>Details</th></tr></thead>
+              <tbody>
+                {summary.strategy_rows.length > 0 ? summary.strategy_rows.map((row) => (
+                  <tr key={row.strategy_id}>
+                    <td>{row.label}</td><td>{row.paper_result_label}</td><td>{row.evidence_status}</td><td>{row.replay_status}</td><td>{row.provider_status}</td><td><StatusBadge raw={row.status} /></td><td>{row.next_action}</td>
+                    <td><button type="button" className="linkish" aria-label={`Open ${row.label} details in ${row.detail_target.replace(/_/g, " ")}`} onClick={() => onOpenDetail((row.detail_target as OperatorModeId) || "DAILY_OPS")}>Open {row.detail_target.replace(/_/g, " ").toLowerCase()}</button></td>
+                  </tr>
+                )) : <tr><td colSpan={8}>UNKNOWN · no strategy rows available from read-plane payloads.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </details>
         <div className="cockpit-home__actions" data-testid="cockpit-home-links">
           <button type="button" className="term-btn term-btn--sm" data-testid="cockpit-open-candidate-workbench" onClick={() => onOpenDetail("RESEARCH_REVIEW")}>Open Candidate Workbench</button>
           <button type="button" className="term-btn term-btn--sm" onClick={() => onOpenDetail("FORENSIC_AUDIT")}>Evidence / Replay</button>

@@ -22,6 +22,9 @@ describe("OperatorModeSwitchboard", () => {
     expect(screen.getByTestId("cockpit-mode-switchboard")).toBeTruthy();
     expect(screen.getByTestId("cockpit-mode-select-FIRST_RUN")).toBeTruthy();
     expect(screen.getByTestId("cockpit-mode-select-SYSTEM_TOPOLOGY")).toBeTruthy();
+    expect(screen.getByLabelText("Setup modes")).toBeTruthy();
+    expect(screen.getByLabelText("Evidence / release modes")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "DAILY OPS" }).textContent).toMatch(/Command-capable/i);
     expect(screen.getByTestId("cockpit-mode-command-banner")).toBeTruthy();
     fireEvent.click(screen.getByTestId("cockpit-mode-select-RELEASE_CONTROL"));
     expect(onChange).toHaveBeenCalledWith("RELEASE_CONTROL");
