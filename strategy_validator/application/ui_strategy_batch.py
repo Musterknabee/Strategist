@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from strategy_validator.application.paper_research_replay import latest_replay_verification_summary
 from strategy_validator.contracts.strategy_batch import StrategyBatchRunSummary
 
 _SCHEMA = "ui_strategy_batch/v1"
@@ -88,6 +89,7 @@ def build_ui_strategy_batch_latest_payload(*, repo_root: Path | None = None) -> 
         "degraded": degraded,
         "latest": summary.model_dump(mode="json") if summary else None,
         "portfolio_allocation": _read_portfolio_allocation(run_dir),
+        "artifact_replay": latest_replay_verification_summary(repo_root=repo_root),
         "provider_backed_gauntlet": {
             "provider_snapshot_strategy_count": provider_rows,
             "has_provider_strategies": provider_rows > 0,

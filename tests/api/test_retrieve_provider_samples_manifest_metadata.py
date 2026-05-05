@@ -36,3 +36,7 @@ def test_retrieve_provider_samples_manifest_includes_generated_timestamp(tmp_pat
     assert payload["schema_version"] == "provider_samples_manifest/v1"
     assert isinstance(payload.get("generated_at_utc"), str)
     assert payload["generated_at_utc"]
+    assert payload["paper_only"] is True
+    assert payload["live_trading_blocked"] is True
+    assert payload["replayable_offline"] is True
+    assert payload["command"] == "python scripts/retrieve_provider_samples.py"

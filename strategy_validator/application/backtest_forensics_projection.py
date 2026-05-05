@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from strategy_validator.application.paper_research_replay import latest_replay_verification_summary
 from strategy_validator.application.ui_strategy_batch import _default_scan_root, discover_batch_by_run_id, discover_latest_batch_summary
 from strategy_validator.contracts.backtest_forensics import (
     BacktestForensicStrategyRow,
@@ -204,6 +205,7 @@ def _payload(path: Path | None, summary: StrategyBatchRunSummary | None, *, repo
         summary=_summary(summary, rows),
         strategies=rows,
         raw_strategy_batch_route=route,
+        artifact_replay=latest_replay_verification_summary(repo_root=repo_root),
     ).model_dump(mode="json")
 
 

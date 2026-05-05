@@ -29,6 +29,8 @@ def build_provider_evidence_manifest_payload(
     health_snapshot: ProviderHealthSnapshot,
     generated_at_utc: str | None = None,
     source_run_id: str | None = None,
+    command_args_redacted: tuple[str, ...] = (),
+    replay_manifest_path: str | None = None,
 ) -> ProviderEvidenceManifest:
     when = generated_at_utc or datetime.now(timezone.utc).isoformat()
     run_id = source_run_id or str(uuid.uuid4())
@@ -78,6 +80,8 @@ def build_provider_evidence_manifest_payload(
 
     return ProviderEvidenceManifest(
         generated_at_utc=when,
+        command_args_redacted=command_args_redacted,
+        replay_manifest_path=replay_manifest_path,
         source_run_id=run_id,
         provider_sample_manifest_digest=sp_digest,
         normalized_records_digest=norm_digest or _json_digest([]),
