@@ -97,6 +97,12 @@ Use canonical paths so evidence stays predictable:
 7. `python scripts/branch_cleanup_audit.py --json --output-json-path artifacts/release_verification/latest/branch-cleanup-audit.json --output-markdown-path artifacts/release_verification/latest/branch-cleanup-audit.md`
 8. `strategy-validator-paper-research-replay-verify --replay-manifest artifacts/provider_paper_loop/latest/replay_manifest.json --json`
 
+The release verification pack status is evidence only:
+
+- `PASS`/`FAIL` describe local gate outcomes.
+- It does not grant deployment approval or operator signoff.
+- Use `--require-pass` when you need non-zero exit on failed required steps.
+
 ## PASS / WARN / FAIL meaning
 
 - `PASS`: no blockers in local diagnostic scope.
