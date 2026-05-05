@@ -54,6 +54,10 @@ python scripts/branch_cleanup_audit.py `
   --output-markdown-path artifacts/release_verification/latest/branch-cleanup-audit.md
 ```
 
+Optional full-repo handoff archive steps are documented in:
+
+- `docs/development/REPOSITORY_ARCHIVE_REPRODUCIBILITY.md`
+
 ## Related integrity check (paper replay evidence)
 
 When provider paper artifacts are present, run replay verification separately:

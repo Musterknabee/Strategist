@@ -33,6 +33,9 @@ EXCLUDED_DIR_NAMES = {
     ".venv",
     "venv",
     "node_modules",
+    ".next",
+    ".cache",
+    ".turbo",
     "dist",
     "build",
     "htmlcov",
@@ -41,6 +44,18 @@ EXCLUDED_DIR_NAMES = {
 }
 EXCLUDED_SUFFIXES = {".pyc", ".pyo", ".zip", ".tar", ".gz", ".tgz", ".sqlite", ".sqlite3", ".db", ".db-wal", ".db-shm", ".log", ".jsonl", ".coverage"}
 EXCLUDED_TOP_LEVEL_NAMES = frozenset({".coverage", "coverage.xml"})
+EXCLUDED_FILE_BASENAMES = frozenset(
+    {
+        ".env",
+        ".env.local",
+        ".envrc",
+        "deployment.env",
+        "id_rsa",
+        "id_dsa",
+        "id_ed25519",
+    }
+)
+EXCLUDED_SECRET_SUFFIXES = frozenset({".pem", ".key", ".p12", ".pfx", ".crt"})
 
 
 class UnsafeArchiveOutputError(ValueError):
@@ -75,6 +90,9 @@ class PackageRepoReport:
     included_file_count: int
     skipped_file_count: int
     skipped_generated_roots: tuple[str, ...]
+    exclusions_applied: tuple[str, ...]
+    warnings: tuple[str, ...]
+    blockers: tuple[str, ...]
     archive_sha256: str | None = None
 
     def to_payload(self) -> dict[str, object]:
@@ -111,7 +129,11 @@ def include_in_clean_repo_archive(path: Path, *, repo_root: Path) -> bool:
         return False
     if rel.name in EXCLUDED_TOP_LEVEL_NAMES:
         return False
+    if rel.name.lower() in EXCLUDED_FILE_BASENAMES:
+        return False
     if path.suffix in EXCLUDED_SUFFIXES:
+        return False
+    if path.suffix.lower() in EXCLUDED_SECRET_SUFFIXES:
         return False
     if path.is_symlink():
         return False
@@ -295,6 +317,16 @@ def build_clean_repo_zip(
         included_file_count=len(files),
         skipped_file_count=skipped_count,
         skipped_generated_roots=generated_roots,
+        exclusions_applied=(
+            "top_level_generated_dirs",
+            "runtime_and_build_dirs",
+            "runtime_suffixes",
+            "env_files",
+            "secret_key_material",
+            "symlinks",
+        ),
+        warnings=(),
+        blockers=(),
         archive_sha256=archive_sha256,
     )
 
@@ -322,6 +354,9 @@ def main(argv: list[str] | None = None) -> int:
             "included_file_count": 0,
             "skipped_file_count": 0,
             "skipped_generated_roots": [],
+            "exclusions_applied": [],
+            "warnings": [],
+            "blockers": ["UNSAFE_ARCHIVE_OUTPUT"],
             "archive_sha256": None,
             "error": str(exc),
         }

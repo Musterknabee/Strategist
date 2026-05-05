@@ -39,7 +39,10 @@ class ArchiveVerificationReport:
     expected_file_count: int
     archive_file_count: int
     archive_sha256: str | None
+    archive_size_bytes: int
     failure_count: int
+    warnings: tuple[str, ...]
+    blockers: tuple[str, ...]
     failures: tuple[ArchiveVerificationFailure, ...]
 
     def to_payload(self) -> dict[str, object]:
@@ -77,7 +80,10 @@ def verify_clean_repo_archive(
             expected_file_count=0,
             archive_file_count=0,
             archive_sha256=None,
+            archive_size_bytes=0,
             failure_count=len(failures),
+            warnings=(),
+            blockers=("REPO_ROOT_PATH_INTEGRITY",),
             failures=tuple(failures),
         )
 
@@ -104,7 +110,10 @@ def verify_clean_repo_archive(
             expected_file_count=len(expected_files),
             archive_file_count=0,
             archive_sha256=None,
+            archive_size_bytes=0,
             failure_count=len(failures),
+            warnings=(),
+            blockers=("ARCHIVE_PATH_INTEGRITY",),
             failures=tuple(failures),
         )
     if not archive.exists():
@@ -117,7 +126,10 @@ def verify_clean_repo_archive(
             expected_file_count=len(expected_files),
             archive_file_count=0,
             archive_sha256=None,
+            archive_size_bytes=0,
             failure_count=len(failures),
+            warnings=(),
+            blockers=("ARCHIVE_MISSING",),
             failures=tuple(failures),
         )
     if not archive.is_file():
@@ -130,15 +142,22 @@ def verify_clean_repo_archive(
             expected_file_count=len(expected_files),
             archive_file_count=0,
             archive_sha256=None,
+            archive_size_bytes=0,
             failure_count=len(failures),
+            warnings=(),
+            blockers=("ARCHIVE_NOT_REGULAR_FILE",),
             failures=tuple(failures),
         )
 
     archive_sha256 = _sha256_file(archive)
+    archive_size_bytes = archive.stat().st_size
+    warnings: list[str] = []
     try:
         with zipfile.ZipFile(archive) as handle:
             infos = handle.infolist()
             archive_names = [info.filename for info in infos]
+            if archive_size_bytes > 2 * 1024 * 1024 * 1024:
+                warnings.append("ARCHIVE_SIZE_OVER_2GB")
             if archive_names != sorted(archive_names):
                 failures.append(ArchiveVerificationFailure(name="entry_order", detail="archive entries are not lexicographically sorted"))
             duplicate_names = sorted({name for name in archive_names if archive_names.count(name) > 1})
@@ -155,6 +174,14 @@ def verify_clean_repo_archive(
                 failures.append(ArchiveVerificationFailure(name="extra_entries", detail=", ".join(extra[:20])))
 
             for info in infos:
+                name = info.filename
+                normalized = Path(name)
+                if name.startswith("/") or name.startswith("\\") or normalized.is_absolute():
+                    failures.append(ArchiveVerificationFailure(name="entry_absolute_path", detail=name))
+                    break
+                if ".." in normalized.parts:
+                    failures.append(ArchiveVerificationFailure(name="entry_path_traversal", detail=name))
+                    break
                 if info.date_time != EXPECTED_ZIP_TIMESTAMP:
                     failures.append(
                         ArchiveVerificationFailure(
@@ -196,6 +223,7 @@ def verify_clean_repo_archive(
     except zipfile.BadZipFile as exc:
         failures.append(ArchiveVerificationFailure(name="zip_readable", detail=f"bad ZIP file: {exc}"))
 
+    blockers = tuple(sorted({failure.name.upper() for failure in failures}))
     return ArchiveVerificationReport(
         schema_version="repo_archive_verify/v1",
         status="PASS" if not failures else "FAIL",
@@ -204,7 +232,10 @@ def verify_clean_repo_archive(
         expected_file_count=len(expected_files),
         archive_file_count=len(archive_names),
         archive_sha256=archive_sha256,
+        archive_size_bytes=archive_size_bytes,
         failure_count=len(failures),
+        warnings=tuple(sorted(set(warnings))),
+        blockers=blockers,
         failures=tuple(failures),
     )
 
