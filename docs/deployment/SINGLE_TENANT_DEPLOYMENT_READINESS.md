@@ -171,6 +171,9 @@ The preflight emits `single_tenant_deployment_preflight/v1` and requires all of 
 - optional backup/restore drill passes when requested,
 - frontend readiness is not claimed prematurely.
 
+`strategy-validator-operator-doctor` summarizes these readiness signals for local diagnostics, but it does not approve deployment, does not provide operator signoff, and does not authorize live trading.
+Doctor `PASS/WARN/FAIL` is a compatibility rollup over canonical readiness labels (`OK`, `WARN`, `BLOCKED`, `DEGRADED`, `UNKNOWN`, `PENDING`, `NOT_CONFIGURED`, `OPTIONAL_NOT_CONFIGURED`).
+
 Canonical readiness semantics used by backend readiness surfaces:
 
 - `OK`: required runtime/deployment evidence passed.

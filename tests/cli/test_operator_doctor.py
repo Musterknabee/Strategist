@@ -31,6 +31,18 @@ def test_json_report_shape_and_disclaimers(tmp_path: Path) -> None:
     payload = build_operator_doctor_report(repo_root=tmp_path, env_file=env)
     assert payload["schema_version"] == "operator_doctor/v1"
     assert payload["status"] in {"PASS", "WARN", "FAIL", "UNKNOWN"}
+    assert payload["readiness_summary"]["runtime_readiness_status"] in {
+        "OK",
+        "WARN",
+        "BLOCKED",
+        "DEGRADED",
+        "UNKNOWN",
+        "PENDING",
+        "NOT_CONFIGURED",
+        "OPTIONAL_NOT_CONFIGURED",
+    }
+    assert "deployment_readiness" in payload
+    assert "strategic_horizon_readiness" in payload
     assert "not production deployment approval" in " ".join(item.lower() for item in payload["disclaimers"])
     assert "no live trading authorization" in " ".join(item.lower() for item in payload["disclaimers"])
 
@@ -46,7 +58,7 @@ def test_placeholder_token_is_not_ready(tmp_path: Path) -> None:
     _write_env(env, token="CHANGEME")
     payload = build_operator_doctor_report(repo_root=tmp_path, env_file=env)
     assert payload["ok"] is False
-    assert payload["deployment_env_status"]["status"] == "FAIL"
+    assert payload["deployment_env_status"]["status"] == "BLOCKED"
     assert any("deployment env check failed" in item.lower() for item in payload["blockers"])
 
 
@@ -55,6 +67,7 @@ def test_missing_provider_keys_warn_not_fatal(tmp_path: Path) -> None:
     _write_env(env)
     payload = build_operator_doctor_report(repo_root=tmp_path, env_file=env)
     assert payload["provider_key_posture"]["status"] == "PENDING_KEY"
+    assert payload["status"] in {"WARN", "FAIL"}
     assert any("optional provider keys" in item.lower() for item in payload["warnings"])
 
 
@@ -74,6 +87,13 @@ def test_next_commands_deterministic(tmp_path: Path) -> None:
     payload_a = build_operator_doctor_report(repo_root=tmp_path, env_file=tmp_path / "missing.env")
     payload_b = build_operator_doctor_report(repo_root=tmp_path, env_file=tmp_path / "missing.env")
     assert payload_a["next_recommended_commands"] == payload_b["next_recommended_commands"]
+
+
+def test_status_mapping_is_documented(tmp_path: Path) -> None:
+    payload = build_operator_doctor_report(repo_root=tmp_path, env_file=tmp_path / "missing.env")
+    mapping = payload["status_mapping"]
+    assert "FAIL" in mapping and "BLOCKED" in mapping["FAIL"]
+    assert "WARN" in mapping and "PENDING" in mapping["WARN"]
 
 
 def test_require_ready_returns_non_zero_when_blocked(tmp_path: Path, capsys) -> None:
