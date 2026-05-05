@@ -92,6 +92,13 @@ def main(argv: list[str] | None = None) -> int:
         samples_manifest_path=samples,
         normalized_records_path=norm_path,
         health_snapshot=health,
+        command_args_redacted=tuple(
+            "<redacted>" if any(t in str(arg).lower() for t in ("key", "secret", "token", "password")) else str(arg)
+            for arg in (argv or [])
+        ),
+        replay_manifest_path=(
+            _REPO_ROOT / "artifacts" / "provider_paper_loop" / "latest" / "replay_manifest.json"
+        ).as_posix(),
     )
     payload: dict[str, Any] = model.model_dump(mode="json")
     indent = 2 if ns.json else None

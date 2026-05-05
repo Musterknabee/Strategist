@@ -5,6 +5,14 @@ import { describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import PaperTrackingPage from "./page";
 
+function createQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { gcTime: Infinity, retry: false },
+    },
+  });
+}
+
 vi.mock("@/lib/config/public-config", () => ({
   tryGetPublicStrategistApiBaseUrl: () => ({ ok: true as const, baseUrl: "http://127.0.0.1:8000" }),
 }));
@@ -64,8 +72,8 @@ vi.mock("@/lib/terminal/cockpit-context", () => ({
 
 describe("PaperTrackingPage promotion banner", () => {
   it("renders promotion review gate banner and not-approval copy", () => {
-    const client = new QueryClient();
-    render(
+    const client = createQueryClient();
+    const view = render(
       <QueryClientProvider client={client}>
         <PaperTrackingPage />
       </QueryClientProvider>,
@@ -73,5 +81,7 @@ describe("PaperTrackingPage promotion banner", () => {
     expect(screen.getByText(/Promotion review gate/i)).toBeTruthy();
     expect(screen.getByText(/not live trading approval/i)).toBeTruthy();
     expect(screen.getAllByText("PROMOTION_REVIEW_READY").length).toBeGreaterThan(0);
+    view.unmount();
+    client.clear();
   });
 });

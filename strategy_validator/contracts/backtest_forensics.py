@@ -62,6 +62,7 @@ class BacktestForensicsPayload(BaseModel):
     summary: BacktestForensicsSummary
     strategies: list[BacktestForensicStrategyRow] = Field(default_factory=list)
     raw_strategy_batch_route: str | None = None
+    artifact_replay: dict[str, Any] = Field(default_factory=dict)
     model_config = {"extra": "forbid"}
 
 

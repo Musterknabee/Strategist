@@ -112,6 +112,11 @@ class ProviderPaperLoopManifest(BaseModel):
     paper_broker: dict[str, Any] | None = None
     daily_tracking: dict[str, Any] | None = None
     portfolio: dict[str, Any] | None = None
+    artifact_descriptor: dict[str, Any] | None = None
+    replay_manifest_path: str | None = None
+    replayable_offline: bool = True
+    paper_only: bool = True
+    live_trading_blocked: bool = True
     warnings: list[str] = Field(default_factory=list)
     blockers: list[str] = Field(default_factory=list)
     digests: dict[str, str] = Field(default_factory=dict)

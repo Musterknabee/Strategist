@@ -5,6 +5,14 @@ import { describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import PaperTrackingPage from "./page";
 
+function createQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { gcTime: Infinity, retry: false },
+    },
+  });
+}
+
 vi.mock("@/lib/config/public-config", () => ({
   tryGetPublicStrategistApiBaseUrl: () => ({ ok: true as const, baseUrl: "http://127.0.0.1:8000" }),
 }));
@@ -68,8 +76,8 @@ vi.mock("@/lib/terminal/cockpit-context", () => ({
 
 describe("PaperTrackingPage", () => {
   it("renders paper posture and no live trading copy", () => {
-    const client = new QueryClient();
-    render(
+    const client = createQueryClient();
+    const view = render(
       <QueryClientProvider client={client}>
         <PaperTrackingPage />
       </QueryClientProvider>,
@@ -80,5 +88,7 @@ describe("PaperTrackingPage", () => {
     expect(screen.getAllByText(/DUPLICATIVE/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText("WATCHLIST").length).toBeGreaterThan(0);
     expect(screen.getByText(/not live approval/i)).toBeTruthy();
+    view.unmount();
+    client.clear();
   });
 });

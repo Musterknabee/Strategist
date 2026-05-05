@@ -38,6 +38,19 @@ function scoreReviewStatus(row: ResearchForensicsRow): number {
   return 100;
 }
 
+function replaySummary(payload: Record<string, unknown> | null | undefined): {
+  status: string;
+  mismatch: number;
+  missing: number;
+} {
+  const replay = asRecord(payload?.artifact_replay);
+  return {
+    status: asString(replay?.status) ?? "UNKNOWN",
+    mismatch: asNumber(replay?.digest_mismatch_count) ?? 0,
+    missing: asNumber(replay?.missing_artifact_count) ?? 0,
+  };
+}
+
 function inferReviewStatus(opts: {
   degraded: string[];
   blockerCount: number;
@@ -84,10 +97,11 @@ export function buildResearchBatchForensicsModel(input: {
   const batchLatestInner = asRecord(batchLatest?.latest);
   const batchLatestDegraded = asStringArray(batchLatest?.degraded);
   {
+    const replay = replaySummary(batchLatest);
     const status = batchLatestInner ? (batchLatestInner.ok === true ? "OK" : "REQUIRES_REVIEW") : "PENDING";
-    const blockerCount = asNumber(batchLatestInner?.blocked_count) ?? 0;
+    const blockerCount = (asNumber(batchLatestInner?.blocked_count) ?? 0) + replay.mismatch + replay.missing;
     const warningCount = asNumber(batchLatestInner?.failed_count) ?? 0;
-    const trust = batchLatestInner ? "BATCH_SUMMARY_PRESENT" : "UNKNOWN";
+    const trust = batchLatestInner ? `BATCH_SUMMARY_PRESENT · REPLAY_${replay.status}` : "UNKNOWN";
     rows.push({
       __id: "latest-batch",
       section: "Latest Batch",
@@ -108,11 +122,12 @@ export function buildResearchBatchForensicsModel(input: {
   const forensicsSummary = asRecord(forensics?.summary);
   const forensicsDegraded = asStringArray(forensics?.degraded);
   {
+    const replay = replaySummary(forensics);
     const status = asString(forensicsSummary?.batch_present) === "false" ? "PENDING" : "READY";
-    const blockerCount = asNumber(forensicsSummary?.blocked_count) ?? 0;
+    const blockerCount = (asNumber(forensicsSummary?.blocked_count) ?? 0) + replay.mismatch + replay.missing;
     const warningCount =
       (asNumber(forensicsSummary?.needs_evidence_count) ?? 0) + (asNumber(forensicsSummary?.failed_count) ?? 0);
-    const trust = blockerCount > 0 ? "RESTRICTED" : "FORENSICS_PRESENT";
+    const trust = blockerCount > 0 ? `RESTRICTED · REPLAY_${replay.status}` : `FORENSICS_PRESENT · REPLAY_${replay.status}`;
     rows.push({
       __id: "backtest-forensics",
       section: "Backtest Forensics",
@@ -134,11 +149,12 @@ export function buildResearchBatchForensicsModel(input: {
   const paperManifest = asRecord(paperLatest?.manifest);
   const paperDegraded = asStringArray(paper?.degraded);
   {
+    const replay = replaySummary(paper);
     const lifecycle = asString(paperLatest?.lifecycle_state) ?? "UNKNOWN";
     const status = lifecycle === "UNKNOWN" ? "PENDING" : lifecycle;
-    const blockers = asStringArray(paperLatest?.lifecycle_blockers).length;
+    const blockers = asStringArray(paperLatest?.lifecycle_blockers).length + replay.mismatch + replay.missing;
     const warnings = asNumber(asRecord(paperLatest?.scorecard)?.warning_count) ?? 0;
-    const trust = asString(paperManifest?.trust_banner) ?? "UNKNOWN";
+    const trust = `${asString(paperManifest?.trust_banner) ?? "UNKNOWN"} · REPLAY_${replay.status}`;
     rows.push({
       __id: "paper-tracking",
       section: "Paper Tracking",

@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from strategy_validator.application.paper_research_replay import latest_replay_verification_summary
 from strategy_validator.application.paper_tracking_ops import (
     derive_candidate_lifecycle_assessment,
     read_persisted_lifecycle_assessment,
@@ -171,6 +172,7 @@ def build_ui_paper_tracking_latest_payload(*, repo_root: Path | None = None) -> 
         "degraded": degraded,
         "latest": bundle,
         "latest_daily_run": _latest_daily_run_manifest(scan),
+        "artifact_replay": latest_replay_verification_summary(repo_root=repo_root),
     }
 
 
@@ -186,6 +188,7 @@ def build_ui_paper_tracking_detail_payload(tracking_id: str, *, repo_root: Path 
         "manifest_path": str(path) if path else None,
         "degraded": degraded,
         "tracking": bundle,
+        "artifact_replay": latest_replay_verification_summary(repo_root=repo_root),
     }
 
 
