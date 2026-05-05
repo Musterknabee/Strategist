@@ -17,6 +17,8 @@ The replay manifest answers:
 
 Replay verification checks artifact integrity only. It does not claim strategy quality, profitability, production readiness, deployment approval, or operator signoff.
 
+For cross-artifact discovery, use `strategy-validator-evidence-index`; discovery metadata is not equivalent to replay verification.
+
 ## Schema highlights
 
 - `schema_version`
