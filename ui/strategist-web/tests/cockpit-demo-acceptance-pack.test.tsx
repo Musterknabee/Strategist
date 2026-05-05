@@ -175,7 +175,7 @@ describe("cockpit demo and acceptance hardening", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /show paper wins candidates/i }));
     expect(screen.getByRole("button", { name: /show paper wins candidates/i }).getAttribute("aria-pressed")).toBe("true");
-    fireEvent.click(screen.getByRole("button", { name: "Evidence / Audit" }));
+    fireEvent.click(screen.getByRole("button", { name: "Forensic Audit" }));
     fireEvent.click(screen.getByRole("button", { name: "Capital Firewall" }));
     expect(onOpenMode).toHaveBeenCalledWith("FORENSIC_AUDIT");
     expect(onOpenMode).toHaveBeenCalledWith("CAPITAL_FIREWALL");
