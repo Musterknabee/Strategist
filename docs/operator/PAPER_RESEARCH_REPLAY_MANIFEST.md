@@ -75,3 +75,5 @@ Replay-manifest discovery is portable and explicit:
 4. repo-root relative `artifacts/provider_paper_loop/latest/replay_manifest.json`
 
 Missing replay evidence is never treated as OK; read-plane payloads remain `UNKNOWN`/`PENDING` until evidence exists.
+
+Digest mismatches are treated as degraded evidence and must remain visible in `digest_mismatch_count`, replay blockers, and read-plane replay status fields.

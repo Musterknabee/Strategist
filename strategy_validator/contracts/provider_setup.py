@@ -26,6 +26,7 @@ class ProviderSetupEntry(BaseModel):
     configured: bool = False
     reachable: bool = False
     classified_status: str = "NOT_CHECKED"
+    canonical_status: str = "UNKNOWN"
     setup_status: str
     readiness_tier: str
     freshness_class: str

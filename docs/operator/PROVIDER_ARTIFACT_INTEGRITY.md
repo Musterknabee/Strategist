@@ -25,6 +25,17 @@ Provider/sample/research artifacts should expose descriptor metadata (or `UNKNOW
 - Missing provider keys must remain action-required and non-fatal (`PENDING_KEY`, `ACTION_REQUIRED`, `UNKNOWN`).
 - Artifact presence alone must not imply promotability, production readiness, or live readiness.
 
+Canonical provider/evidence status vocabulary used by operator read-plane payloads:
+
+- `OK`: evidence present and verification checks passed.
+- `OPTIONAL_NOT_CONFIGURED`: optional key is not configured; local diagnostics may continue.
+- `PENDING_KEY`: provider flow requested but key/broker setup is still pending.
+- `UNAVAILABLE`: provider was explicitly unreachable/temporarily unavailable.
+- `STALE`: sample/evidence timestamp is older than freshness policy.
+- `DEGRADED`: evidence exists but verification or provider quality checks failed.
+- `UNKNOWN`: evidence is missing/not yet produced; never interpreted as pass.
+- `BLOCKED`: explicit command intent cannot complete without required setup/evidence.
+
 ## Read-plane and cockpit expectations
 
 Read-plane payloads should surface replay/integrity summaries:
@@ -35,7 +46,7 @@ Read-plane payloads should surface replay/integrity summaries:
 - digest mismatch count
 - paper-only/live-block posture
 
-When replay metadata is absent, payloads should degrade honestly (`UNKNOWN`/`PENDING`), never pass silently.
+When replay metadata is absent, payloads should degrade honestly (`UNKNOWN`/`PENDING`), never pass silently. Digest mismatches must surface as degraded/blocked evidence.
 
 Replay verification remains an offline integrity check:
 

@@ -21,6 +21,17 @@ from strategy_validator.contracts.paper_tracking import (
 _SCHEMA = "ui_paper_tracking/v2"
 
 
+def _replay_evidence_status(replay: dict[str, Any]) -> dict[str, Any]:
+    status = str(replay.get("status") or "UNKNOWN").upper()
+    missing = int(replay.get("missing_artifact_count") or 0)
+    mismatch = int(replay.get("digest_mismatch_count") or 0)
+    if mismatch > 0 or status == "DEGRADED":
+        return {"status": "DEGRADED", "blocked": True}
+    if status == "OK" and missing == 0:
+        return {"status": "OK", "blocked": False}
+    return {"status": "UNKNOWN", "blocked": False}
+
+
 def _root(repo_root: Path | None = None) -> Path:
     from strategy_validator.application.research_os_paths import paper_tracking_root_directory
 
@@ -164,6 +175,8 @@ def build_ui_paper_tracking_latest_payload(*, repo_root: Path | None = None) -> 
     if path is None:
         degraded.append("NO_PAPER_TRACKING_ARTIFACTS")
     scan = _root(repo_root)
+    replay = latest_replay_verification_summary(repo_root=repo_root)
+    replay_posture = _replay_evidence_status(replay)
     return {
         "schema_version": _SCHEMA,
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -172,7 +185,9 @@ def build_ui_paper_tracking_latest_payload(*, repo_root: Path | None = None) -> 
         "degraded": degraded,
         "latest": bundle,
         "latest_daily_run": _latest_daily_run_manifest(scan),
-        "artifact_replay": latest_replay_verification_summary(repo_root=repo_root),
+        "artifact_replay": replay,
+        "replay_evidence_status": replay_posture["status"],
+        "replay_evidence_blocked": replay_posture["blocked"],
     }
 
 
@@ -181,6 +196,8 @@ def build_ui_paper_tracking_detail_payload(tracking_id: str, *, repo_root: Path 
     degraded: list[str] = []
     if bundle is None:
         degraded.append("PAPER_TRACKING_NOT_FOUND")
+    replay = latest_replay_verification_summary(repo_root=repo_root)
+    replay_posture = _replay_evidence_status(replay)
     return {
         "schema_version": _SCHEMA,
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -188,7 +205,9 @@ def build_ui_paper_tracking_detail_payload(tracking_id: str, *, repo_root: Path 
         "manifest_path": str(path) if path else None,
         "degraded": degraded,
         "tracking": bundle,
-        "artifact_replay": latest_replay_verification_summary(repo_root=repo_root),
+        "artifact_replay": replay,
+        "replay_evidence_status": replay_posture["status"],
+        "replay_evidence_blocked": replay_posture["blocked"],
     }
 
 

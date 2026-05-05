@@ -956,6 +956,29 @@ def main(argv: list[str] | None = None) -> int:
         else:
             sys.stderr.write(f"No fetcher registered for {pid!r}\n")
 
+    explicit_provider_request = bool((ns.providers or "").strip())
+    blockers: list[str] = []
+    warnings: list[str] = []
+    canonical_status_counts: dict[str, int] = {}
+    for row in records:
+        st = str(row.status or "").upper()
+        canonical = "UNKNOWN"
+        if st == "OK":
+            canonical = "OK"
+        elif st in {"PENDING_KEY", "PENDING_MANUAL_BROKER_SETUP"}:
+            canonical = "PENDING_KEY"
+        elif row.classified_status.upper() in {"TEMPORARILY_UNAVAILABLE", "NETWORK_BLOCKED"}:
+            canonical = "UNAVAILABLE"
+        elif row.classified_status.upper() in {"AUTH_FAILED", "PLAN_LIMITED", "RATE_LIMITED", "ENDPOINT_CHANGED", "PARSE_ERROR", "ERROR", "HTTP_ERROR"}:
+            canonical = "DEGRADED"
+        elif st in {"SKIPPED_NO_NETWORK", "POLICY_SKIP"}:
+            canonical = "UNKNOWN"
+        canonical_status_counts[canonical] = int(canonical_status_counts.get(canonical, 0)) + 1
+        if explicit_provider_request and st in {"PENDING_KEY", "PENDING_MANUAL_BROKER_SETUP"}:
+            blockers.append(f"PROVIDER_KEY_PENDING:{row.provider_id}")
+        elif canonical in {"UNAVAILABLE", "DEGRADED"}:
+            warnings.append(f"PROVIDER_{canonical}:{row.provider_id}")
+
     if ns.manifest_json:
         generated_at = datetime.now(timezone.utc).isoformat()
         command_args_redacted = [
@@ -971,13 +994,33 @@ def main(argv: list[str] | None = None) -> int:
             "command": "python scripts/retrieve_provider_samples.py",
             "command_args_redacted": command_args_redacted,
             "schema_version": "provider_samples_manifest/v1",
+            "status_summary": {
+                "providers_processed": len(records),
+                "canonical_status_counts": dict(sorted(canonical_status_counts.items())),
+            },
+            "warnings": sorted(set(warnings)),
+            "blockers": sorted(set(blockers)),
         }
         (out_dir / "manifest.json").write_text(
             json.dumps(manifest, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
-    sys.stdout.write(json.dumps({"providers_processed": len(records), "output_dir": str(out_dir)}, indent=2) + "\n")
-    return 0
+    result_code = 3 if blockers else 0
+    sys.stdout.write(
+        json.dumps(
+            {
+                "providers_processed": len(records),
+                "output_dir": str(out_dir),
+                "status": "BLOCKED" if blockers else "OK",
+                "canonical_status_counts": dict(sorted(canonical_status_counts.items())),
+                "warnings": sorted(set(warnings)),
+                "blockers": sorted(set(blockers)),
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+    return result_code
 
 
 if __name__ == "__main__":
