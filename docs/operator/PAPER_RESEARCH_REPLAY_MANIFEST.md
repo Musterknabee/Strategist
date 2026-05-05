@@ -2,6 +2,8 @@
 
 `paper_research_replay_manifest/v1` is the offline integrity contract for provider-backed paper research artifacts.
 
+In the single-tenant operator flow, replay verification is a late integrity step after env check, preflight, API smoke, operator doctor, and release verification pack (see `docs/operator/OPERATOR_EASE_OF_USE_COMMANDS.md`).
+
 ## Purpose
 
 The replay manifest answers:
@@ -38,7 +40,7 @@ strategy-validator-paper-research-replay-verify --replay-manifest artifacts/prov
 Expected behavior:
 
 - no provider network calls,
-- no provider key requirement,
+- no provider key requirement for replay verification itself,
 - no ledger mutation,
 - returns non-zero on missing files or digest mismatch.
 
