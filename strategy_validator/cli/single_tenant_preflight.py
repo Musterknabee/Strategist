@@ -299,6 +299,7 @@ def build_single_tenant_deployment_preflight(
     return {
         "schema_version": "single_tenant_deployment_preflight/v1",
         "ok": ok,
+        "canonical_status": "OK" if ok else "BLOCKED",
         "deployment_model": "single_tenant_backend_only",
         "recommended_action": recommended_action,
         "repo_root": str(repo),

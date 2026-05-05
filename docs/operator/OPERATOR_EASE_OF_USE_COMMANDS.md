@@ -120,6 +120,12 @@ The release verification pack status is evidence only:
 - `WARN`: non-blocking issues remain (for example optional provider keys pending).
 - `FAIL`: blocking setup or readiness issues detected.
 
+Backend readiness APIs may additionally expose canonical status labels:
+
+- `OK`, `WARN`, `BLOCKED`, `DEGRADED`, `UNKNOWN`, `PENDING`, `NOT_CONFIGURED`, `OPTIONAL_NOT_CONFIGURED`.
+- `UNKNOWN`/`PENDING`/`DEGRADED`/`BLOCKED` are never silently interpreted as `OK`.
+- Optional provider/frontend claim setup may remain `OPTIONAL_NOT_CONFIGURED` without globally failing unrelated local diagnostics.
+
 ## Windows/PowerShell notes
 
 - `strategy-validator-single-tenant-preflight` reads process env. Load `deployment.env` into the current shell before preflight.

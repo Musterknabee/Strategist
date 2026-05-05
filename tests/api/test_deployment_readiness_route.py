@@ -12,6 +12,7 @@ def test_deployment_readiness_route_uses_application_surface(monkeypatch) -> Non
             "ok": False,
             "surface": "deployment_readiness",
             "status": "BLOCKED",
+            "canonical_status": "BLOCKED",
             "runtime_readiness_status": "BLOCKED",
             "blocker_codes": ["PRIVATE_KEY_MATERIAL_IN_REPO"],
             "warning_codes": [],
@@ -24,6 +25,7 @@ def test_deployment_readiness_route_uses_application_surface(monkeypatch) -> Non
     payload = response.json()
     assert payload["surface"] == "deployment_readiness"
     assert payload["status"] == "BLOCKED"
+    assert payload["canonical_status"] == "BLOCKED"
     assert payload["blocker_codes"] == ["PRIVATE_KEY_MATERIAL_IN_REPO"]
 
 

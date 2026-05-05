@@ -18,6 +18,7 @@ def test_readiness_health_route_uses_service(monkeypatch) -> None:
             'ok': False,
             'surface': 'readiness',
             'status': 'DEGRADED',
+            'canonical_status': 'DEGRADED',
             'adjudication_allowed': False,
             'blocker_codes': ['X'],
         },
@@ -27,5 +28,6 @@ def test_readiness_health_route_uses_service(monkeypatch) -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload['status'] == 'DEGRADED'
+    assert payload['canonical_status'] == 'DEGRADED'
     assert payload['adjudication_allowed'] is False
     assert payload['blocker_codes'] == ['X']

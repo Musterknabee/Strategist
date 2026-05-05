@@ -34,6 +34,7 @@ def test_deployment_readiness_payload_is_transport_neutral(monkeypatch) -> None:
     assert payload["surface"] == "deployment_readiness"
     assert payload["ok"] is False
     assert payload["status"] == "DEGRADED"
+    assert payload["canonical_status"] == "DEGRADED"
     assert payload["runtime_readiness_status"] == "READY"
     assert payload["checks"]["ledger_backup_dir_configured"] is False
 
@@ -61,5 +62,6 @@ def test_deployment_readiness_summary_reports_operator_action(monkeypatch) -> No
 
     assert payload["schema_version"] == "deployment_readiness_summary/v1"
     assert payload["ok"] is False
+    assert payload["canonical_status"] == "DEGRADED"
     assert payload["recommended_action"] == "DEPLOY_WITH_GOVERNED_EXCEPTION_OR_FIX_WARNINGS"
     assert payload["failed_checks"] == ["ledger_backup_dir_configured"]

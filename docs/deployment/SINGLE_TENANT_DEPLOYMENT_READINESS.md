@@ -171,6 +171,18 @@ The preflight emits `single_tenant_deployment_preflight/v1` and requires all of 
 - optional backup/restore drill passes when requested,
 - frontend readiness is not claimed prematurely.
 
+Canonical readiness semantics used by backend readiness surfaces:
+
+- `OK`: required runtime/deployment evidence passed.
+- `WARN`: non-blocking issues exist.
+- `BLOCKED`: required condition failed or missing.
+- `DEGRADED`: subsystem evidence exists but is stale/failed/mismatched.
+- `UNKNOWN` / `PENDING`: reliable evidence is missing or not yet produced.
+- `NOT_CONFIGURED`: required deployment configuration missing.
+- `OPTIONAL_NOT_CONFIGURED`: optional provider/frontend claim setup is not enabled and does not grant pass.
+
+Readiness is diagnostic/evidence posture only. It is not deployment approval, operator signoff, live-trading authorization, or profitability evidence.
+
 ## Scope boundary
 
 This is still backend-only. Do not expose it as a multi-tenant SaaS, do not claim `ui/strategist-web` readiness, and do not grant advisory/research routes capital authority.
