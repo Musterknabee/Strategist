@@ -33,6 +33,10 @@ class ProviderEvidenceManifest(BaseModel):
     trust_summary: dict[str, Any] = Field(default_factory=dict)
     pit_summary: dict[str, Any] = Field(default_factory=dict)
     unavailable_providers: tuple[str, ...] = ()
+    replay_verification_status: str = "UNKNOWN"
+    evidence_status: str = "UNKNOWN"
+    warnings: tuple[str, ...] = ()
+    blockers: tuple[str, ...] = ()
     secret_redaction_assertion: str = (
         "no_raw_secrets_in_manifest_fields_v1"
     )

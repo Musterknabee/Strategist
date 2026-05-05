@@ -74,9 +74,13 @@ class EnvCheckReport:
     values: dict[str, object]
 
     def to_payload(self) -> dict[str, object]:
+        canonical_status = "OK" if self.ok else "BLOCKED"
+        if self.ok and self.warning_count > 0:
+            canonical_status = "WARN"
         return {
             "schema_version": self.schema_version,
             "ok": self.ok,
+            "canonical_status": canonical_status,
             "env_file": self.env_file,
             "checked_key_count": self.checked_key_count,
             "required_key_count": self.required_key_count,

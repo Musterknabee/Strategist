@@ -344,6 +344,7 @@ def build_operator_doctor_report(
             "WARN": ["WARN", "UNKNOWN", "PENDING", "OPTIONAL_NOT_CONFIGURED"],
             "FAIL": ["BLOCKED", "DEGRADED", "NOT_CONFIGURED"],
         },
+        "canonical_status": _canonical_status(status),
         "run_mode": run_mode.to_payload(),
         "readiness_summary": {
             "runtime_readiness_status": runtime_status,

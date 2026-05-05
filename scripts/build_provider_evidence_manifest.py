@@ -16,6 +16,8 @@ if str(_REPO_ROOT) not in sys.path:
 
 from scripts._path_integrity import PathIntegrityError, path_error_payload, safe_input_file, safe_output_file
 
+from strategy_validator.application.paper_research_replay import latest_replay_verification_summary
+from strategy_validator.contracts.evidence_manifest import ProviderEvidenceManifest
 from strategy_validator.evidence.provider_bundle import build_provider_evidence_manifest_payload
 from strategy_validator.providers.health import build_provider_health_snapshot
 
@@ -96,11 +98,39 @@ def main(argv: list[str] | None = None) -> int:
             "<redacted>" if any(t in str(arg).lower() for t in ("key", "secret", "token", "password")) else str(arg)
             for arg in (argv or [])
         ),
-        replay_manifest_path=(
-            _REPO_ROOT / "artifacts" / "provider_paper_loop" / "latest" / "replay_manifest.json"
-        ).as_posix(),
+        replay_manifest_path=(_REPO_ROOT / "artifacts" / "provider_paper_loop" / "latest" / "replay_manifest.json").as_posix(),
     )
+    replay = latest_replay_verification_summary(repo_root=_REPO_ROOT)
+    replay_status = str(replay.get("status") or "UNKNOWN").upper()
+    replay_missing = int(replay.get("missing_artifact_count") or 0)
+    replay_mismatch = int(replay.get("digest_mismatch_count") or 0)
+    unavailable = list(model.unavailable_providers or ())
+    blockers: list[str] = []
+    warnings: list[str] = []
+    if replay_mismatch > 0:
+        blockers.append("REPLAY_DIGEST_MISMATCH")
+    elif replay_status == "DEGRADED":
+        blockers.append("REPLAY_EVIDENCE_DEGRADED")
+    elif replay_status != "OK" or replay_missing > 0:
+        warnings.append("REPLAY_EVIDENCE_MISSING_OR_PENDING")
+    if unavailable:
+        warnings.append("PROVIDER_UNAVAILABLE_PRESENT")
+    evidence_status = "OK"
+    if blockers:
+        evidence_status = "DEGRADED"
+    elif warnings:
+        evidence_status = "UNKNOWN"
     payload: dict[str, Any] = model.model_dump(mode="json")
+    payload["replay_verification_status"] = "DEGRADED" if blockers else ("OK" if replay_status == "OK" else "UNKNOWN")
+    payload["evidence_status"] = evidence_status
+    payload["warnings"] = tuple(dict.fromkeys(warnings))
+    payload["blockers"] = tuple(dict.fromkeys(blockers))
+    payload["trust_summary"] = {
+        **(payload.get("trust_summary") or {}),
+        "replay_verification_status": payload["replay_verification_status"],
+        "evidence_status": payload["evidence_status"],
+    }
+    payload = ProviderEvidenceManifest.model_validate(payload).model_dump(mode="json")
     indent = 2 if ns.json else None
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(payload, indent=indent, sort_keys=True) + "\n", encoding="utf-8")
@@ -110,6 +140,10 @@ def main(argv: list[str] | None = None) -> int:
         "provider_sample_manifest_digest": payload.get("provider_sample_manifest_digest"),
         "provider_health_digest": payload.get("provider_health_digest"),
         "unavailable_providers": list(payload.get("unavailable_providers") or ()),
+        "replay_verification_status": payload.get("replay_verification_status"),
+        "evidence_status": payload.get("evidence_status"),
+        "warnings": list(payload.get("warnings") or ()),
+        "blockers": list(payload.get("blockers") or ()),
     }
     sys.stdout.write(json.dumps(summary, indent=2 if ns.json else None, sort_keys=True) + "\n")
     return 0

@@ -16,6 +16,18 @@ StrategicHorizonAction = Literal[
 ]
 
 
+def _canonical_status(status: StrategicHorizonStatus) -> str:
+    if status == 'READY':
+        return 'OK'
+    if status == 'CONDITIONAL':
+        return 'WARN'
+    if status == 'DEFERRED':
+        return 'PENDING'
+    if status == 'BLOCKED':
+        return 'BLOCKED'
+    return 'UNKNOWN'
+
+
 @dataclass(frozen=True)
 class StrategicHorizonCheck:
     """One Horizon-C capability gate derived from repository/runtime evidence."""
@@ -31,6 +43,7 @@ class StrategicHorizonCheck:
         return {
             'capability': self.capability,
             'status': self.status,
+            'canonical_status': _canonical_status(self.status),
             'recommended_action': self.recommended_action,
             'evidence': list(self.evidence),
             'blockers': list(self.blockers),
@@ -55,8 +68,10 @@ class StrategicHorizonReadinessReport:
         return {
             'schema_version': self.schema_version,
             'status': self.status,
+            'canonical_status': _canonical_status(self.status),
             'recommended_action': self.recommended_action,
             'checks': [check.to_payload() for check in self.checks],
+            'readiness_scope_disclaimer': 'Strategic horizon readiness is evidence posture only; it is not deployment approval, operator signoff, live authorization, or profitability evidence.',
         }
 
 
