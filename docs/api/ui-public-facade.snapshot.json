@@ -7,7 +7,7 @@
   "frontend_runtime_reachable": null,
   "mutation_route": "/ui/commands/{action}",
   "read_plane_only": true,
-  "route_count": 59,
+  "route_count": 157,
   "routes": [
     {
       "auth_required": false,
@@ -52,6 +52,13 @@
       "payload_schema": "ui_burnin/v1"
     },
     {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/commands/policy",
+      "payload_schema": "ui_operator_command_policy_projection/v1"
+    },
+    {
       "auth_required": true,
       "kind": "mutation",
       "method": "POST",
@@ -83,6 +90,13 @@
       "auth_required": false,
       "kind": "read",
       "method": "GET",
+      "path": "/ui/evidence-bundles",
+      "payload_schema": "evidence_bundle_index/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
       "path": "/ui/evidence-chain",
       "payload_schema": "ui_evidence_chain/v1"
     },
@@ -104,6 +118,20 @@
       "auth_required": false,
       "kind": "read",
       "method": "GET",
+      "path": "/ui/market-data-integrity",
+      "payload_schema": "ui_market_data_integrity/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/market-data-integrity/latest",
+      "payload_schema": "ui_market_data_integrity/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
       "path": "/ui/operator-actions",
       "payload_schema": "operator_action_event_projection_index/v1"
     },
@@ -113,6 +141,13 @@
       "method": "GET",
       "path": "/ui/packs/detail",
       "payload_schema": "ui_pack_detail/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/packs/workbench",
+      "payload_schema": "oracle_operator_pack_workbench/v1"
     },
     {
       "auth_required": false,
@@ -148,6 +183,27 @@
       "method": "GET",
       "path": "/ui/paper-tracking/{tracking_id}",
       "payload_schema": "ui_paper_tracking/v2"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/projection-registry",
+      "payload_schema": "ui_projection_registry/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/promotion-review",
+      "payload_schema": "ui_promotion_review/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/promotion-review/latest",
+      "payload_schema": "ui_promotion_review/v1"
     },
     {
       "auth_required": false,
@@ -286,6 +342,636 @@
       "auth_required": false,
       "kind": "read",
       "method": "GET",
+      "path": "/ui/semantic-release",
+      "payload_schema": "ui_semantic_release_handoff/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-release/latest",
+      "payload_schema": "ui_semantic_release_handoff/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff",
+      "payload_schema": "ui_semantic_validator_handoff/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/action-queue",
+      "payload_schema": "ui_semantic_validator_handoff_action_queue/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/action-queue/latest",
+      "payload_schema": "ui_semantic_validator_handoff_action_queue/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/archive",
+      "payload_schema": "ui_semantic_validator_handoff_archive/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/archive/latest",
+      "payload_schema": "ui_semantic_validator_handoff_archive/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/audit-packet",
+      "payload_schema": "ui_semantic_validator_handoff_audit_packet/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/audit-packet/latest",
+      "payload_schema": "ui_semantic_validator_handoff_audit_packet/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-acceptance-board",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_acceptance_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-acceptance-board/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_acceptance_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-action-register",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_action_register/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-action-register/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_action_register/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-checklist",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_checklist/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-checklist/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_checklist/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-closeout-board",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_closeout_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-closeout-board/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_closeout_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-coverage-board",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_coverage_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-coverage-board/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_coverage_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-dossier",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_dossier/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-dossier/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_dossier/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-evidence-matrix",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_evidence_matrix/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-evidence-matrix/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_evidence_matrix/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-gate",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_gate/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-gate/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_gate/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-operations-board",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_operations_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-operations-board/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_operations_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-acknowledgment-board",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_acknowledgment_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-acknowledgment-board/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_acknowledgment_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-archive-board",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_archive_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-archive-board/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_archive_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-closure-board",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_closure_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-closure-board/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_closure_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-completion-board",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_completion_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-completion-board/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_completion_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-confirmation-board",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_confirmation_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-confirmation-board/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_confirmation_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-custody-board",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_custody_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-custody-board/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_custody_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-disposal-board",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_disposal_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-disposal-board/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_disposal_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-disposition-board",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_disposition_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-disposition-board/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_disposition_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-handoff-board",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_handoff_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-handoff-board/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_handoff_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-packet",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_packet/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-packet/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_packet/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-readiness-board",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_readiness_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-readiness-board/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_readiness_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-receipt-board",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_receipt_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-receipt-board/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_receipt_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-retention-board",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_retention_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-release-retention-board/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_release_retention_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-resolution-plan",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_resolution_plan/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-resolution-plan/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_resolution_plan/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-review-docket",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_review_docket/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-review-docket/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_review_docket/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-signoff-packet",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_signoff_packet/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-signoff-packet/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_signoff_packet/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-verification-board",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_verification_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/clearance-verification-board/latest",
+      "payload_schema": "ui_semantic_validator_handoff_clearance_verification_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/closure",
+      "payload_schema": "ui_semantic_validator_handoff_closure/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/closure/latest",
+      "payload_schema": "ui_semantic_validator_handoff_closure/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/continuity",
+      "payload_schema": "ui_semantic_validator_handoff_continuity/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/continuity/latest",
+      "payload_schema": "ui_semantic_validator_handoff_continuity/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/custody",
+      "payload_schema": "ui_semantic_validator_handoff_custody/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/custody/latest",
+      "payload_schema": "ui_semantic_validator_handoff_custody/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/decision",
+      "payload_schema": "ui_semantic_validator_handoff_decision/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/decision/latest",
+      "payload_schema": "ui_semantic_validator_handoff_decision/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/escalation-board",
+      "payload_schema": "ui_semantic_validator_handoff_escalation_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/escalation-board/latest",
+      "payload_schema": "ui_semantic_validator_handoff_escalation_board/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/evidence-gaps",
+      "payload_schema": "ui_semantic_validator_handoff_evidence_gaps/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/evidence-gaps/latest",
+      "payload_schema": "ui_semantic_validator_handoff_evidence_gaps/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/exceptions",
+      "payload_schema": "ui_semantic_validator_handoff_exceptions/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/exceptions/latest",
+      "payload_schema": "ui_semantic_validator_handoff_exceptions/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/latest",
+      "payload_schema": "ui_semantic_validator_handoff/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/lineage",
+      "payload_schema": "ui_semantic_validator_handoff_lineage/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/lineage/latest",
+      "payload_schema": "ui_semantic_validator_handoff_lineage/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/remediation",
+      "payload_schema": "ui_semantic_validator_handoff_remediation/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/remediation/latest",
+      "payload_schema": "ui_semantic_validator_handoff_remediation/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/resolution-plan",
+      "payload_schema": "ui_semantic_validator_handoff_resolution_plan/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/resolution-plan/latest",
+      "payload_schema": "ui_semantic_validator_handoff_resolution_plan/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/review",
+      "payload_schema": "ui_semantic_validator_handoff_review/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/review/latest",
+      "payload_schema": "ui_semantic_validator_handoff_review/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/runbook",
+      "payload_schema": "ui_semantic_validator_handoff_runbook/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/runbook/latest",
+      "payload_schema": "ui_semantic_validator_handoff_runbook/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/signoff",
+      "payload_schema": "ui_semantic_validator_handoff_signoff/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/signoff/latest",
+      "payload_schema": "ui_semantic_validator_handoff_signoff/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/timeline",
+      "payload_schema": "ui_semantic_validator_handoff_timeline/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/semantic-validator-handoff/timeline/latest",
+      "payload_schema": "ui_semantic_validator_handoff_timeline/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
       "path": "/ui/shadow-book/latest",
       "payload_schema": "ui_shadow_book/v1"
     },
@@ -364,7 +1050,7 @@
       "kind": "read",
       "method": "GET",
       "path": "/ui/tribunal",
-      "payload_schema": "ui_tribunal/v1"
+      "payload_schema": "ui_tribunal_workspace/v1"
     },
     {
       "auth_required": false,
@@ -423,7 +1109,7 @@
       "payload_schema": "ui_workboard_export_options/v1"
     }
   ],
-  "routes_sha256": "8746e001a864db3152e605c7b16f8e808e4e7afe01147e6b3a292f2feffa148a",
+  "routes_sha256": "00607dbae55e6ea6440f314303c3ff6bbe7732ba18c196a8a8277f03d7923dcf",
   "schema_version": "ui_public_facade_snapshot/v1",
   "source_endpoint": "/ui/facade",
   "source_schema_version": "ui_public_facade_inventory/v1",

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from strategy_validator.api.routes._lazy_imports import lazy_callable
 
 import os
 from pathlib import Path
@@ -7,19 +8,20 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from strategy_validator.api.auth import require_mutation_auth
-from strategy_validator.application.readiness import (
-    get_deployment_readiness_payload,
-    get_strategic_horizon_readiness_payload,
-    summarize_deployment_readiness_payload,
-    get_readiness_health_payload,
-    publish_release_bundle_from_paths,
-)
-from strategy_validator.application.release_publication_paths import resolve_release_publication_paths
 from strategy_validator.core.path_guards import PathBoundaryError
 from strategy_validator.providers.health import (
     build_provider_health_snapshot,
     provider_health_snapshot_public_payload,
 )
+
+
+# Heavy application/read-plane dependencies are lazy-loaded to keep API import fast.
+get_deployment_readiness_payload = lazy_callable('strategy_validator.application.readiness', 'get_deployment_readiness_payload')
+get_strategic_horizon_readiness_payload = lazy_callable('strategy_validator.application.readiness', 'get_strategic_horizon_readiness_payload')
+summarize_deployment_readiness_payload = lazy_callable('strategy_validator.application.readiness', 'summarize_deployment_readiness_payload')
+get_readiness_health_payload = lazy_callable('strategy_validator.application.readiness', 'get_readiness_health_payload')
+publish_release_bundle_from_paths = lazy_callable('strategy_validator.application.readiness', 'publish_release_bundle_from_paths')
+resolve_release_publication_paths = lazy_callable('strategy_validator.application.release_publication_paths', 'resolve_release_publication_paths')
 
 router = APIRouter(prefix="/readiness", tags=["readiness"])
 

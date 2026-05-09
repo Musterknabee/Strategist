@@ -119,7 +119,7 @@ export const OPERATOR_MODE_DEFINITIONS: Record<OperatorModeId, OperatorModeDefin
   RELEASE_CONTROL: {
     mode_id: "RELEASE_CONTROL",
     label: "Release Control",
-    purpose: "Evidence bundle, release readiness, handoff labels, and review journal read surfaces; not deployment approval.",
+    purpose: "Evidence bundle, release readiness, handoff, signoff, and review journal read surfaces.",
     primary_panes: ["Release control", "Evidence runbook", "Promotion evidence dossier", "Seven-pane grid (evidence + facade tiles)"],
     secondary_panes: ["Research OS drilldown", "Audit forensic", "Topology"],
     recommended_next_action_source: "GET /ui/evidence, GET /ui/research-os/* latest payloads, registry CLI hints (copy-only).",

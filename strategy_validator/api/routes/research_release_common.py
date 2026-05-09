@@ -1,0 +1,42 @@
+"""Lazy semantic release route dependencies and contract proxies."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from pydantic import BaseModel
+
+from strategy_validator.api.routes._lazy_imports import lazy_callable, lazy_model
+
+Evidence = lazy_model("strategy_validator.contracts.evidence", "Evidence")
+ExperimentManifest = lazy_model("strategy_validator.contracts.experiments", "ExperimentManifest")
+SemanticAdjudicationBundle = lazy_model("strategy_validator.contracts.semantic", "SemanticAdjudicationBundle")
+SemanticAdjudicationBundleManifest = lazy_model("strategy_validator.contracts.semantic", "SemanticAdjudicationBundleManifest")
+SemanticAdjudicationBundleReleaseIndex = lazy_model("strategy_validator.contracts.semantic", "SemanticAdjudicationBundleReleaseIndex")
+SemanticAdjudicationReleaseCapsule = lazy_model("strategy_validator.contracts.semantic", "SemanticAdjudicationReleaseCapsule")
+SemanticAdjudicationReleaseDecisionLedger = lazy_model("strategy_validator.contracts.semantic", "SemanticAdjudicationReleaseDecisionLedger")
+SemanticAdjudicationReleaseDecisionRecord = lazy_model("strategy_validator.contracts.semantic", "SemanticAdjudicationReleaseDecisionRecord")
+SemanticAdjudicationReleaseHandoffCertificate = lazy_model("strategy_validator.contracts.semantic", "SemanticAdjudicationReleaseHandoffCertificate")
+
+# Heavy application/read-plane dependencies are lazy-loaded to keep API import fast.
+build_semantic_adjudication_bundle_manifest = lazy_callable("strategy_validator.application.research_integrity", "build_semantic_adjudication_bundle_manifest")
+summarize_semantic_adjudication_bundle = lazy_callable("strategy_validator.application.research_integrity", "summarize_semantic_adjudication_bundle")
+verify_semantic_adjudication_bundle_manifest = lazy_callable("strategy_validator.application.research_integrity", "verify_semantic_adjudication_bundle_manifest")
+build_semantic_adjudication_bundle_release_preflight = lazy_callable("strategy_validator.application.research_integrity", "build_semantic_adjudication_bundle_release_preflight")
+build_semantic_adjudication_bundle_release_index = lazy_callable("strategy_validator.application.research_integrity", "build_semantic_adjudication_bundle_release_index")
+verify_semantic_adjudication_bundle_release_index = lazy_callable("strategy_validator.application.research_integrity", "verify_semantic_adjudication_bundle_release_index")
+build_semantic_adjudication_release_capsule = lazy_callable("strategy_validator.application.research_integrity", "build_semantic_adjudication_release_capsule")
+verify_semantic_adjudication_release_capsule = lazy_callable("strategy_validator.application.research_integrity", "verify_semantic_adjudication_release_capsule")
+summarize_semantic_adjudication_release_capsule = lazy_callable("strategy_validator.application.research_integrity", "summarize_semantic_adjudication_release_capsule")
+build_semantic_adjudication_release_decision_record = lazy_callable("strategy_validator.application.research_integrity", "build_semantic_adjudication_release_decision_record")
+verify_semantic_adjudication_release_decision_record = lazy_callable("strategy_validator.application.research_integrity", "verify_semantic_adjudication_release_decision_record")
+summarize_semantic_adjudication_release_decision_record = lazy_callable("strategy_validator.application.research_integrity", "summarize_semantic_adjudication_release_decision_record")
+build_semantic_adjudication_release_decision_ledger = lazy_callable("strategy_validator.application.research_integrity", "build_semantic_adjudication_release_decision_ledger")
+verify_semantic_adjudication_release_decision_ledger = lazy_callable("strategy_validator.application.research_integrity", "verify_semantic_adjudication_release_decision_ledger")
+summarize_semantic_adjudication_release_decision_ledger = lazy_callable("strategy_validator.application.research_integrity", "summarize_semantic_adjudication_release_decision_ledger")
+build_semantic_adjudication_release_handoff_certificate = lazy_callable("strategy_validator.application.research_integrity", "build_semantic_adjudication_release_handoff_certificate")
+verify_semantic_adjudication_release_handoff_certificate = lazy_callable("strategy_validator.application.research_integrity", "verify_semantic_adjudication_release_handoff_certificate")
+summarize_semantic_adjudication_release_handoff_certificate = lazy_callable("strategy_validator.application.research_integrity", "summarize_semantic_adjudication_release_handoff_certificate")
+build_semantic_release_handoff_certificate_evidence = lazy_callable("strategy_validator.application.research_integrity", "build_semantic_release_handoff_certificate_evidence")
+verify_semantic_release_handoff_certificate_evidence = lazy_callable("strategy_validator.application.research_integrity", "verify_semantic_release_handoff_certificate_evidence")
+summarize_semantic_release_handoff_certificate_evidence = lazy_callable("strategy_validator.application.research_integrity", "summarize_semantic_release_handoff_certificate_evidence")

@@ -34,6 +34,60 @@ describe("invalidateQueriesForRoute", () => {
     spy.mockRestore();
   });
 
+  it("invalidates semantic validator handoff lineage keys", () => {
+    const client = new QueryClient();
+    const spy = vi.spyOn(client, "invalidateQueries");
+    invalidateQueriesForRoute(client, "/semantic-validator-handoff-lineage");
+    const keys = spy.mock.calls.map((c) => c[0]?.queryKey);
+    expect(keys).toContainEqual([...queryKeys.uiSemanticValidatorHandoffLineage]);
+    spy.mockRestore();
+  });
+
+  it("invalidates semantic validator handoff remediation keys", () => {
+    const client = new QueryClient();
+    const spy = vi.spyOn(client, "invalidateQueries");
+    invalidateQueriesForRoute(client, "/semantic-validator-handoff-remediation");
+    const keys = spy.mock.calls.map((c) => c[0]?.queryKey);
+    expect(keys).toContainEqual([...queryKeys.uiSemanticValidatorHandoffRemediation]);
+    spy.mockRestore();
+  });
+
+  it("invalidates semantic validator handoff review keys", () => {
+    const client = new QueryClient();
+    const spy = vi.spyOn(client, "invalidateQueries");
+    invalidateQueriesForRoute(client, "/semantic-validator-handoff-review");
+    const keys = spy.mock.calls.map((c) => c[0]?.queryKey);
+    expect(keys).toContainEqual([...queryKeys.uiSemanticValidatorHandoffReview]);
+    spy.mockRestore();
+  });
+
+  it("invalidates semantic validator handoff signoff keys", () => {
+    const client = new QueryClient();
+    const spy = vi.spyOn(client, "invalidateQueries");
+    invalidateQueriesForRoute(client, "/semantic-validator-handoff-signoff");
+    const keys = spy.mock.calls.map((c) => c[0]?.queryKey);
+    expect(keys).toContainEqual([...queryKeys.uiSemanticValidatorHandoffSignoff]);
+    spy.mockRestore();
+  });
+
+  it("invalidates semantic validator handoff custody keys", () => {
+    const client = new QueryClient();
+    const spy = vi.spyOn(client, "invalidateQueries");
+    invalidateQueriesForRoute(client, "/semantic-validator-handoff-custody");
+    const keys = spy.mock.calls.map((c) => c[0]?.queryKey);
+    expect(keys).toContainEqual([...queryKeys.uiSemanticValidatorHandoffCustody]);
+    spy.mockRestore();
+  });
+
+  it("invalidates semantic validator handoff archive keys", () => {
+    const client = new QueryClient();
+    const spy = vi.spyOn(client, "invalidateQueries");
+    invalidateQueriesForRoute(client, "/semantic-validator-handoff-archive");
+    const keys = spy.mock.calls.map((c) => c[0]?.queryKey);
+    expect(keys).toContainEqual([...queryKeys.uiSemanticValidatorHandoffArchive]);
+    spy.mockRestore();
+  });
+
   it("invalidates strategy batch keys for /strategy-lab", () => {
     const client = new QueryClient();
     const spy = vi.spyOn(client, "invalidateQueries");

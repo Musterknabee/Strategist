@@ -14,6 +14,13 @@ describe("command-registry", () => {
     expect(paths.has("/ledger")).toBe(true);
     expect(paths.has("/providers")).toBe(true);
     expect(paths.has("/runtime")).toBe(true);
+    expect(paths.has("/semantic-validator-handoff-lineage")).toBe(true);
+    expect(paths.has("/semantic-validator-handoff-remediation")).toBe(true);
+    expect(paths.has("/semantic-validator-handoff-review")).toBe(true);
+    expect(paths.has("/semantic-validator-handoff-decision")).toBe(true);
+    expect(paths.has("/semantic-validator-handoff-signoff")).toBe(true);
+    expect(paths.has("/semantic-validator-handoff-custody")).toBe(true);
+    expect(paths.has("/semantic-validator-handoff-archive")).toBe(true);
     expect(paths.has("/workboard")).toBe(true);
   });
 

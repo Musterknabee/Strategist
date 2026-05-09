@@ -24,10 +24,12 @@ def test_research_tree_has_no_ledger_writer_imports() -> None:
         _assert_no_ledger_writer_reference(p)
 
 
-def test_paper_tracking_ops_has_no_ledger_writer_imports() -> None:
-    p = ROOT / "strategy_validator" / "application" / "paper_tracking_ops.py"
-    assert p.is_file()
-    _assert_no_ledger_writer_reference(p)
+def test_paper_tracking_application_modules_have_no_ledger_writer_imports() -> None:
+    root = ROOT / "strategy_validator" / "application"
+    files = sorted(root.glob("paper_tracking*.py"))
+    assert files
+    for p in files:
+        _assert_no_ledger_writer_reference(p)
 
 
 def test_broker_packages_have_no_ledger_writer_imports() -> None:

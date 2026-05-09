@@ -12,6 +12,11 @@ describe("queryKeys", () => {
     expect(queryKeys.readinessDeployment).not.toEqual(queryKeys.probeReadyz);
   });
 
+  it("uses distinct semantic validator handoff lineage keys", () => {
+    expect(queryKeys.uiSemanticValidatorHandoff).not.toEqual(queryKeys.uiSemanticValidatorHandoffLineage);
+    expect(queryKeys.uiSemanticValidatorHandoffLineage).not.toEqual(queryKeys.uiSemanticValidatorHandoffLineageFiltered({ chainStatus: "READY" }));
+  });
+
   it("uses distinct paper tracking keys", () => {
     expect(queryKeys.uiPaperTrackingLatest).not.toEqual(queryKeys.uiPaperTrackingDetail("a"));
     expect(queryKeys.uiPaperTrackingDetail("a")).not.toEqual(queryKeys.uiPaperTrackingDetail("b"));

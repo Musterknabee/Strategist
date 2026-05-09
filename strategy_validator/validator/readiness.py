@@ -99,18 +99,6 @@ def _mutation_safety(cfg: Any) -> tuple[MutationSafetyStatus, tuple[str, ...], s
             missing,
             "MISSING_PRODUCTION_TOKEN",
         )
-    if api_token == "secret-token":
-        return (
-            MutationSafetyStatus(
-                runtime_mode=mode,
-                authorization_mode="TOKEN_PROTECTED",
-                token_configured=True,
-                mutation_routes_safe=True,
-                detail_code="MUTATION_TOKEN_CONFIGURED",
-            ),
-            (),
-            "OK",
-        )
     if is_placeholder_token(api_token):
         # MUTATION_AUTH_TOKEN_PLACEHOLDER
         return (

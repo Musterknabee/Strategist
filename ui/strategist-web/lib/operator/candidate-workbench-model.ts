@@ -63,7 +63,6 @@ export type CandidateWorkbenchSummary = {
   graveyard_warning_count: number;
   evidence_problem_count: number;
   replay_problem_count: number;
-  provider_pending_key_count: number;
   next_action: CandidateNextAction;
   next_action_reason: string;
   rows: CandidateWorkbenchRow[];
@@ -254,7 +253,6 @@ export function buildCandidateWorkbenchModel(input: {
   const graveyardCount = rows.filter((row) => row.graveyard_status !== "NO_MATCH").length;
   const evidenceProblems = rows.filter((row) => row.evidence_status !== "VERIFIED").length;
   const replayProblems = rows.filter((row) => row.replay_status !== "VERIFIED").length;
-  const providerPendingKeyCount = rows.filter((row) => row.provider_status === "PENDING_KEY").length;
 
   const nextAction: CandidateNextAction =
     blockedCount > 0
@@ -290,7 +288,6 @@ export function buildCandidateWorkbenchModel(input: {
     graveyard_warning_count: graveyardCount,
     evidence_problem_count: evidenceProblems,
     replay_problem_count: replayProblems,
-    provider_pending_key_count: providerPendingKeyCount,
     next_action: nextAction,
     next_action_reason: nextReason,
     rows,

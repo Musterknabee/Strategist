@@ -28,9 +28,12 @@ from strategy_validator.application.ui_public_facade import (
     build_ui_provider_health_payload,
 )
 from strategy_validator.application.ui_research_compute import build_ui_research_compute_payload
+from strategy_validator.application.market_data_integrity_projection import build_ui_market_data_integrity_payload
 from strategy_validator.application.operator_action_projection import build_operator_action_event_index_payload
 from strategy_validator.application.evidence_chain_projection import build_ui_evidence_chain_payload
+from strategy_validator.application.evidence_bundle_index import build_ui_evidence_bundle_index_payload
 from strategy_validator.application.ui_views import (
+    build_operator_pack_workbench_payload,
     build_ui_burnin_payload,
     build_ui_evidence_payload,
     build_ui_operator_command_receipt_payload,
@@ -60,6 +63,7 @@ __all__ = [
     'build_ui_public_facade_inventory',
     'build_ui_provider_health_payload',
     'build_ui_research_compute_payload',
+    'build_ui_market_data_integrity_payload',
     'build_ui_export_entity_headers',
     'build_ui_export_options_response',
     'build_ui_export_response',
@@ -69,7 +73,9 @@ __all__ = [
     'build_ui_tribunal_query',
     'execute_ui_operator_command',
     'build_operator_action_event_index_payload',
+    'build_operator_pack_workbench_payload',
     'build_ui_evidence_chain_payload',
+    'build_ui_evidence_bundle_index_payload',
     'build_ui_evidence_payload',
     'build_ui_operator_command_receipt_payload',
     'build_ui_pack_detail_payload',

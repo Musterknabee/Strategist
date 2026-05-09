@@ -1,0 +1,28 @@
+"""Paper execution evidence-bundle contracts.
+
+Legacy facade over focused evidence-bundle contract phase modules.
+"""
+from __future__ import annotations
+
+from strategy_validator.contracts.paper_execution_evidence_bundle_core import *
+from strategy_validator.contracts.paper_execution_evidence_bundle_verification import *
+from strategy_validator.contracts.paper_execution_evidence_bundle_rotation import *
+from strategy_validator.contracts.paper_execution_evidence_bundle_attestation import *
+from strategy_validator.contracts.paper_execution_evidence_bundle_closure import *
+from strategy_validator.contracts.paper_execution_evidence_bundle_export import *
+
+from strategy_validator.contracts.paper_execution_evidence_bundle_core import __all__ as _paper_execution_evidence_bundle_core_all
+from strategy_validator.contracts.paper_execution_evidence_bundle_verification import __all__ as _paper_execution_evidence_bundle_verification_all
+from strategy_validator.contracts.paper_execution_evidence_bundle_rotation import __all__ as _paper_execution_evidence_bundle_rotation_all
+from strategy_validator.contracts.paper_execution_evidence_bundle_attestation import __all__ as _paper_execution_evidence_bundle_attestation_all
+from strategy_validator.contracts.paper_execution_evidence_bundle_closure import __all__ as _paper_execution_evidence_bundle_closure_all
+from strategy_validator.contracts.paper_execution_evidence_bundle_export import __all__ as _paper_execution_evidence_bundle_export_all
+
+__all__ = (
+    *_paper_execution_evidence_bundle_core_all,
+    *_paper_execution_evidence_bundle_verification_all,
+    *_paper_execution_evidence_bundle_rotation_all,
+    *_paper_execution_evidence_bundle_attestation_all,
+    *_paper_execution_evidence_bundle_closure_all,
+    *_paper_execution_evidence_bundle_export_all,
+)

@@ -42,7 +42,7 @@ EXCLUDED_DIR_NAMES = {
     ".hypothesis",
     ".nox",
 }
-EXCLUDED_SUFFIXES = {".pyc", ".pyo", ".zip", ".tar", ".gz", ".tgz", ".sqlite", ".sqlite3", ".db", ".db-wal", ".db-shm", ".log", ".jsonl", ".coverage"}
+EXCLUDED_SUFFIXES = {".pyc", ".pyo", ".zip", ".tar", ".gz", ".tgz", ".sqlite", ".sqlite3", ".db", ".db-wal", ".db-shm", ".log", ".jsonl", ".coverage", ".tsbuildinfo"}
 EXCLUDED_TOP_LEVEL_NAMES = frozenset({".coverage", "coverage.xml"})
 EXCLUDED_FILE_BASENAMES = frozenset(
     {

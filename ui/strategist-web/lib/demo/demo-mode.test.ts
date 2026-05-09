@@ -8,6 +8,8 @@ const required = [
   "/ui/runtime",
   "/ui/evidence",
   "/ui/evidence-chain",
+  "/ui/packs/workbench",
+  "/ui/packs/detail",
   "/ui/operator-actions",
   "/ui/workboard",
   "/ui/provider-health",

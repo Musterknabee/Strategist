@@ -140,12 +140,17 @@ def build_operator_pack_workbench_payload(
     search_root: str | Path | None = None,
     pack_kinds: Iterable[str] = (),
     trust_statuses: Iterable[str] = (),
+    summary_line_contains: str | None = None,
+    output_artifact_label_contains: str | None = None,
 ) -> dict[str, Any]:
     """Compatibility alias expected by UI workboard intelligence tests."""
+    root = Path(search_root) if search_root is not None else Path.cwd()
     return _build_operator_pack_workbench_payload(
-        search_root=search_root,
+        search_root=root,
         pack_kinds=list(pack_kinds),
         trust_statuses=list(trust_statuses),
+        summary_line_contains=summary_line_contains,
+        output_artifact_label_contains=output_artifact_label_contains,
     )
 
 

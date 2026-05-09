@@ -1,0 +1,15 @@
+"""Legacy facade for paper execution retention custody chain contracts."""
+from __future__ import annotations
+
+from strategy_validator.contracts.paper_execution_retention_custody_register import *
+from strategy_validator.contracts.paper_execution_retention_custody_register import __all__ as _PAPER_EXECUTION_RETENTION_CUSTODY_REGISTER_ALL
+from strategy_validator.contracts.paper_execution_retention_custody_audit import *
+from strategy_validator.contracts.paper_execution_retention_custody_audit import __all__ as _PAPER_EXECUTION_RETENTION_CUSTODY_AUDIT_ALL
+from strategy_validator.contracts.paper_execution_retention_custody_review import *
+from strategy_validator.contracts.paper_execution_retention_custody_review import __all__ as _PAPER_EXECUTION_RETENTION_CUSTODY_REVIEW_ALL
+
+__all__ = tuple(
+    _PAPER_EXECUTION_RETENTION_CUSTODY_REGISTER_ALL +
+    _PAPER_EXECUTION_RETENTION_CUSTODY_AUDIT_ALL +
+    _PAPER_EXECUTION_RETENTION_CUSTODY_REVIEW_ALL
+)

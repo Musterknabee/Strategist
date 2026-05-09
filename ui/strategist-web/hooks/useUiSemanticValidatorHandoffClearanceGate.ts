@@ -1,0 +1,9 @@
+"use client";
+import { useReadPlaneJsonQuery } from "@/hooks/useReadPlaneJsonQuery";
+import type { UiSemanticValidatorHandoffClearanceGatePayload } from "@/lib/api/types";
+import { queryKeys } from "@/lib/query/keys";
+type Nullable<T> = T | null | undefined;
+export type UiSemanticValidatorHandoffClearanceGateQuery = { experimentIdContains?: Nullable<string>; issueContains?: Nullable<string>; clearanceStatus?: Nullable<string>; priority?: Nullable<string>; trustBanner?: Nullable<string>; requiresExternalArtifact?: Nullable<boolean>; handoffClearanceBlocked?: Nullable<boolean>; candidateForOperatorClearanceReview?: Nullable<boolean>; limit?: Nullable<number>; };
+const append=(p:URLSearchParams,k:string,v:Nullable<string|number|boolean>)=>{ if(v!==null&&v!==undefined&&v!=="") p.set(k,String(v)); };
+function path(q?:UiSemanticValidatorHandoffClearanceGateQuery){ const p=new URLSearchParams(); if(q){ append(p,"experiment_id_contains",q.experimentIdContains); append(p,"issue_contains",q.issueContains); append(p,"requires_external_artifact",q.requiresExternalArtifact); append(p,"handoff_clearance_blocked",q.handoffClearanceBlocked); append(p,"candidate_for_operator_clearance_review",q.candidateForOperatorClearanceReview); append(p,"limit",q.limit); if(q.clearanceStatus) p.append("clearance_status",q.clearanceStatus); if(q.priority) p.append("priority",q.priority); if(q.trustBanner) p.append("trust_banner",q.trustBanner); } const qs=p.toString(); return qs?`/ui/semantic-validator-handoff/clearance-gate?${qs}`:"/ui/semantic-validator-handoff/clearance-gate"; }
+export function useUiSemanticValidatorHandoffClearanceGate(query?: UiSemanticValidatorHandoffClearanceGateQuery){ return useReadPlaneJsonQuery<UiSemanticValidatorHandoffClearanceGatePayload>(queryKeys.uiSemanticValidatorHandoffClearanceGateFiltered(query ?? {}), path(query)); }

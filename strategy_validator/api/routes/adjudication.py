@@ -1,8 +1,12 @@
 from __future__ import annotations
+from strategy_validator.api.routes._lazy_imports import lazy_callable
 
 from fastapi import APIRouter
 
-from strategy_validator.application.api_adjudication_surfaces import run_oracle_adjudication
+
+
+# Heavy application/read-plane dependencies are lazy-loaded to keep API import fast.
+run_oracle_adjudication = lazy_callable('strategy_validator.application.api_adjudication_surfaces', 'run_oracle_adjudication')
 
 router = APIRouter(prefix='/adjudication', tags=['adjudication'])
 

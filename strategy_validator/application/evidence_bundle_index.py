@@ -266,6 +266,29 @@ def build_evidence_bundle_index(
     return payload
 
 
+def build_ui_evidence_bundle_index_payload(
+    *,
+    repo_root: str | Path | None = None,
+    artifact_root: str | Path | None = None,
+    include_digests: bool = False,
+) -> dict[str, Any]:
+    """UI read-plane adapter for local evidence bundle discovery.
+
+    This intentionally remains discovery-only: it never creates, mutates, signs,
+    verifies, approves, or publishes evidence. Query parameters let a local
+    operator point the API at a test fixture or alternate artifact root while
+    preserving the same payload contract used by the CLI/application layer.
+    """
+    root = Path(repo_root).resolve() if repo_root is not None else Path.cwd().resolve()
+    artifacts = Path(artifact_root).resolve() if artifact_root is not None else None
+    return build_evidence_bundle_index(
+        repo_root=root,
+        artifact_root=artifacts,
+        include_digests=include_digests,
+    )
+
+
 __all__ = [
     "build_evidence_bundle_index",
+    "build_ui_evidence_bundle_index_payload",
 ]

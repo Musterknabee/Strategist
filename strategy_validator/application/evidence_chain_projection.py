@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -46,9 +47,28 @@ def _database_path_text(database_path: str | None) -> str:
         return ''
 
 
+def _normalize_tuple(values: tuple[str, ...] | list[str] | None) -> tuple[str, ...]:
+    return tuple(str(value).strip() for value in (values or ()) if str(value).strip())
+
+
+def _normalize_contains(value: str | None) -> str | None:
+    if value is None:
+        return None
+    stripped = str(value).strip()
+    return stripped.casefold() if stripped else None
+
+
+def _contains(haystack: object, needle: str | None) -> bool:
+    if not needle:
+        return True
+    if haystack is None:
+        return False
+    return needle in str(haystack).casefold()
+
+
 def _decision_issue_map(report: Any) -> dict[tuple[str, int | None], list[str]]:
     mapped: dict[tuple[str, int | None], list[str]] = {}
-    for issue in getattr(report, 'issues', ()):
+    for issue in getattr(report, 'issues', ()):  # pragma: no branch - report contract is tuple-like in production.
         key = (str(getattr(issue, 'experiment_id', '')), getattr(issue, 'sequence_number', None))
         mapped.setdefault(key, []).append(str(getattr(issue, 'code', 'UNKNOWN_LEDGER_ISSUE')))
     return mapped
@@ -71,6 +91,7 @@ def _decision_event_entry(event: LedgerEvent, issue_codes: list[str]) -> dict[st
         'previous_event_hash': event.previous_event_hash,
         'manifest_hash': event.manifest_hash,
         'payload_digest_sha256': _payload_digest_from_json(event.event_payload_json),
+        'summary_line': f"{event.event_type} · {event.experiment_id} · {event.promotion_state}",
         'chained': not issue_codes,
         'issue_codes': issue_codes,
     }
@@ -94,9 +115,12 @@ def _operator_event_entry(event: Any, chain_issues: tuple[str, ...]) -> dict[str
     authorization = payload.get('authorization')
     if not isinstance(authorization, dict):
         authorization = {}
+    work_item_key = payload.get('work_item_key')
+    review_target = payload.get('review_target')
     return {
         'stream_family': _OPERATOR_STREAM_FAMILY,
         'record_id': event.action_event_id,
+        'aggregate_id': work_item_key or review_target or event.action_event_id,
         'action_event_id': event.action_event_id,
         'sequence_number': event.sequence_number,
         'event_type': event.action,
@@ -110,9 +134,12 @@ def _operator_event_entry(event: Any, chain_issues: tuple[str, ...]) -> dict[str
         'previous_event_hash': event.previous_event_hash,
         'target_payload_digest': _target_payload_digest(event.target_payload_json),
         'idempotency_key': payload.get('idempotency_key'),
+        'review_target': review_target,
+        'work_item_key': work_item_key,
         'control_plane_event_id': payload.get('event_id') if event.action == 'control-plane-event' else None,
         'authorization_principal_id': authorization.get('principal_id'),
         'authorization_mode': authorization.get('authorization_mode'),
+        'summary_line': event.summary_line or f"{event.action} · {event.operator_id} · {event.status}",
         'chained': event.sequence_number is not None and not issue_codes,
         'issue_codes': issue_codes,
     }
@@ -185,20 +212,74 @@ def _build_operator_journal_payload(*, readonly: bool) -> tuple[dict[str, Any], 
     }, degraded
 
 
+def _entry_matches(
+    entry: dict[str, Any],
+    *,
+    stream_families: tuple[str, ...],
+    issue_codes: tuple[str, ...],
+    statuses: tuple[str, ...],
+    actor_contains: str | None,
+    aggregate_contains: str | None,
+    event_type_contains: str | None,
+    chained: bool | None,
+) -> bool:
+    if stream_families and str(entry.get('stream_family')) not in stream_families:
+        return False
+    if statuses and str(entry.get('status')) not in statuses:
+        return False
+    entry_issues = tuple(str(code) for code in (entry.get('issue_codes') or ()))
+    if issue_codes and not any(code in entry_issues for code in issue_codes):
+        return False
+    if chained is not None and bool(entry.get('chained')) is not chained:
+        return False
+    if not _contains(entry.get('actor_id') or entry.get('writer_identity') or entry.get('operator_id'), actor_contains):
+        return False
+    if not _contains(entry.get('aggregate_id') or entry.get('experiment_id') or entry.get('action_event_id'), aggregate_contains):
+        return False
+    if not _contains(entry.get('event_type') or entry.get('action'), event_type_contains):
+        return False
+    return True
+
+
+def _count_values(entries: list[dict[str, Any]], key: str) -> dict[str, int]:
+    return dict(sorted(Counter(str(entry.get(key) or 'UNKNOWN') for entry in entries).items()))
+
+
+def _count_issue_codes(entries: list[dict[str, Any]]) -> dict[str, int]:
+    counts: Counter[str] = Counter()
+    for entry in entries:
+        counts.update(str(code) for code in (entry.get('issue_codes') or ()))
+    return dict(sorted(counts.items()))
+
+
 def build_ui_evidence_chain_payload(
     *,
     database_path: str | None = None,
     readonly: bool = True,
+    stream_family: tuple[str, ...] | list[str] | None = None,
+    issue_code: tuple[str, ...] | list[str] | None = None,
+    status: tuple[str, ...] | list[str] | None = None,
+    actor_contains: str | None = None,
+    aggregate_contains: str | None = None,
+    event_type_contains: str | None = None,
+    chained: bool | None = None,
     limit: int = 200,
 ) -> dict[str, Any]:
     """Build a read-only forensic projection over decision and operator chains.
 
-    This is a UI/read-plane surface only. It verifies and exposes existing
-    append-only evidence streams without creating promotion, broker, or operator
-    mutation authority.
+    This UI/read-plane surface verifies and exposes existing append-only evidence
+    streams. It deliberately grants no promotion, broker, adjudication, or
+    operator mutation authority.
     """
 
     safe_limit = max(1, min(int(limit), 1000))
+    stream_families = _normalize_tuple(stream_family)
+    issue_codes = _normalize_tuple(issue_code)
+    statuses = _normalize_tuple(status)
+    actor_needle = _normalize_contains(actor_contains)
+    aggregate_needle = _normalize_contains(aggregate_contains)
+    event_type_needle = _normalize_contains(event_type_contains)
+
     generated_at = datetime.now(timezone.utc).isoformat()
     decision, decision_degraded = _build_decision_ledger_payload(readonly=readonly)
     operator, operator_degraded = _build_operator_journal_payload(readonly=readonly)
@@ -206,13 +287,26 @@ def build_ui_evidence_chain_payload(
 
     timeline_entries = [*decision['entries'], *operator['entries']]
     timeline_entries.sort(key=lambda row: (str(row.get('created_at_utc') or ''), str(row.get('stream_family') or '')))
-    limited_timeline = timeline_entries[-safe_limit:]
+    filtered_entries = [
+        entry for entry in timeline_entries
+        if _entry_matches(
+            entry,
+            stream_families=stream_families,
+            issue_codes=issue_codes,
+            statuses=statuses,
+            actor_contains=actor_needle,
+            aggregate_contains=aggregate_needle,
+            event_type_contains=event_type_needle,
+            chained=chained,
+        )
+    ]
+    limited_timeline = filtered_entries[-safe_limit:]
 
     decision_ok = bool(decision.get('chain_ok'))
     operator_ok = bool(operator.get('chain_ok'))
     total_events = int(decision.get('event_count') or 0) + int(operator.get('event_count') or 0)
     total_issues = int(decision.get('chain_issue_count') or 0) + int(operator.get('chain_issue_count') or 0)
-    ok = decision_ok and operator_ok and not degraded
+    ok = decision_ok and operator_ok and not degraded and not _count_issue_codes(timeline_entries)
 
     return {
         'schema_version': UI_EVIDENCE_CHAIN_SCHEMA_VERSION,
@@ -225,21 +319,44 @@ def build_ui_evidence_chain_payload(
         'database_path': _database_path_text(database_path),
         'ok': ok,
         'degraded': degraded,
+        'filters': {
+            'stream_family': list(stream_families),
+            'issue_code': list(issue_codes),
+            'status': list(statuses),
+            'actor_contains': actor_contains,
+            'aggregate_contains': aggregate_contains,
+            'event_type_contains': event_type_contains,
+            'chained': chained,
+            'limit': safe_limit,
+        },
         'summary': {
             'event_count_total': total_events,
+            'filtered_event_count': len(filtered_entries),
+            'returned_event_count': len(limited_timeline),
+            'unchained_filtered_event_count': sum(1 for entry in filtered_entries if not bool(entry.get('chained'))),
             'chain_issue_count_total': total_issues,
             'decision_ledger_event_count': int(decision.get('event_count') or 0),
             'decision_ledger_stream_count': int(decision.get('stream_count') or 0),
             'operator_action_event_count': int(operator.get('event_count') or 0),
             'decision_ledger_chain_ok': decision_ok,
             'operator_action_chain_ok': operator_ok,
+            'stream_family_counts': _count_values(filtered_entries, 'stream_family'),
+            'status_counts': _count_values(filtered_entries, 'status'),
+            'issue_code_counts': _count_issue_codes(filtered_entries),
         },
+        'guardrails': [
+            'read_plane_only_no_ledger_mutation',
+            'no_promotion_or_adjudication_authority',
+            'no_broker_or_live_execution_authority',
+            'append_only_streams_are_observed_not_rewritten',
+        ],
         'streams': {
             _DECISION_STREAM_FAMILY: decision,
             _OPERATOR_STREAM_FAMILY: operator,
         },
         'timeline': {
             'entry_count': len(timeline_entries),
+            'filtered_count': len(filtered_entries),
             'returned_count': len(limited_timeline),
             'limit': safe_limit,
             'entries': limited_timeline,

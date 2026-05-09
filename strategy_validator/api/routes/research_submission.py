@@ -1,29 +1,30 @@
 """Validator-submission research routes."""
 
 from __future__ import annotations
+from strategy_validator.api.routes._lazy_imports import lazy_callable, lazy_model
 
 from typing import Any
 
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from strategy_validator.application.research_integrity import (
-    build_semantic_validator_submission_packet,
-    verify_semantic_validator_submission_packet,
-    summarize_semantic_validator_submission_packet,
-    build_semantic_validator_submission_packet_evidence,
-    verify_semantic_validator_submission_packet_evidence,
-    summarize_semantic_validator_submission_packet_evidence,
-    build_semantic_validator_submission_readiness_report,
-    summarize_semantic_validator_submission_readiness,
-)
-from strategy_validator.contracts.evidence import Evidence
-from strategy_validator.contracts.experiments import ExperimentManifest
-from strategy_validator.contracts.semantic import (
-    SemanticValidatorIngressAcceptanceLedger,
-    SemanticValidatorIngressAcceptanceRecord,
-    SemanticValidatorSubmissionPacket,
-)
+
+
+Evidence = lazy_model('strategy_validator.contracts.evidence', 'Evidence')
+ExperimentManifest = lazy_model('strategy_validator.contracts.experiments', 'ExperimentManifest')
+SemanticValidatorIngressAcceptanceLedger = lazy_model('strategy_validator.contracts.semantic', 'SemanticValidatorIngressAcceptanceLedger')
+SemanticValidatorIngressAcceptanceRecord = lazy_model('strategy_validator.contracts.semantic', 'SemanticValidatorIngressAcceptanceRecord')
+SemanticValidatorSubmissionPacket = lazy_model('strategy_validator.contracts.semantic', 'SemanticValidatorSubmissionPacket')
+
+# Heavy application/read-plane dependencies are lazy-loaded to keep API import fast.
+build_semantic_validator_submission_packet = lazy_callable('strategy_validator.application.research_integrity', 'build_semantic_validator_submission_packet')
+verify_semantic_validator_submission_packet = lazy_callable('strategy_validator.application.research_integrity', 'verify_semantic_validator_submission_packet')
+summarize_semantic_validator_submission_packet = lazy_callable('strategy_validator.application.research_integrity', 'summarize_semantic_validator_submission_packet')
+build_semantic_validator_submission_packet_evidence = lazy_callable('strategy_validator.application.research_integrity', 'build_semantic_validator_submission_packet_evidence')
+verify_semantic_validator_submission_packet_evidence = lazy_callable('strategy_validator.application.research_integrity', 'verify_semantic_validator_submission_packet_evidence')
+summarize_semantic_validator_submission_packet_evidence = lazy_callable('strategy_validator.application.research_integrity', 'summarize_semantic_validator_submission_packet_evidence')
+build_semantic_validator_submission_readiness_report = lazy_callable('strategy_validator.application.research_integrity', 'build_semantic_validator_submission_readiness_report')
+summarize_semantic_validator_submission_readiness = lazy_callable('strategy_validator.application.research_integrity', 'summarize_semantic_validator_submission_readiness')
 
 router = APIRouter()
 

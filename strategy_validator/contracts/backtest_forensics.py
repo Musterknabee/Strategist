@@ -39,10 +39,16 @@ class BacktestForensicsSummary(BaseModel):
     paper_only_count: int = 0
     failed_count: int = 0
     needs_evidence_count: int = 0
+    review_ready_count: int = 0
     synthetic_count: int = 0
     provider_snapshot_count: int = 0
     real_local_count: int = 0
+    warning_count: int = 0
+    blocker_count: int = 0
     risk_flag_counts: dict[str, int] = Field(default_factory=dict)
+    review_posture_counts: dict[str, int] = Field(default_factory=dict)
+    status_counts: dict[str, int] = Field(default_factory=dict)
+    data_plane_counts: dict[str, int] = Field(default_factory=dict)
     gate_status_counts: dict[str, dict[str, int]] = Field(default_factory=dict)
     model_config = {"extra": "forbid"}
 
@@ -60,9 +66,15 @@ class BacktestForensicsPayload(BaseModel):
     degraded: list[str] = Field(default_factory=list)
     batch: dict[str, Any] | None = None
     summary: BacktestForensicsSummary
+    filtered_summary: BacktestForensicsSummary
     strategies: list[BacktestForensicStrategyRow] = Field(default_factory=list)
+    total_strategy_count: int = 0
+    filtered_strategy_count: int = 0
+    returned_strategy_count: int = 0
+    filters: dict[str, Any] = Field(default_factory=dict)
     raw_strategy_batch_route: str | None = None
     artifact_replay: dict[str, Any] = Field(default_factory=dict)
+    guardrails: list[str] = Field(default_factory=list)
     model_config = {"extra": "forbid"}
 
 

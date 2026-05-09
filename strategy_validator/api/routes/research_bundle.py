@@ -1,25 +1,26 @@
 """Semantic adjudication bundle/readiness research routes."""
 
 from __future__ import annotations
+from strategy_validator.api.routes._lazy_imports import lazy_callable, lazy_model
 
 from typing import Any
 
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from strategy_validator.application.research_integrity import (
-    build_semantic_adjudication_bundle,
-    build_semantic_adjudication_handoff_artifact,
-    build_semantic_adjudication_readiness_report,
-    verify_semantic_adjudication_bundle,
-    verify_semantic_adjudication_handoff_artifact,
-)
-from strategy_validator.contracts.experiments import ExperimentManifest
-from strategy_validator.contracts.semantic import (
-    SemanticAdjudicationBundle,
-    SemanticAdjudicationHandoffArtifact,
-    SemanticResearchGateArtifact,
-)
+
+
+ExperimentManifest = lazy_model('strategy_validator.contracts.experiments', 'ExperimentManifest')
+SemanticAdjudicationBundle = lazy_model('strategy_validator.contracts.semantic', 'SemanticAdjudicationBundle')
+SemanticAdjudicationHandoffArtifact = lazy_model('strategy_validator.contracts.semantic', 'SemanticAdjudicationHandoffArtifact')
+SemanticResearchGateArtifact = lazy_model('strategy_validator.contracts.semantic', 'SemanticResearchGateArtifact')
+
+# Heavy application/read-plane dependencies are lazy-loaded to keep API import fast.
+build_semantic_adjudication_bundle = lazy_callable('strategy_validator.application.research_integrity', 'build_semantic_adjudication_bundle')
+build_semantic_adjudication_handoff_artifact = lazy_callable('strategy_validator.application.research_integrity', 'build_semantic_adjudication_handoff_artifact')
+build_semantic_adjudication_readiness_report = lazy_callable('strategy_validator.application.research_integrity', 'build_semantic_adjudication_readiness_report')
+verify_semantic_adjudication_bundle = lazy_callable('strategy_validator.application.research_integrity', 'verify_semantic_adjudication_bundle')
+verify_semantic_adjudication_handoff_artifact = lazy_callable('strategy_validator.application.research_integrity', 'verify_semantic_adjudication_handoff_artifact')
 
 router = APIRouter()
 

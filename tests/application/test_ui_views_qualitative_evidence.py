@@ -23,3 +23,15 @@ def test_build_ui_evidence_payload_includes_section_provenance() -> None:
     assert 'deployment_status' in payload
     assert payload['deployment_status'] in {'UNKNOWN', 'PASS', 'FAIL', 'DEGRADED'}
     assert 'evidence_generated_at_utc' in payload
+
+
+def test_build_ui_tribunal_payload_declares_read_plane_guardrails() -> None:
+    payload = build_ui_tribunal_payload()
+
+    assert payload['schema_version'] == 'ui_tribunal_workspace/v1'
+    assert payload['summary']['quantitative_metric_family_count'] == 0
+    assert payload['summary']['read_plane_only'] is True
+    assert payload['guardrails']['mutation_authority'] == 'NONE'
+    assert payload['guardrails']['promotion_authority'] == 'NONE'
+    assert payload['guardrails']['execution_authority'] == 'NONE'
+    assert payload['guardrails']['blindness_enforced'] is True

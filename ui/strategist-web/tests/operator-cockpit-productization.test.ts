@@ -37,7 +37,6 @@ describe("operator cockpit productization semantics", () => {
   it("treats pending provider keys as action-required rather than success", () => {
     const model = candidateModel({ providerSetup: { summary: { missing_secret_count: 1 } } });
     expect(model.rows[0].provider_status).toBe("PENDING_KEY");
-    expect(model.provider_pending_key_count).toBe(1);
     expect(model.rows[0].next_action).toBe("ADD_PROVIDER_KEY");
     expect(model.next_action).toBe("ADD_PROVIDER_KEY");
   });

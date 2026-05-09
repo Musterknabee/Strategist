@@ -1,14 +1,16 @@
 from __future__ import annotations
+from strategy_validator.api.routes._lazy_imports import lazy_callable
 
-from strategy_validator.application.api_ui_surfaces import (
-    build_ui_burnin_query,
-    build_ui_evidence_query,
-    build_ui_pack_detail_query,
-    build_ui_runtime_query,
-    build_ui_tribunal_query,
-    build_ui_workboard_query,
-)
 
+
+
+# Heavy application/read-plane dependencies are lazy-loaded to keep API import fast.
+build_ui_burnin_query = lazy_callable('strategy_validator.application.api_ui_surfaces', 'build_ui_burnin_query')
+build_ui_evidence_query = lazy_callable('strategy_validator.application.api_ui_surfaces', 'build_ui_evidence_query')
+build_ui_pack_detail_query = lazy_callable('strategy_validator.application.api_ui_surfaces', 'build_ui_pack_detail_query')
+build_ui_runtime_query = lazy_callable('strategy_validator.application.api_ui_surfaces', 'build_ui_runtime_query')
+build_ui_tribunal_query = lazy_callable('strategy_validator.application.api_ui_surfaces', 'build_ui_tribunal_query')
+build_ui_workboard_query = lazy_callable('strategy_validator.application.api_ui_surfaces', 'build_ui_workboard_query')
 
 def build_ui_evidence_query_kwargs(
     *,

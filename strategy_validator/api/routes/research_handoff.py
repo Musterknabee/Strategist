@@ -1,36 +1,37 @@
 """Validator-handoff and ingress-acceptance research routes."""
 
 from __future__ import annotations
+from strategy_validator.api.routes._lazy_imports import lazy_callable, lazy_model
 
 from typing import Any
 
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from strategy_validator.application.research_integrity import (
-    build_semantic_validator_handoff_packet,
-    verify_semantic_validator_handoff_packet,
-    summarize_semantic_validator_handoff_packet,
-    build_semantic_validator_handoff_packet_ingress_report,
-    summarize_semantic_validator_handoff_packet_ingress,
-    build_semantic_validator_handoff_packet_ingress_certificate,
-    verify_semantic_validator_handoff_packet_ingress_certificate,
-    summarize_semantic_validator_handoff_packet_ingress_certificate,
-    build_semantic_validator_ingress_acceptance_record,
-    verify_semantic_validator_ingress_acceptance_record,
-    summarize_semantic_validator_ingress_acceptance_record,
-    build_semantic_validator_ingress_acceptance_ledger,
-    verify_semantic_validator_ingress_acceptance_ledger,
-    summarize_semantic_validator_ingress_acceptance_ledger,
-)
-from strategy_validator.contracts.evidence import Evidence
-from strategy_validator.contracts.experiments import ExperimentManifest
-from strategy_validator.contracts.semantic import (
-    SemanticValidatorHandoffPacket,
-    SemanticValidatorHandoffPacketIngressCertificate,
-    SemanticValidatorIngressAcceptanceRecord,
-    SemanticValidatorIngressAcceptanceLedger,
-)
+
+
+Evidence = lazy_model('strategy_validator.contracts.evidence', 'Evidence')
+ExperimentManifest = lazy_model('strategy_validator.contracts.experiments', 'ExperimentManifest')
+SemanticValidatorHandoffPacket = lazy_model('strategy_validator.contracts.semantic', 'SemanticValidatorHandoffPacket')
+SemanticValidatorHandoffPacketIngressCertificate = lazy_model('strategy_validator.contracts.semantic', 'SemanticValidatorHandoffPacketIngressCertificate')
+SemanticValidatorIngressAcceptanceLedger = lazy_model('strategy_validator.contracts.semantic', 'SemanticValidatorIngressAcceptanceLedger')
+SemanticValidatorIngressAcceptanceRecord = lazy_model('strategy_validator.contracts.semantic', 'SemanticValidatorIngressAcceptanceRecord')
+
+# Heavy application/read-plane dependencies are lazy-loaded to keep API import fast.
+build_semantic_validator_handoff_packet = lazy_callable('strategy_validator.application.research_integrity', 'build_semantic_validator_handoff_packet')
+verify_semantic_validator_handoff_packet = lazy_callable('strategy_validator.application.research_integrity', 'verify_semantic_validator_handoff_packet')
+summarize_semantic_validator_handoff_packet = lazy_callable('strategy_validator.application.research_integrity', 'summarize_semantic_validator_handoff_packet')
+build_semantic_validator_handoff_packet_ingress_report = lazy_callable('strategy_validator.application.research_integrity', 'build_semantic_validator_handoff_packet_ingress_report')
+summarize_semantic_validator_handoff_packet_ingress = lazy_callable('strategy_validator.application.research_integrity', 'summarize_semantic_validator_handoff_packet_ingress')
+build_semantic_validator_handoff_packet_ingress_certificate = lazy_callable('strategy_validator.application.research_integrity', 'build_semantic_validator_handoff_packet_ingress_certificate')
+verify_semantic_validator_handoff_packet_ingress_certificate = lazy_callable('strategy_validator.application.research_integrity', 'verify_semantic_validator_handoff_packet_ingress_certificate')
+summarize_semantic_validator_handoff_packet_ingress_certificate = lazy_callable('strategy_validator.application.research_integrity', 'summarize_semantic_validator_handoff_packet_ingress_certificate')
+build_semantic_validator_ingress_acceptance_record = lazy_callable('strategy_validator.application.research_integrity', 'build_semantic_validator_ingress_acceptance_record')
+verify_semantic_validator_ingress_acceptance_record = lazy_callable('strategy_validator.application.research_integrity', 'verify_semantic_validator_ingress_acceptance_record')
+summarize_semantic_validator_ingress_acceptance_record = lazy_callable('strategy_validator.application.research_integrity', 'summarize_semantic_validator_ingress_acceptance_record')
+build_semantic_validator_ingress_acceptance_ledger = lazy_callable('strategy_validator.application.research_integrity', 'build_semantic_validator_ingress_acceptance_ledger')
+verify_semantic_validator_ingress_acceptance_ledger = lazy_callable('strategy_validator.application.research_integrity', 'verify_semantic_validator_ingress_acceptance_ledger')
+summarize_semantic_validator_ingress_acceptance_ledger = lazy_callable('strategy_validator.application.research_integrity', 'summarize_semantic_validator_ingress_acceptance_ledger')
 
 router = APIRouter()
 

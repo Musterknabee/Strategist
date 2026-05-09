@@ -1,4 +1,5 @@
 from __future__ import annotations
+from strategy_validator.api.routes._lazy_imports import lazy_callable
 
 from pathlib import Path
 
@@ -6,8 +7,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from strategy_validator.api.auth import require_mutation_auth
-from strategy_validator.application.projection_backfill import backfill_all_registered_projections
 from strategy_validator.core.path_guards import PathBoundaryError, resolve_within_root
+
+
+# Heavy application/read-plane dependencies are lazy-loaded to keep API import fast.
+backfill_all_registered_projections = lazy_callable('strategy_validator.application.projection_backfill', 'backfill_all_registered_projections')
 
 router = APIRouter(prefix="/rebuild", tags=["rebuild"])
 

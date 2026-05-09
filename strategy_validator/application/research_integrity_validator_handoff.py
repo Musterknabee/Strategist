@@ -254,6 +254,22 @@ def summarize_semantic_validator_handoff_packet_ingress(
     )
 
 
+
+
+def _validator_handoff_packet_ingress_certificate_checksum_payload(
+    certificate: SemanticValidatorHandoffPacketIngressCertificate,
+) -> dict[str, Any]:
+    payload = certificate.model_dump(mode="json")
+    payload.pop("payload_checksum", None)
+    return payload
+
+
+def _validator_handoff_packet_ingress_certificate_payload_checksum(
+    certificate: SemanticValidatorHandoffPacketIngressCertificate,
+) -> str:
+    return _sha256_payload(_validator_handoff_packet_ingress_certificate_checksum_payload(certificate))
+
+
 def build_semantic_validator_handoff_packet_ingress_certificate(
     packet: SemanticValidatorHandoffPacket,
     *,

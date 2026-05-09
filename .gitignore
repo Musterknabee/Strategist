@@ -1,31 +1,16 @@
-# Python/runtime transients
+# Python bytecode / test caches
 __pycache__/
 *.py[cod]
-*$py.class
+*.pyc
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 .import_linter_cache/
-.strategy_validator/
+.coverage
+coverage.xml
+htmlcov/
 
-# Local environments/build outputs
-.venv/
-venv/
-build/
-dist/
-*.egg-info/
-
-# Private operator env (never commit real tokens)
-deployment.env
-.env
-.env.local
-*.secrets
-.keys/
-
-# Local dev layout (optional scripts/setup_local_deployment.py --dev)
-.local/
-
-# Runtime state and generated artifacts
+# Local runtime state / databases
 *.sqlite
 *.sqlite3
 *.db
@@ -33,10 +18,31 @@ deployment.env
 *.db-shm
 *.log
 *.jsonl
-/artifacts/
-scratch/**/*.log
+artifacts/
+scratch/
+.strategy_validator/
 
-# Frontend/build caches
+# Virtualenvs / packaging
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+
+# Frontend dependencies / build state
 node_modules/
-ui/strategist-web/.next/
+.next/
+.cache/
+.turbo/
 *.tsbuildinfo
+
+# Local environment / secrets
+.env
+.env.local
+.envrc
+deployment.env
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
