@@ -41,6 +41,7 @@ node_modules/
 .env.local
 .envrc
 deployment.env
+.keys/
 *.pem
 *.key
 *.p12

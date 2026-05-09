@@ -6,6 +6,31 @@ on:
   workflow_dispatch:
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: ui/strategist-web/package-lock.json
+      - name: Install package with dev extras
+        run: python -m pip install -e '.[dev]'
+      - name: Install Strategist web dependencies (validate)
+        if: hashFiles('ui/strategist-web/package-lock.json') != ''
+        working-directory: ui/strategist-web
+        run: npm ci
+      - name: Validate backend
+        run: python scripts/ci_local_verify.py
+      - name: Validate Strategist web
+        if: hashFiles('ui/strategist-web/package-lock.json') != ''
+        working-directory: ui/strategist-web
+        run: npm run certify
+
   repository-truth:
     runs-on: ubuntu-latest
     steps:

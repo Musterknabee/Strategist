@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
 from strategy_validator.api.app import app
@@ -46,7 +48,7 @@ def test_ui_pack_workbench_route_uses_read_model_service(monkeypatch) -> None:
     assert payload["trust_statuses"] == ["TRUSTED"]
     assert payload["summary_line_contains"] == "daily"
     assert payload["output_artifact_label_contains"] == "markdown"
-    assert str(captured["search_root"]) == "/tmp/operator-packs"
+    assert captured["search_root"] == Path("/tmp/operator-packs")
 
 
 def test_ui_facade_declares_pack_workbench_as_read_plane() -> None:

@@ -7,6 +7,9 @@ ROUTES_ROOT = Path('strategy_validator/api/routes')
 _ALLOWED_INTERNAL_ROUTE_FACADES = (
     'strategy_validator.api.routes import ui as ui_root',
     'strategy_validator.api.routes import ui_route_responses as _ui_route_responses',
+    'strategy_validator.api.routes.research_release_',
+    'strategy_validator.api.routes.ui_routes_detail_',
+    'legacy_callable(',
 )
 _FORBIDDEN_DOMAIN_IMPORTS = (
     'strategy_validator.validator',

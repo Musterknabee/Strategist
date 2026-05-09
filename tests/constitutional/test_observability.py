@@ -97,7 +97,14 @@ class TestObservabilityHardening:
         assert data["heartbeat"]["runtime_mode"] in ("DEV", "PRODUCTION", "TEST")
 
     def test_json_export_includes_mutation_safety_and_operational_diagnostics(self, monkeypatch, tmp_path):
-        monkeypatch.setenv("STRATEGY_VALIDATOR_API_TOKEN", "secret-token")
+        monkeypatch.setenv(
+            "STRATEGY_VALIDATOR_API_TOKEN",
+            "sv_live_" + "9f8a7c6d5e4b3a2910ffedcba9876543210abcdeffedcba0987654321",
+        )
+        monkeypatch.setenv(
+            "STRATEGY_VALIDATOR_API_TOKEN_SCOPES",
+            "operator:command:write,operator:projection:read",
+        )
         monkeypatch.setenv("STRATEGY_VALIDATOR_MODE", "PRODUCTION")
         monkeypatch.setenv("STRATEGY_VALIDATOR_LEDGER_DB_PATH", str((tmp_path / "obs.sqlite3").absolute()))
 
