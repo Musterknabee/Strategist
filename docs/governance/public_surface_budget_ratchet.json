@@ -61,8 +61,8 @@
       "budget": 47
     },
     "docs_pages": {
-      "actual": 178,
-      "baseline_reason": "Research-and-Paper-Discovery certification pass: markdown docs inventory.",
+      "actual": 179,
+      "baseline_reason": "Research-and-Paper-Discovery certification pass: markdown docs inventory remeasured (+1 docs_pages; documentation-only drift within budget).",
       "budget": 182
     },
     "frontend_pages": {
