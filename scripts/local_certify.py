@@ -26,7 +26,7 @@ from functools import lru_cache
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Sequence, TextIO
+from typing import Any, Sequence, TextIO
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FRONTEND_ROOT = REPO_ROOT / "ui" / "strategist-web"
@@ -473,6 +473,45 @@ def _timeout_for_step(name: str, override_seconds: int | None = None) -> int:
     return LOCAL_CERTIFY_STEP_TIMEOUTS.get(name, DEFAULT_LOCAL_CERTIFY_TIMEOUT_SECONDS)
 
 
+def _windows_subprocess_popen(
+    argv: list[str],
+    *,
+    cwd: Path,
+    env: dict[str, str],
+    stdout_file: TextIO,
+    stderr_file: TextIO,
+    start_new_session: bool,
+) -> subprocess.Popen[str]:
+    """Start a subprocess on Windows with best-effort job isolation.
+
+    Some IDE-hosted shells attach certification workers to a job that is torn
+    down when the terminal session ends.  ``CREATE_BREAKAWAY_FROM_JOB`` (when
+    allowed by the parent job) lets long-running shard children leave that job
+    so they are less likely to disappear mid-run.  If ``CreateProcess`` rejects
+    breakaway, fall back to ``CREATE_NEW_PROCESS_GROUP`` only.
+    """
+    popen_kw: dict[str, Any] = {
+        "cwd": cwd,
+        "env": env,
+        "stdout": stdout_file,
+        "stderr": stderr_file,
+        "text": True,
+        "encoding": "utf-8",
+        "errors": "replace",
+        "close_fds": True,
+        "start_new_session": start_new_session,
+    }
+    new_group = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    breakaway = getattr(subprocess, "CREATE_BREAKAWAY_FROM_JOB", 0)
+    combined = int(new_group) | int(breakaway)
+    if breakaway and combined:
+        try:
+            return subprocess.Popen(argv, creationflags=combined, **popen_kw)
+        except OSError:
+            return subprocess.Popen(argv, creationflags=int(new_group), **popen_kw)
+    return subprocess.Popen(argv, creationflags=int(new_group), **popen_kw)
+
+
 def _run(
     name: str,
     command: Sequence[str],
@@ -491,10 +530,7 @@ def _run(
     effective_timeout = _timeout_for_step(name, timeout_seconds)
     started_perf = time.perf_counter()
     started_at = _utc_now()
-    creationflags = 0
     start_new_session = os.name != "nt"
-    if os.name == "nt":  # pragma: no cover - Windows-specific process handling
-        creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
     timed_out = False
     exit_code = 0
     stdout = ""
@@ -507,19 +543,29 @@ def _run(
         with stdout_path.open("w+", encoding="utf-8", errors="replace") as stdout_file, stderr_path.open(
             "w+", encoding="utf-8", errors="replace"
         ) as stderr_file:
-            proc = subprocess.Popen(
-                list(command),
-                cwd=cwd,
-                env=env,
-                stdout=stdout_file,
-                stderr=stderr_file,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                close_fds=True,
-                start_new_session=start_new_session,
-                creationflags=creationflags,
-            )
+            argv = list(command)
+            if os.name == "nt":  # pragma: no cover - Windows-specific process handling
+                proc = _windows_subprocess_popen(
+                    argv,
+                    cwd=cwd,
+                    env=env,
+                    stdout_file=stdout_file,
+                    stderr_file=stderr_file,
+                    start_new_session=start_new_session,
+                )
+            else:
+                proc = subprocess.Popen(
+                    argv,
+                    cwd=cwd,
+                    env=env,
+                    stdout=stdout_file,
+                    stderr=stderr_file,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    close_fds=True,
+                    start_new_session=start_new_session,
+                )
             last_progress = started_perf
             try:
                 while proc.poll() is None:
@@ -5307,7 +5353,9 @@ def main(argv: list[str] | None = None) -> int:
                         "until the run finishes or you will have no artifacts/local_certify/latest/local_certify_report.json "
                         f"(on Ctrl+C a snapshot is written to {LOCAL_CERTIFY_INTERRUPTED_SNAPSHOT_PATH.name}). "
                         "IDE or agent-hosted terminals may stop long jobs without an explicit keypress—use external "
-                        "PowerShell (see scripts/run_local_certify_research_paper_discovery.ps1) for unattended runs.",
+                        "PowerShell (see scripts/run_local_certify_research_paper_discovery.ps1) for unattended runs. "
+                        "On Windows, local_certify also requests CREATE_BREAKAWAY_FROM_JOB for child processes when the "
+                        "host job allows it, so shard workers are less tied to IDE terminal teardown.",
                         file=sys.stderr,
                         flush=True,
                     )
@@ -5724,7 +5772,9 @@ def main(argv: list[str] | None = None) -> int:
             "interrupt_source_note": (
                 "Python raised KeyboardInterrupt in local_certify (SIGINT / console control event on Windows). "
                 "That is not always a deliberate Ctrl+C: IDE terminals, AI agents, or closing the terminal can stop "
-                "long-running commands the same way. For a full certification, rerun in a stable external shell."
+                "long-running commands the same way. For a full certification, rerun in a stable external shell. "
+                "On Windows, child steps request CREATE_BREAKAWAY_FROM_JOB when the host job allows it, but the parent "
+                "process can still receive console control events."
             ),
         }
         rid = locals().get("certification_run_id")
