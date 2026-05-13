@@ -119,6 +119,12 @@ python scripts/local_certify.py --certify-research-paper-discovery --json
 if (-not $?) { exit $LASTEXITCODE }
 ```
 
+**`$LASTEXITCODE` is `-1`:** Often means the host or shell stopped the process without recording Python’s exit code (for example IDE terminal limits or aggressive job cancellation). That does **not** mean the certification passed. Map `-1` to a nonzero exit in scripts, or run from an external PowerShell session. Repo helper:
+
+```powershell
+pwsh -File scripts/run_local_certify_research_paper_discovery.ps1
+```
+
 ## No-live-authority and paper/live firewall
 
 No certification logic, broker surfaces, or tokens were changed as part of repository_truth repair. Repository truth edits were **not** applied beyond documenting parity and refreshing artifacts.

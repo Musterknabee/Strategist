@@ -66,6 +66,7 @@ def _npm_public_registry_env() -> dict[str, str]:
 
 
 REPORT_PATH = REPO_ROOT / "artifacts" / "local_certify" / "latest" / "local_certify_report.json"
+LOCAL_CERTIFY_INTERRUPTED_SNAPSHOT_PATH = REPO_ROOT / "artifacts" / "local_certify" / "latest" / "local_certify_interrupted.json"
 LOCAL_CERTIFY_REPORT_VERIFICATION_PATH = REPO_ROOT / "artifacts" / "local_certify" / "latest" / "local_certify_report_verification.json"
 RESEARCH_PAPER_DISCOVERY_CLOSURE_REPORT_PATH = REPO_ROOT / "artifacts" / "local_certify" / "latest" / "research_paper_discovery_closure_report.json"
 RESEARCH_PAPER_DISCOVERY_EVIDENCE_BUNDLE_PATH = REPO_ROOT / "artifacts" / "local_certify" / "latest" / "research_paper_discovery_evidence_bundle.json"
@@ -5296,6 +5297,19 @@ def main(argv: list[str] | None = None) -> int:
         with _temporary_certify_artifact_paths(args):
             apply_research_paper_discovery_profile(args)
             with _maybe_canonical_latest_write_lock(args):
+                if (
+                    args.certify_research_paper_discovery
+                    and not args.phase_profile_plan_only
+                    and sys.stderr.isatty()
+                ):
+                    print(
+                        "local_certify: Research-and-Paper-Discovery usually needs 20–40+ minutes; do not interrupt "
+                        "until the run finishes or you will have no artifacts/local_certify/latest/local_certify_report.json "
+                        f"(on Ctrl+C a snapshot is written to {LOCAL_CERTIFY_INTERRUPTED_SNAPSHOT_PATH.name}). "
+                        "If the IDE terminal stops early, run the same command in an external PowerShell window.",
+                        file=sys.stderr,
+                        flush=True,
+                    )
                 certification_run_id = secrets.token_hex(16) if args.certify_research_paper_discovery else None
                 frontend_included = not args.skip_frontend and (FRONTEND_ROOT / "package-lock.json").exists()
                 results: list[LocalCertifyStep] = []
@@ -5696,15 +5710,51 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
 
     except KeyboardInterrupt:
+        # Canonical `local_certify_report.json` is written only after the full step loop completes.
+        # On Ctrl+C, persist a small snapshot so operators are not left with a missing file and a dead end.
+        interrupted_snapshot: dict[str, object] = {
+            "schema_version": "local_certify_interrupted/v1",
+            "status": "INTERRUPTED",
+            "blockers": ["interrupted"],
+            "repo_root": str(REPO_ROOT),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "canonical_report_path": str(REPORT_PATH),
+            "note": "Full local_certify_report.json is not written until the run finishes; this file records interrupt-only state.",
+        }
+        rid = locals().get("certification_run_id")
+        if isinstance(rid, str) and rid:
+            interrupted_snapshot["certification_run_id"] = rid
+        res_obj = locals().get("results")
+        if isinstance(res_obj, list) and res_obj:
+            last_step = res_obj[-1]
+            interrupted_snapshot["last_completed_step"] = getattr(last_step, "name", None)
+            interrupted_snapshot["completed_step_count"] = len(res_obj)
         if args.json:
             print(
                 json.dumps(
-                    {"blockers": ["interrupted"], "status": "INTERRUPTED"},
+                    {
+                        "blockers": ["interrupted"],
+                        "interrupted_snapshot_path": str(LOCAL_CERTIFY_INTERRUPTED_SNAPSHOT_PATH),
+                        "status": "INTERRUPTED",
+                    },
                     indent=2,
                     sort_keys=True,
                 )
             )
+        LOCAL_CERTIFY_INTERRUPTED_SNAPSHOT_PATH.parent.mkdir(parents=True, exist_ok=True)
+        LOCAL_CERTIFY_INTERRUPTED_SNAPSHOT_PATH.write_text(
+            json.dumps(interrupted_snapshot, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
         print("\nlocal_certify: interrupted (subprocess stopped)", file=sys.stderr)
+        print(
+            f"local_certify: interrupted snapshot written to {LOCAL_CERTIFY_INTERRUPTED_SNAPSHOT_PATH}",
+            file=sys.stderr,
+        )
+        print(
+            f"local_certify: canonical report not written (expected until full run completes): {REPORT_PATH}",
+            file=sys.stderr,
+        )
         return 130
 
     except CanonicalLatestWriteLockError:
