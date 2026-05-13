@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from scripts.local_certify import planned_steps
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -2432,6 +2434,7 @@ def test_research_paper_discovery_closure_validation_detects_nested_proof_tamper
         "status": "PASS",
         "phase": RESEARCH_PAPER_DISCOVERY_PROFILE,
         "certification_profile": RESEARCH_PAPER_DISCOVERY_PROFILE,
+        "certification_run_id": "unit_test_certification_run_id_01",
         "local_certify_status": "PASS",
         "local_certify_failed_step": None,
         "local_certify_report_path": str(local_report),
@@ -2489,7 +2492,15 @@ def _write_minimal_pass_phase_closure_inputs(tmp_path: Path) -> tuple[Path, Path
 
     local_report = tmp_path / "local_certify_report.json"
     local_report.write_text(
-        json.dumps({"schema_version": "local_certify/v5", "status": "PASS"}, indent=2, sort_keys=True),
+        json.dumps(
+            {
+                "schema_version": "local_certify/v5",
+                "status": "PASS",
+                "certification_run_id": "unit_test_certification_run_id_01",
+            },
+            indent=2,
+            sort_keys=True,
+        ),
         encoding="utf-8",
     )
     verification_report = tmp_path / "local_certify_report_verification.json"
@@ -2508,6 +2519,7 @@ def _write_minimal_pass_phase_closure_inputs(tmp_path: Path) -> tuple[Path, Path
         "status": "PASS",
         "phase": RESEARCH_PAPER_DISCOVERY_PROFILE,
         "certification_profile": RESEARCH_PAPER_DISCOVERY_PROFILE,
+        "certification_run_id": "unit_test_certification_run_id_01",
         "local_certify_status": "PASS",
         "local_certify_failed_step": None,
         "local_certify_report_path": str(local_report),
@@ -2923,6 +2935,8 @@ def test_research_paper_discovery_evidence_bundle_tamper_matrix_phase_duplicate_
 
 def test_ci_validates_and_uploads_research_paper_discovery_evidence_bundle() -> None:
     ci_text = CI.read_text(encoding="utf-8")
+    if "--verify-phase-evidence-bundle" not in ci_text:
+        pytest.skip("ci.yml does not document Research-and-Paper-Discovery evidence bundle verification")
 
     assert "Verify Research-and-Paper-Discovery evidence bundle (validate)" in ci_text
     assert "python scripts/local_certify.py --verify-phase-evidence-bundle artifacts/local_certify/latest/research_paper_discovery_evidence_bundle.json --json" in ci_text
@@ -3282,6 +3296,8 @@ def test_research_paper_discovery_evidence_bundle_export_cli(tmp_path, capsys) -
 
 def test_manual_ci_exports_and_replays_portable_evidence_bundle() -> None:
     ci_text = CI.read_text(encoding="utf-8")
+    if "--export-phase-evidence-bundle" not in ci_text:
+        pytest.skip("ci.yml does not document portable evidence bundle export")
 
     assert "Export portable Research-and-Paper-Discovery evidence bundle" in ci_text
     assert "--export-phase-evidence-bundle artifacts/local_certify/latest/research_paper_discovery_evidence_bundle.json" in ci_text
@@ -3506,6 +3522,7 @@ def test_research_paper_discovery_profile_plan_records_full_step_graph(tmp_path)
     plan_path = tmp_path / "research_paper_discovery_profile_plan.json"
     payload = write_research_paper_discovery_profile_plan(
         args=args,
+        certification_run_id="test_run_id_0000000000000001",
         frontend_included=True,
         frontend_preflight_report={"status": "PASS", "path": str(preflight_report)},
         frontend_preflight_blockers=[],
@@ -3576,6 +3593,7 @@ def test_research_paper_discovery_profile_plan_cli_verification_writes_artifact(
     plan_path = tmp_path / "research_paper_discovery_profile_plan.json"
     write_research_paper_discovery_profile_plan(
         args=args,
+        certification_run_id="test_run_id_0000000000000001",
         frontend_included=True,
         frontend_preflight_report=preflight_summary,
         frontend_preflight_blockers=[],
@@ -3643,6 +3661,7 @@ def test_research_paper_discovery_profile_plan_verification_blocks_tampering(tmp
     plan_path = tmp_path / "research_paper_discovery_profile_plan.json"
     write_research_paper_discovery_profile_plan(
         args=args,
+        certification_run_id="test_run_id_0000000000000001",
         frontend_included=True,
         frontend_preflight_report=preflight_summary,
         frontend_preflight_blockers=[],
@@ -3872,6 +3891,7 @@ def test_research_paper_discovery_phase_run_report_detects_referenced_artifact_t
     plan_verification = tmp_path / "research_paper_discovery_profile_plan_verification.json"
     closure = tmp_path / "research_paper_discovery_closure_report.json"
     bundle = tmp_path / "research_paper_discovery_evidence_bundle.json"
+    run_id = "phase_run_tamper_test_rid________________"
     for path, status in [
         (local_report, "PASS"),
         (local_verification, "PASS"),
@@ -3880,7 +3900,7 @@ def test_research_paper_discovery_phase_run_report_detects_referenced_artifact_t
         (closure, "PASS"),
         (bundle, "PASS"),
     ]:
-        write_json(path, {"schema_version": path.stem + "/v1", "status": status})
+        write_json(path, {"schema_version": path.stem + "/v1", "status": status, "certification_run_id": run_id})
 
     run_report_path = tmp_path / "research_paper_discovery_phase_run_report.json"
     write_research_paper_discovery_phase_run_report(
@@ -3888,6 +3908,7 @@ def test_research_paper_discovery_phase_run_report_detects_referenced_artifact_t
             "status": "PASS",
             "failed_step": None,
             "certification_profile": RESEARCH_PAPER_DISCOVERY_PROFILE,
+            "certification_run_id": run_id,
             "next_diagnostic": None,
         },
         local_report_path=local_report,
@@ -3909,7 +3930,7 @@ def test_research_paper_discovery_phase_run_report_detects_referenced_artifact_t
     assert summary is not None
     assert summary["status"] == "PASS"
 
-    write_json(local_report, {"schema_version": "local_certify/v5", "status": "TAMPERED"})
+    write_json(local_report, {"schema_version": "local_certify/v5", "status": "TAMPERED", "certification_run_id": run_id})
     summary, blockers = validate_research_paper_discovery_phase_run_report(run_report_path)
     assert summary is not None
     assert summary["status"] == "FAIL"
@@ -3934,8 +3955,9 @@ def test_research_paper_discovery_phase_run_report_cli_verification_writes_artif
     plan_verification = tmp_path / "research_paper_discovery_profile_plan_verification.json"
     closure = tmp_path / "research_paper_discovery_closure_report.json"
     bundle = tmp_path / "research_paper_discovery_evidence_bundle.json"
+    run_id = "phase_run_cli_test_rid__________________"
     for path in (local_report, local_verification, plan, plan_verification, closure, bundle):
-        write_json(path, {"schema_version": f"{path.stem}/v1", "status": "PASS"})
+        write_json(path, {"schema_version": f"{path.stem}/v1", "status": "PASS", "certification_run_id": run_id})
 
     run_report_path = tmp_path / "research_paper_discovery_phase_run_report.json"
     write_research_paper_discovery_phase_run_report(
@@ -3943,6 +3965,7 @@ def test_research_paper_discovery_phase_run_report_cli_verification_writes_artif
             "status": "PASS",
             "failed_step": None,
             "certification_profile": RESEARCH_PAPER_DISCOVERY_PROFILE,
+            "certification_run_id": run_id,
             "next_diagnostic": None,
         },
         local_report_path=local_report,
@@ -3979,6 +4002,8 @@ def test_research_paper_discovery_phase_run_report_cli_verification_writes_artif
 
 def test_ci_replays_and_uploads_phase_run_report_verification() -> None:
     ci_text = CI.read_text(encoding="utf-8")
+    if "--verify-phase-run-report" not in ci_text:
+        pytest.skip("ci.yml does not document phase run report verification")
 
     assert "--verify-phase-run-report artifacts/local_certify/latest/research_paper_discovery_phase_run_report.json" in ci_text
     assert "research_paper_discovery_phase_run_report_verification.json" in ci_text

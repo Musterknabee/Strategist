@@ -47,6 +47,7 @@ def test_phase_run_report_surfaces_local_certify_verification_blocker_codes() ->
             "status": "PASS",
             "failed_step": None,
             "certification_profile": lc.RESEARCH_PAPER_DISCOVERY_PROFILE,
+            "certification_run_id": "phase_run_proof_chain_test_run",
             "next_diagnostic": None,
         },
         local_report_verification={
@@ -74,6 +75,7 @@ def test_phase_run_report_no_closure_false_positive_when_nested_pass(tmp_path: P
             "status": "PASS",
             "failed_step": None,
             "certification_profile": lc.RESEARCH_PAPER_DISCOVERY_PROFILE,
+            "certification_run_id": "phase_run_proof_chain_test_run",
             "next_diagnostic": None,
         },
         local_report_verification={"status": "PASS", "blockers": []},
