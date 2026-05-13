@@ -8,6 +8,9 @@
   process can receive SIGINT even when you did not press Ctrl+C. $LASTEXITCODE may then be -1.
   This script maps -1 to exit 130 (interrupt-style failure) so CI/scripts do not treat the run as success.
 
+  On Windows, local_certify requests CREATE_BREAKAWAY_FROM_JOB for subprocesses when permitted so shard workers are
+  less likely to die with IDE terminal job teardown (the parent Python process can still be interrupted).
+
   Usage (from repo root):
     pwsh -File scripts/run_local_certify_research_paper_discovery.ps1
     pwsh -File scripts/run_local_certify_research_paper_discovery.ps1 -SkipJson
