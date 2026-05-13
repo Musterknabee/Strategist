@@ -15,6 +15,7 @@ import hashlib
 import json
 import os
 import platform
+import secrets
 import shutil
 import signal
 import subprocess
@@ -29,6 +30,17 @@ from typing import Sequence, TextIO
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FRONTEND_ROOT = REPO_ROOT / "ui" / "strategist-web"
+CANONICAL_LOCAL_CERTIFY_LATEST_DIR = REPO_ROOT / "artifacts" / "local_certify" / "latest"
+LOCAL_CERTIFY_CANONICAL_LATEST_WRITE_LOCK_PATH = CANONICAL_LOCAL_CERTIFY_LATEST_DIR / ".canonical_latest_write.lock"
+LOCAL_CERTIFY_CANONICAL_LATEST_WRITE_LOCKED = "LOCAL_CERTIFY_CANONICAL_LATEST_WRITE_LOCKED"
+LOCAL_CERTIFY_MIXED_RUN_ARTIFACTS = "LOCAL_CERTIFY_MIXED_RUN_ARTIFACTS"
+
+
+class CanonicalLatestWriteLockError(RuntimeError):
+    """Raised when another process holds the canonical latest write lock."""
+
+    def __str__(self) -> str:  # pragma: no cover - exercised via exact message assertions
+        return LOCAL_CERTIFY_CANONICAL_LATEST_WRITE_LOCKED
 
 
 @lru_cache(maxsize=1)
@@ -257,6 +269,106 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _resolved_path(path: Path) -> Path:
+    return path.expanduser().resolve()
+
+
+def _path_is_under_dir(path: Path, root: Path) -> bool:
+    try:
+        return _resolved_path(path).is_relative_to(_resolved_path(root))
+    except (ValueError, OSError):
+        return False
+
+
+def _process_alive(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
+def _maybe_steal_stale_canonical_latest_write_lock(lock_path: Path) -> None:
+    try:
+        raw = lock_path.read_text(encoding="utf-8")
+        data = json.loads(raw)
+        pid = int(data.get("pid", -1))
+    except (OSError, json.JSONDecodeError, ValueError, TypeError):
+        try:
+            lock_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        return
+    if not _process_alive(pid):
+        try:
+            lock_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+@contextlib.contextmanager
+def _canonical_latest_write_lock_acquire() -> None:
+    CANONICAL_LOCAL_CERTIFY_LATEST_DIR.mkdir(parents=True, exist_ok=True)
+    lock_path = LOCAL_CERTIFY_CANONICAL_LATEST_WRITE_LOCK_PATH
+    meta = json.dumps({"pid": os.getpid(), "created_at": _utc_now()}, sort_keys=True) + "\n"
+    for attempt in range(2):
+        try:
+            with open(lock_path, "x", encoding="utf-8") as handle:
+                handle.write(meta)
+            break
+        except FileExistsError:
+            if attempt == 1:
+                raise CanonicalLatestWriteLockError from None
+            _maybe_steal_stale_canonical_latest_write_lock(lock_path)
+    try:
+        yield
+    finally:
+        try:
+            lock_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+def _certification_writes_any_canonical_latest_path(args: argparse.Namespace) -> bool:
+    root = CANONICAL_LOCAL_CERTIFY_LATEST_DIR
+    candidates = [_resolved_path(REPORT_PATH), _resolved_path(PYTHON_CORE_REPORT_PATH)]
+    if getattr(args, "certify_research_paper_discovery", False):
+        for path in (
+            args.phase_profile_plan_output,
+            args.phase_profile_plan_verification_output,
+            args.phase_run_report_output,
+            args.phase_run_report_verification_output,
+            args.phase_closure_output,
+            args.phase_closure_verification_output,
+            args.phase_evidence_bundle_output,
+            args.phase_evidence_bundle_verification_output,
+            args.verification_output,
+            args.final_phase_certificate_index_output,
+        ):
+            candidates.append(_resolved_path(path))
+    return any(_path_is_under_dir(candidate, root) for candidate in candidates)
+
+
+def _export_touches_canonical_latest(bundle_path: Path, export_dir: Path) -> bool:
+    root = CANONICAL_LOCAL_CERTIFY_LATEST_DIR
+    return _path_is_under_dir(bundle_path, root) or _path_is_under_dir(export_dir, root)
+
+
+@contextlib.contextmanager
+def _maybe_canonical_latest_write_lock(args: argparse.Namespace) -> None:
+    if _certification_writes_any_canonical_latest_path(args):
+        with _canonical_latest_write_lock_acquire():
+            yield
+    else:
+        yield
+
+
 def _cleanup_process_group(pgid: int) -> None:
     if os.name == "nt":  # pragma: no cover - Windows-specific process handling
         return
@@ -301,6 +413,31 @@ def _terminate_process(proc: subprocess.Popen[str]) -> None:
         except ProcessLookupError:
             pass
         proc.wait(timeout=5)
+    _cleanup_process_group(proc.pid)
+
+
+def _ensure_subprocess_stopped(proc: subprocess.Popen[str], *, block_seconds: float = 90.0) -> None:
+    """Reap *proc* so Windows releases redirected stdout/stderr handles before deleting the temp log dir.
+
+    ``TemporaryDirectory`` cleanup can raise WinError 32 if the child (or its children) still holds
+    open handles to ``stdout.txt`` / ``stderr.txt`` after the parent receives ``KeyboardInterrupt``.
+    """
+    if proc.poll() is not None:
+        _cleanup_process_group(proc.pid)
+        return
+    _terminate_process(proc)
+    deadline = time.monotonic() + block_seconds
+    while proc.poll() is None and time.monotonic() < deadline:
+        time.sleep(0.05)
+    if proc.poll() is None:
+        try:
+            proc.kill()
+        except ProcessLookupError:
+            pass
+        try:
+            proc.wait(timeout=30)
+        except (subprocess.TimeoutExpired, ProcessLookupError):
+            pass
     _cleanup_process_group(proc.pid)
 
 
@@ -361,7 +498,9 @@ def _run(
     exit_code = 0
     stdout = ""
     stderr = ""
-    with tempfile.TemporaryDirectory(prefix="strategy_validator_local_certify_") as tmp_dir:
+    tmp_dir = tempfile.mkdtemp(prefix="strategy_validator_local_certify_")
+    proc: subprocess.Popen[str] | None = None
+    try:
         stdout_path = Path(tmp_dir) / "stdout.txt"
         stderr_path = Path(tmp_dir) / "stderr.txt"
         with stdout_path.open("w+", encoding="utf-8", errors="replace") as stdout_file, stderr_path.open(
@@ -381,16 +520,20 @@ def _run(
                 creationflags=creationflags,
             )
             last_progress = started_perf
-            while proc.poll() is None:
-                now = time.perf_counter()
-                if now - started_perf >= effective_timeout:
-                    timed_out = True
-                    _terminate_process(proc)
-                    break
-                if heartbeat_seconds > 0 and now - last_progress >= heartbeat_seconds:
-                    print(f"... {name} still running after {round(now - started_perf, 1)}s", flush=True)
-                    last_progress = now
-                time.sleep(0.25)
+            try:
+                while proc.poll() is None:
+                    now = time.perf_counter()
+                    if now - started_perf >= effective_timeout:
+                        timed_out = True
+                        _terminate_process(proc)
+                        break
+                    if heartbeat_seconds > 0 and now - last_progress >= heartbeat_seconds:
+                        print(f"... {name} still running after {round(now - started_perf, 1)}s", flush=True)
+                        last_progress = now
+                    time.sleep(0.25)
+            except BaseException:
+                _ensure_subprocess_stopped(proc)
+                raise
             if not timed_out:
                 _cleanup_process_group(proc.pid)
             stdout_file.flush()
@@ -400,6 +543,12 @@ def _run(
             stdout = stdout_file.read()
             stderr = stderr_file.read()
             exit_code = TIMEOUT_EXIT_CODE if timed_out else int(proc.returncode or 0)
+    except BaseException:
+        if proc is not None:
+            _ensure_subprocess_stopped(proc)
+        raise
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
     duration = time.perf_counter() - started_perf
     ended_at = _utc_now()
     if stdout:
@@ -719,7 +868,12 @@ def _parse_iso_datetime(value: object) -> datetime | None:
 
 
 
-def write_frontend_preflight_report(*, skip_frontend_requested: bool, output_path: Path = FRONTEND_PREFLIGHT_REPORT_PATH) -> dict[str, object]:
+def write_frontend_preflight_report(
+    *,
+    skip_frontend_requested: bool,
+    output_path: Path = FRONTEND_PREFLIGHT_REPORT_PATH,
+    certification_run_id: str | None = None,
+) -> dict[str, object]:
     """Write a bounded frontend prerequisite report for full phase certification.
 
     This is deliberately a local preflight, not a dependency installer.  It
@@ -769,6 +923,8 @@ def write_frontend_preflight_report(*, skip_frontend_requested: bool, output_pat
         "created_at": _utc_now(),
         "report_path": str(output_path),
     }
+    if certification_run_id is not None:
+        payload["certification_run_id"] = certification_run_id
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return payload
@@ -806,6 +962,9 @@ def validate_frontend_preflight_report(path: Path = FRONTEND_PREFLIGHT_REPORT_PA
         blockers.append("FRONTEND_PREFLIGHT_SOURCE_TREE_DIGEST_MISSING")
     elif current_digest is not None and declared_digest != current_digest:
         blockers.append(f"FRONTEND_PREFLIGHT_SOURCE_TREE_DIGEST_MISMATCH:{declared_digest}:expected={current_digest}")
+    crid = payload.get("certification_run_id")
+    if crid is not None and (not isinstance(crid, str) or not crid.strip()):
+        blockers.append("FRONTEND_PREFLIGHT_CERTIFICATION_RUN_ID_INVALID")
     embedded_blockers = payload.get("blockers")
     if not isinstance(embedded_blockers, list) or not all(isinstance(item, str) for item in embedded_blockers):
         blockers.append("FRONTEND_PREFLIGHT_BLOCKERS_INVALID")
@@ -2112,6 +2271,7 @@ def _planned_step_entry(
 def write_research_paper_discovery_profile_plan(
     *,
     args: argparse.Namespace,
+    certification_run_id: str,
     frontend_included: bool,
     frontend_preflight_report: dict[str, object] | None,
     frontend_preflight_blockers: Sequence[str],
@@ -2142,6 +2302,7 @@ def write_research_paper_discovery_profile_plan(
         "blockers": blockers,
         "phase": RESEARCH_PAPER_DISCOVERY_PROFILE,
         "certification_profile": RESEARCH_PAPER_DISCOVERY_PROFILE,
+        "certification_run_id": certification_run_id,
         "certification_profile_contract": _research_paper_discovery_profile_contract(frontend_included=frontend_included),
         "frontend_required": True,
         "frontend_skip_allowed": False,
@@ -2184,6 +2345,9 @@ def validate_research_paper_discovery_profile_plan(
         blockers.append(f"RESEARCH_PAPER_DISCOVERY_PROFILE_PLAN_SCHEMA_UNEXPECTED:{payload.get('schema_version')}")
     if payload.get("phase") != RESEARCH_PAPER_DISCOVERY_PROFILE:
         blockers.append(f"RESEARCH_PAPER_DISCOVERY_PROFILE_PLAN_PHASE_UNEXPECTED:{payload.get('phase')}")
+    rid = payload.get("certification_run_id")
+    if not isinstance(rid, str) or not rid.strip():
+        blockers.append("RESEARCH_PAPER_DISCOVERY_PROFILE_PLAN_CERTIFICATION_RUN_ID_MISSING")
     embedded_blockers = payload.get("blockers")
     if not isinstance(embedded_blockers, list) or not all(isinstance(item, str) for item in embedded_blockers):
         blockers.append("RESEARCH_PAPER_DISCOVERY_PROFILE_PLAN_BLOCKERS_INVALID")
@@ -2671,6 +2835,7 @@ def build_research_paper_discovery_phase_run_report(
         "status": "PASS" if not ordered_blockers else "FAIL",
         "phase": RESEARCH_PAPER_DISCOVERY_PROFILE,
         "certification_profile": local_certify_payload.get("certification_profile"),
+        "certification_run_id": local_certify_payload.get("certification_run_id"),
         "local_certify_status": local_status,
         "local_certify_failed_step": failed_step,
         "timeout_seconds": local_certify_payload.get("timeout_seconds"),
@@ -2761,6 +2926,9 @@ def validate_research_paper_discovery_phase_run_report(
             "RESEARCH_PAPER_DISCOVERY_PHASE_RUN_CERTIFICATION_PROFILE_UNEXPECTED:"
             f"{payload.get('certification_profile')}"
         )
+    anchor = payload.get("certification_run_id")
+    if not isinstance(anchor, str) or not anchor.strip():
+        blockers.append("RESEARCH_PAPER_DISCOVERY_PHASE_RUN_CERTIFICATION_RUN_ID_MISSING")
     embedded_blockers = payload.get("blockers")
     if not isinstance(embedded_blockers, list) or not all(isinstance(item, str) for item in embedded_blockers):
         blockers.append("RESEARCH_PAPER_DISCOVERY_PHASE_RUN_BLOCKERS_INVALID")
@@ -2817,6 +2985,28 @@ def validate_research_paper_discovery_phase_run_report(
                 blockers.append(
                     f"RESEARCH_PAPER_DISCOVERY_PHASE_RUN_ARTIFACT_SHA256_MISMATCH:{key}:{row_sha}:expected={observed_sha}"
                 )
+    if isinstance(anchor, str) and anchor.strip():
+        for key in ("local_certify_report", "phase_profile_plan", "phase_closure_report", "phase_evidence_bundle"):
+            row = payload.get(key)
+            if not isinstance(row, dict) or row.get("present") is not True:
+                continue
+            row_path = row.get("path")
+            if not isinstance(row_path, str):
+                continue
+            artifact_path = Path(row_path)
+            if not artifact_path.exists():
+                continue
+            try:
+                loaded = json.loads(artifact_path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                continue
+            if not isinstance(loaded, dict):
+                continue
+            file_rid = loaded.get("certification_run_id")
+            if not isinstance(file_rid, str) or not file_rid.strip():
+                blockers.append(f"RESEARCH_PAPER_DISCOVERY_PHASE_RUN_ARTIFACT_CERTIFICATION_RUN_ID_MISSING:{key}")
+            elif file_rid != anchor:
+                blockers.append(f"{LOCAL_CERTIFY_MIXED_RUN_ARTIFACTS}:phase_run_report_vs_{key}")
     summary = {
         "proof_name": "research_paper_discovery_phase_run_report",
         "path": str(path),
@@ -2833,6 +3023,9 @@ def validate_research_paper_discovery_phase_run_report(
 def _verify_research_paper_discovery_profile_contract(payload: dict[str, object], blockers: list[str]) -> None:
     if payload.get("certification_profile") != RESEARCH_PAPER_DISCOVERY_PROFILE:
         return
+    rep_rid = payload.get("certification_run_id")
+    if not isinstance(rep_rid, str) or not rep_rid.strip():
+        blockers.append("LOCAL_CERTIFY_RESEARCH_PAPER_DISCOVERY_CERTIFICATION_RUN_ID_MISSING")
     contract = payload.get("certification_profile_contract")
     if not isinstance(contract, dict):
         blockers.append("LOCAL_CERTIFY_RESEARCH_PAPER_DISCOVERY_PROFILE_CONTRACT_MISSING")
@@ -2872,6 +3065,23 @@ def _verify_research_paper_discovery_profile_contract(payload: dict[str, object]
             "LOCAL_CERTIFY_RESEARCH_PAPER_DISCOVERY_PROFILE_FRONTEND_PREFLIGHT_NOT_PASSING:"
             f"{frontend_preflight.get('status')}"
         )
+    else:
+        fp_path_value = frontend_preflight.get("path")
+        if isinstance(fp_path_value, str) and isinstance(rep_rid, str) and rep_rid.strip():
+            fp_path = Path(fp_path_value)
+            if fp_path.exists():
+                try:
+                    fp_disk = json.loads(fp_path.read_text(encoding="utf-8"))
+                except json.JSONDecodeError:
+                    pass
+                else:
+                    if isinstance(fp_disk, dict):
+                        fp_rid = fp_disk.get("certification_run_id")
+                        if isinstance(fp_rid, str) and fp_rid.strip() and fp_rid != rep_rid:
+                            blockers.append(
+                                f"{LOCAL_CERTIFY_MIXED_RUN_ARTIFACTS}:"
+                                "local_certify_report_vs_frontend_preflight_report"
+                            )
     phase_profile_plan = payload.get("phase_profile_plan_report")
     if not isinstance(phase_profile_plan, dict):
         blockers.append("LOCAL_CERTIFY_RESEARCH_PAPER_DISCOVERY_PROFILE_PLAN_REPORT_MISSING")
@@ -2890,11 +3100,30 @@ def _verify_research_paper_discovery_profile_contract(payload: dict[str, object]
                 blockers.append(f"LOCAL_CERTIFY_RESEARCH_PAPER_DISCOVERY_PROFILE_PLAN_FILE_MISSING:{plan_path}")
             else:
                 observed_plan_sha = _file_sha256(plan_path)
-                if phase_profile_plan.get("sha256") != observed_plan_sha:
+                sha_ok = phase_profile_plan.get("sha256") == observed_plan_sha
+                if not sha_ok:
                     blockers.append(
                         "LOCAL_CERTIFY_RESEARCH_PAPER_DISCOVERY_PROFILE_PLAN_SHA256_MISMATCH:"
                         f"{phase_profile_plan.get('sha256')}:expected={observed_plan_sha}"
                     )
+                if sha_ok and isinstance(rep_rid, str) and rep_rid.strip():
+                    try:
+                        plan_disk = json.loads(plan_path.read_text(encoding="utf-8"))
+                    except json.JSONDecodeError as exc:
+                        blockers.append(
+                            f"LOCAL_CERTIFY_RESEARCH_PAPER_DISCOVERY_PROFILE_PLAN_FILE_INVALID_JSON:{exc}"
+                        )
+                    else:
+                        plan_rid = plan_disk.get("certification_run_id") if isinstance(plan_disk, dict) else None
+                        if not isinstance(plan_rid, str) or not plan_rid.strip():
+                            blockers.append(
+                                "LOCAL_CERTIFY_RESEARCH_PAPER_DISCOVERY_PROFILE_PLAN_CERTIFICATION_RUN_ID_MISSING_ON_DISK"
+                            )
+                        elif plan_rid != rep_rid:
+                            blockers.append(
+                                f"{LOCAL_CERTIFY_MIXED_RUN_ARTIFACTS}:"
+                                "local_certify_report_vs_research_paper_discovery_profile_plan"
+                            )
                 _plan_summary, plan_blockers = validate_research_paper_discovery_profile_plan(plan_path)
                 if plan_blockers:
                     blockers.append("LOCAL_CERTIFY_RESEARCH_PAPER_DISCOVERY_PROFILE_PLAN_CURRENT_VALIDATION_FAILED:" + ";".join(plan_blockers))
@@ -2958,6 +3187,7 @@ def _build_payload(
     pytest_execution_shards_proof: dict[str, object] | None = None,
     certification_profile: str | None = None,
     certification_profile_contract: dict[str, object] | None = None,
+    certification_run_id: str | None = None,
 ) -> dict[str, object]:
     steps = [step.to_payload() for step in results]
     status = "PASS" if failed is None else "TIMEOUT" if failed.timed_out else "FAIL"
@@ -2998,6 +3228,8 @@ def _build_payload(
         "report_path": str(REPORT_PATH),
         "steps": steps,
     }
+    if certification_run_id is not None:
+        payload["certification_run_id"] = certification_run_id
     payload["step_manifest_sha256"] = _step_manifest_digest(steps)
     payload["report_payload_sha256"] = local_certify_payload_digest(payload)
     return payload
@@ -3474,11 +3706,12 @@ def build_research_paper_discovery_closure_report(
             next_diagnostic = "run local_certify.py --verify-report against the referenced report and inspect blockers"
     report_sha256 = _file_sha256(report_path) if report_path.exists() else None
     verification_sha256 = _file_sha256(verification_path) if verification_path.exists() else None
-    return {
+    closure_payload: dict[str, object] = {
         "schema_version": RESEARCH_PAPER_DISCOVERY_CLOSURE_SCHEMA_VERSION,
         "status": "PASS" if not blockers else "FAIL",
         "phase": RESEARCH_PAPER_DISCOVERY_PROFILE,
         "certification_profile": payload.get("certification_profile"),
+        "certification_run_id": payload.get("certification_run_id"),
         "local_certify_status": payload.get("status"),
         "local_certify_failed_step": payload.get("failed_step"),
         "local_certify_report_path": str(report_path),
@@ -3498,6 +3731,7 @@ def build_research_paper_discovery_closure_report(
         "paper_live_firewall_assertion": True,
         "repo_root": str(REPO_ROOT),
     }
+    return closure_payload
 
 
 def write_research_paper_discovery_closure_report(
@@ -3533,6 +3767,10 @@ def validate_research_paper_discovery_closure_report(path: Path) -> tuple[dict[s
         blockers.append(f"RESEARCH_PAPER_DISCOVERY_CLOSURE_SCHEMA_UNEXPECTED:{payload.get('schema_version')}")
     if payload.get("phase") != RESEARCH_PAPER_DISCOVERY_PROFILE:
         blockers.append(f"RESEARCH_PAPER_DISCOVERY_CLOSURE_PHASE_UNEXPECTED:{payload.get('phase')}")
+    if payload.get("phase") == RESEARCH_PAPER_DISCOVERY_PROFILE:
+        rid = payload.get("certification_run_id")
+        if not isinstance(rid, str) or not rid.strip():
+            blockers.append("RESEARCH_PAPER_DISCOVERY_CLOSURE_CERTIFICATION_RUN_ID_MISSING")
     for required_field in ("generated_at", "source_tree_digest"):
         if not isinstance(payload.get(required_field), str) or not payload.get(required_field):
             blockers.append(f"RESEARCH_PAPER_DISCOVERY_CLOSURE_FIELD_MISSING:{required_field}")
@@ -3812,6 +4050,10 @@ def build_research_paper_discovery_evidence_bundle(
         "generated_at": _utc_now(),
         "repo_root": str(REPO_ROOT),
     }
+    if isinstance(closure_payload, dict):
+        closure_rid = closure_payload.get("certification_run_id")
+        if isinstance(closure_rid, str) and closure_rid.strip():
+            payload["certification_run_id"] = closure_rid
     payload["bundle_payload_sha256"] = _canonical_json_digest({k: v for k, v in payload.items() if k != "bundle_payload_sha256"})
     return payload
 
@@ -4190,9 +4432,18 @@ def validate_research_paper_discovery_evidence_bundle(path: Path) -> tuple[dict[
     if closure_path is None:
         blockers.append("RESEARCH_PAPER_DISCOVERY_EVIDENCE_BUNDLE_CLOSURE_PATH_MISSING")
     else:
-        _closure_payload, closure_blockers = validate_research_paper_discovery_closure_report(closure_path)
+        closure_payload, closure_blockers = validate_research_paper_discovery_closure_report(closure_path)
         for blocker in closure_blockers:
             blockers.append(f"RESEARCH_PAPER_DISCOVERY_EVIDENCE_BUNDLE_CLOSURE:{blocker}")
+        bundle_rid = payload.get("certification_run_id")
+        closure_rid = closure_payload.get("certification_run_id") if isinstance(closure_payload, dict) else None
+        if isinstance(closure_rid, str) and closure_rid.strip():
+            if not isinstance(bundle_rid, str) or not bundle_rid.strip():
+                blockers.append("RESEARCH_PAPER_DISCOVERY_EVIDENCE_BUNDLE_CERTIFICATION_RUN_ID_MISSING")
+            elif bundle_rid != closure_rid:
+                blockers.append(
+                    f"{LOCAL_CERTIFY_MIXED_RUN_ARTIFACTS}:evidence_bundle_vs_phase_closure_report"
+                )
     seal_path = _evidence_bundle_seal_path_for(path)
     _seal_payload, seal_blockers = validate_research_paper_discovery_evidence_bundle_seal(
         seal_path, bundle_path=path, portable=portable_bundle
@@ -4893,10 +5144,25 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.export_phase_evidence_bundle is not None:
-        export_payload, export_blockers = export_research_paper_discovery_evidence_bundle(
-            bundle_path=args.export_phase_evidence_bundle,
-            export_dir=args.phase_evidence_bundle_export_dir,
-        )
+        try:
+            with contextlib.ExitStack() as export_stack:
+                if _export_touches_canonical_latest(args.export_phase_evidence_bundle, args.phase_evidence_bundle_export_dir):
+                    export_stack.enter_context(_canonical_latest_write_lock_acquire())
+                export_payload, export_blockers = export_research_paper_discovery_evidence_bundle(
+                    bundle_path=args.export_phase_evidence_bundle,
+                    export_dir=args.phase_evidence_bundle_export_dir,
+                )
+        except CanonicalLatestWriteLockError:
+            if args.json:
+                print(
+                    json.dumps(
+                        {"status": "FAIL", "blockers": [LOCAL_CERTIFY_CANONICAL_LATEST_WRITE_LOCKED]},
+                        indent=2,
+                        sort_keys=True,
+                    )
+                )
+            print(LOCAL_CERTIFY_CANONICAL_LATEST_WRITE_LOCKED, file=sys.stderr)
+            return 2
         exported_bundle_path = args.phase_evidence_bundle_export_dir / "research_paper_discovery_evidence_bundle.json"
         verification = {
             "schema_version": "research_paper_discovery_evidence_bundle_export/v1",
@@ -5021,402 +5287,420 @@ def main(argv: list[str] | None = None) -> int:
         print(f"local_certify report verification: written to {args.verification_output}")
         return 0
 
-    with _temporary_certify_artifact_paths(args):
-        apply_research_paper_discovery_profile(args)
-        frontend_included = not args.skip_frontend and (FRONTEND_ROOT / "package-lock.json").exists()
-        results: list[LocalCertifyStep] = []
-        failed: LocalCertifyStep | None = None
-        frontend_preflight_report_summary: dict[str, object] | None = None
-        preflight_blockers: list[str] = []
-        if args.certify_research_paper_discovery:
-            preflight_started = time.perf_counter()
-            write_frontend_preflight_report(
-                skip_frontend_requested=args.skip_frontend,
-                output_path=FRONTEND_PREFLIGHT_REPORT_PATH,
-            )
-            frontend_preflight_report_summary, preflight_blockers = validate_frontend_preflight_report(
-                FRONTEND_PREFLIGHT_REPORT_PATH
-            )
-            preflight_step = _proof_report_step(
-                step_name="frontend_preflight",
-                validator_name="validate_frontend_preflight_report",
-                summary=frontend_preflight_report_summary,
-                blockers=preflight_blockers,
-                report_path=FRONTEND_PREFLIGHT_REPORT_PATH,
-                started=preflight_started,
-            )
-            results.append(preflight_step)
-            if preflight_step.exit_code != 0:
-                failed = preflight_step
-        monolithic_pytest_included = (not args.include_pytest_shards) or args.run_monolithic_pytest_with_shards
-        phase_preflight_failed = failed is not None and args.certify_research_paper_discovery
-        steps_to_run = build_research_paper_discovery_steps(
-            args,
-            frontend_included=frontend_included,
-            phase_preflight_failed=phase_preflight_failed,
-        )
-        phase_profile_plan_report_summary: dict[str, object] | None = None
-        phase_profile_plan_verification: dict[str, object] | None = None
-        if args.certify_research_paper_discovery:
-            plan_payload = write_research_paper_discovery_profile_plan(
-                args=args,
-                frontend_included=frontend_included,
-                frontend_preflight_report=frontend_preflight_report_summary,
-                frontend_preflight_blockers=preflight_blockers,
-                phase_preflight_failed=phase_preflight_failed,
-                steps_to_run=steps_to_run,
-                output_path=args.phase_profile_plan_output,
-            )
-            phase_profile_plan_report_summary, plan_blockers = validate_research_paper_discovery_profile_plan(
-                args.phase_profile_plan_output
-            )
-            phase_profile_plan_verification = verify_research_paper_discovery_profile_plan(
-                args.phase_profile_plan_output,
-                output_path=args.phase_profile_plan_verification_output,
-            )
-            if args.phase_profile_plan_only:
-                if args.json:
-                    print(json.dumps(plan_payload, indent=2, sort_keys=True))
-                if plan_blockers:
-                    print("Research-and-Paper-Discovery phase profile plan: FAIL", file=sys.stderr)
-                    for blocker in plan_blockers:
-                        print(f"local_certify: {blocker}", file=sys.stderr)
-                    print(f"Research-and-Paper-Discovery phase profile plan: written to {args.phase_profile_plan_output}", file=sys.stderr)
-                    return 1
-                print("Research-and-Paper-Discovery phase profile plan: PASS")
-                print(f"Research-and-Paper-Discovery phase profile plan: written to {args.phase_profile_plan_output}")
-                return 0
-    
-        frontend_certify_report_summary: dict[str, object] | None = None
-        frontend_clean_workspace_report_summary: dict[str, object] | None = None
-        python_core_report_summary: dict[str, object] | None = None
-        public_surface_dashboard_summary: dict[str, object] | None = None
-        package_repo_check_summary: dict[str, object] | None = None
-        researcher_fixture_report_summary: dict[str, object] | None = None
-        collection_shards_proof_summary: dict[str, object] | None = None
-        constitutional_shards_proof_summary: dict[str, object] | None = None
-        pytest_execution_shards_proof_summary: dict[str, object] | None = None
-        deferred_resumable_failure: LocalCertifyStep | None = None
-        for name, command, cwd in steps_to_run:
-            if name == "frontend_clean_workspace":
-                FRONTEND_CLEAN_WORKSPACE_REPORT_PATH.unlink(missing_ok=True)
-            if name == "frontend_certify":
-                FRONTEND_CERTIFY_REPORT_PATH.unlink(missing_ok=True)
-            if name == "public_surface_dashboard":
-                PUBLIC_SURFACE_DASHBOARD_REPORT_PATH.unlink(missing_ok=True)
-            if name == "package_repo_check":
-                PACKAGE_REPO_CHECK_REPORT_PATH.unlink(missing_ok=True)
-            if name == "researcher_fixture":
-                RESEARCHER_FIXTURE_REPORT_PATH.unlink(missing_ok=True)
-            step_env: dict[str, str] | None = None
-            if name == "frontend_certify":
-                step_env = {"FRONTEND_CERTIFY_REPORT": str(FRONTEND_CERTIFY_REPORT_PATH)}
-            if name in ("frontend_npm_ci", "frontend_certify"):
-                step_env = {**(step_env or {}), **_npm_public_registry_env()}
-            result = _run(
-                name,
-                command,
-                cwd=cwd,
-                extra_env=step_env,
-                timeout_seconds=_local_wrapper_timeout_for_step(name, args),
-                heartbeat_seconds=args.step_heartbeat_seconds,
-            )
-            results.append(result)
-            if result.exit_code != 0 and _is_resumable_proof_step(name) and deferred_resumable_failure is None:
-                deferred_resumable_failure = result
-            if result.exit_code != 0 and failed is None and not _is_resumable_proof_step(name):
-                failed = result
-                if not args.no_fail_fast:
-                    break
-            if name == "frontend_clean_workspace":
-                validation_started = time.perf_counter()
-                frontend_clean_workspace_report_summary, blockers = validate_frontend_clean_workspace_report(
-                    FRONTEND_CLEAN_WORKSPACE_REPORT_PATH
-                )
-                validation_step = _proof_report_step(
-                    step_name="frontend_clean_workspace_report_validation",
-                    validator_name="validate_frontend_clean_workspace_report",
-                    summary=frontend_clean_workspace_report_summary,
-                    blockers=blockers,
-                    report_path=FRONTEND_CLEAN_WORKSPACE_REPORT_PATH,
-                    started=validation_started,
-                )
-                results.append(validation_step)
-                if validation_step.exit_code != 0 and failed is None:
-                    failed = validation_step
-                    if not args.no_fail_fast:
-                        break
-            if name == "frontend_certify":
-                validation_started = time.perf_counter()
-                frontend_certify_report_summary, blockers = validate_frontend_certify_report(FRONTEND_CERTIFY_REPORT_PATH)
-                validation_step = _frontend_certify_report_step(
-                    summary=frontend_certify_report_summary,
-                    blockers=blockers,
-                    started=validation_started,
-                )
-                results.append(validation_step)
-                if validation_step.exit_code != 0 and failed is None:
-                    failed = validation_step
-                    if not args.no_fail_fast:
-                        break
-            if name == "public_surface_dashboard":
-                validation_started = time.perf_counter()
-                public_surface_dashboard_summary, blockers = validate_public_surface_dashboard_report(
-                    PUBLIC_SURFACE_DASHBOARD_REPORT_PATH
-                )
-                validation_step = _proof_report_step(
-                    step_name="public_surface_dashboard_report_validation",
-                    validator_name="validate_public_surface_dashboard_report",
-                    summary=public_surface_dashboard_summary,
-                    blockers=blockers,
-                    report_path=PUBLIC_SURFACE_DASHBOARD_REPORT_PATH,
-                    started=validation_started,
-                )
-                results.append(validation_step)
-                if validation_step.exit_code != 0 and failed is None:
-                    failed = validation_step
-                    if not args.no_fail_fast:
-                        break
-            if name == "package_repo_check":
-                validation_started = time.perf_counter()
-                package_repo_check_summary, blockers = validate_package_repo_check_report(PACKAGE_REPO_CHECK_REPORT_PATH)
-                validation_step = _proof_report_step(
-                    step_name="package_repo_check_report_validation",
-                    validator_name="validate_package_repo_check_report",
-                    summary=package_repo_check_summary,
-                    blockers=blockers,
-                    report_path=PACKAGE_REPO_CHECK_REPORT_PATH,
-                    started=validation_started,
-                )
-                results.append(validation_step)
-                if validation_step.exit_code != 0 and failed is None:
-                    failed = validation_step
-                    if not args.no_fail_fast:
-                        break
-            if name == "researcher_fixture":
-                validation_started = time.perf_counter()
-                researcher_fixture_report_summary, blockers = validate_researcher_fixture_report(RESEARCHER_FIXTURE_REPORT_PATH)
-                validation_step = _proof_report_step(
-                    step_name="researcher_fixture_report_validation",
-                    validator_name="validate_researcher_fixture_report",
-                    summary=researcher_fixture_report_summary,
-                    blockers=blockers,
-                    report_path=RESEARCHER_FIXTURE_REPORT_PATH,
-                    started=validation_started,
-                )
-                results.append(validation_step)
-                if validation_step.exit_code != 0 and failed is None:
-                    failed = validation_step
-                    if not args.no_fail_fast:
-                        break
-            if name == "collection_shards_summary_verification":
-                validation_started = time.perf_counter()
-                collection_shards_proof_summary, blockers = validate_collection_shards_proof(
-                    COLLECTION_SHARDS_SUMMARY_PATH,
-                    COLLECTION_SHARDS_SUMMARY_VERIFICATION_PATH,
-                )
-                validation_step = _shard_proof_report_step(
-                    step_name="collection_shards_report_validation",
-                    validator_name="validate_collection_shards_proof",
-                    summary=collection_shards_proof_summary,
-                    blockers=blockers,
-                    summary_path=COLLECTION_SHARDS_SUMMARY_PATH,
-                    verification_path=COLLECTION_SHARDS_SUMMARY_VERIFICATION_PATH,
-                    started=validation_started,
-                )
-                results.append(validation_step)
-                if validation_step.exit_code != 0 and failed is None:
-                    failed = deferred_resumable_failure or validation_step
-                    if not args.no_fail_fast:
-                        break
-            if name == "constitutional_shards_summary_verification":
-                validation_started = time.perf_counter()
-                constitutional_shards_proof_summary, blockers = validate_constitutional_shards_proof(
-                    CONSTITUTIONAL_SHARDS_SUMMARY_PATH,
-                    CONSTITUTIONAL_SHARDS_SUMMARY_VERIFICATION_PATH,
-                )
-                validation_step = _shard_proof_report_step(
-                    step_name="constitutional_shards_report_validation",
-                    validator_name="validate_constitutional_shards_proof",
-                    summary=constitutional_shards_proof_summary,
-                    blockers=blockers,
-                    summary_path=CONSTITUTIONAL_SHARDS_SUMMARY_PATH,
-                    verification_path=CONSTITUTIONAL_SHARDS_SUMMARY_VERIFICATION_PATH,
-                    started=validation_started,
-                )
-                results.append(validation_step)
-                if validation_step.exit_code != 0 and failed is None:
-                    failed = deferred_resumable_failure or validation_step
-                    if not args.no_fail_fast:
-                        break
-            if name == "pytest_execution_shards_summary_verification":
-                validation_started = time.perf_counter()
-                pytest_execution_shards_proof_summary, blockers = validate_pytest_execution_shards_proof(
-                    PYTEST_EXECUTION_SHARDS_SUMMARY_PATH,
-                    PYTEST_EXECUTION_SHARDS_SUMMARY_VERIFICATION_PATH,
-                )
-                validation_step = _shard_proof_report_step(
-                    step_name="pytest_execution_shards_report_validation",
-                    validator_name="validate_pytest_execution_shards_proof",
-                    summary=pytest_execution_shards_proof_summary,
-                    blockers=blockers,
-                    summary_path=PYTEST_EXECUTION_SHARDS_SUMMARY_PATH,
-                    verification_path=PYTEST_EXECUTION_SHARDS_SUMMARY_VERIFICATION_PATH,
-                    started=validation_started,
-                )
-                results.append(validation_step)
-                if args.include_pytest_shards and not monolithic_pytest_included:
-                    replacement_started = time.perf_counter()
-                    pytest_replacement_step = _pytest_execution_shards_replacement_step(
-                        summary=pytest_execution_shards_proof_summary,
-                        blockers=blockers,
-                        started=replacement_started,
+    try:
+        with _temporary_certify_artifact_paths(args):
+            apply_research_paper_discovery_profile(args)
+            with _maybe_canonical_latest_write_lock(args):
+                certification_run_id = secrets.token_hex(16) if args.certify_research_paper_discovery else None
+                frontend_included = not args.skip_frontend and (FRONTEND_ROOT / "package-lock.json").exists()
+                results: list[LocalCertifyStep] = []
+                failed: LocalCertifyStep | None = None
+                frontend_preflight_report_summary: dict[str, object] | None = None
+                preflight_blockers: list[str] = []
+                if args.certify_research_paper_discovery:
+                    preflight_started = time.perf_counter()
+                    write_frontend_preflight_report(
+                        skip_frontend_requested=args.skip_frontend,
+                        output_path=FRONTEND_PREFLIGHT_REPORT_PATH,
+                        certification_run_id=certification_run_id,
                     )
-                    results.append(pytest_replacement_step)
-                if validation_step.exit_code != 0 and failed is None:
-                    failed = deferred_resumable_failure or validation_step
-                    if not args.no_fail_fast:
-                        break
-    
-        if failed is None and deferred_resumable_failure is not None:
-            failed = deferred_resumable_failure
-    
-        python_core_report_payload = _write_python_core_report(results=results, failed=failed, report_path=PYTHON_CORE_REPORT_PATH)
-        validation_started = time.perf_counter()
-        python_core_report_summary, blockers = validate_python_core_report(PYTHON_CORE_REPORT_PATH)
-        python_core_validation_step = _proof_report_step(
-            step_name="python_core_report_validation",
-            validator_name="validate_python_core_report",
-            summary=python_core_report_summary,
-            blockers=blockers,
-            report_path=PYTHON_CORE_REPORT_PATH,
-            started=validation_started,
-        )
-        results.append(python_core_validation_step)
-        if python_core_validation_step.exit_code != 0 and failed is None:
-            failed = python_core_validation_step
-    
-        payload = _build_payload(
-            results=results,
-            failed=failed,
-            frontend_included=frontend_included,
-            frontend_clean_workspace_included=bool(frontend_included and args.clean_frontend_workspace),
-            researcher_fixture_included=args.include_researcher_fixture,
-            collection_shards_included=args.include_collection_shards,
-            collection_shard_count=args.collection_shard_count if args.include_collection_shards else None,
-            constitutional_shards_included=args.include_constitutional_shards,
-            constitutional_shard_count=args.constitutional_shard_count if args.include_constitutional_shards else None,
-            pytest_execution_shards_included=args.include_pytest_shards,
-            pytest_shard_count=args.pytest_shard_count if args.include_pytest_shards else None,
-            monolithic_pytest_included=monolithic_pytest_included,
-            pytest_execution_shards_replace_monolith=args.include_pytest_shards and not monolithic_pytest_included,
-            frontend_certify_report=frontend_certify_report_summary,
-            frontend_clean_workspace_report=frontend_clean_workspace_report_summary,
-            frontend_preflight_report=frontend_preflight_report_summary,
-            phase_profile_plan_report=phase_profile_plan_report_summary,
-            python_core_report=python_core_report_summary,
-            public_surface_dashboard=public_surface_dashboard_summary,
-            package_repo_check=package_repo_check_summary,
-            researcher_fixture_report=researcher_fixture_report_summary,
-            collection_shards_proof=collection_shards_proof_summary,
-            constitutional_shards_proof=constitutional_shards_proof_summary,
-            pytest_execution_shards_proof=pytest_execution_shards_proof_summary,
-            certification_profile=RESEARCH_PAPER_DISCOVERY_PROFILE if args.certify_research_paper_discovery else None,
-            certification_profile_contract=(
-                _research_paper_discovery_profile_contract(frontend_included=frontend_included)
-                if args.certify_research_paper_discovery
-                else None
-            ),
-        )
-        _write_report(payload)
-        phase_closure_report: dict[str, object] | None = None
-        phase_evidence_bundle: dict[str, object] | None = None
-        phase_run_report: dict[str, object] | None = None
-        final_certificate_index: dict[str, object] | None = None
-        report_verification: dict[str, object] | None = None
-        phase_profile_blockers: list[str] = []
-        if args.certify_research_paper_discovery:
-            report_verification = verify_local_certify_report(REPORT_PATH, output_path=args.verification_output)
-            if report_verification.get("status") != "PASS":
-                phase_profile_blockers.append(
-                    "RESEARCH_PAPER_DISCOVERY_PROFILE_LOCAL_CERTIFY_REPORT_VERIFICATION_NOT_PASSING:"
-                    f"{report_verification.get('status')}"
+                    frontend_preflight_report_summary, preflight_blockers = validate_frontend_preflight_report(
+                        FRONTEND_PREFLIGHT_REPORT_PATH
+                    )
+                    preflight_step = _proof_report_step(
+                        step_name="frontend_preflight",
+                        validator_name="validate_frontend_preflight_report",
+                        summary=frontend_preflight_report_summary,
+                        blockers=preflight_blockers,
+                        report_path=FRONTEND_PREFLIGHT_REPORT_PATH,
+                        started=preflight_started,
+                    )
+                    results.append(preflight_step)
+                    if preflight_step.exit_code != 0:
+                        failed = preflight_step
+                monolithic_pytest_included = (not args.include_pytest_shards) or args.run_monolithic_pytest_with_shards
+                phase_preflight_failed = failed is not None and args.certify_research_paper_discovery
+                steps_to_run = build_research_paper_discovery_steps(
+                    args,
+                    frontend_included=frontend_included,
+                    phase_preflight_failed=phase_preflight_failed,
                 )
-            phase_closure_report = write_research_paper_discovery_closure_report(
-                payload,
-                report_verification,
-                output_path=args.phase_closure_output,
-                report_path=REPORT_PATH,
-                verification_path=args.verification_output,
-            )
-            if phase_closure_report.get("status") != "PASS":
-                phase_profile_blockers.append(
-                    "RESEARCH_PAPER_DISCOVERY_PROFILE_CLOSURE_NOT_PASSING:"
-                    f"{phase_closure_report.get('status')}"
+                phase_profile_plan_report_summary: dict[str, object] | None = None
+                phase_profile_plan_verification: dict[str, object] | None = None
+                if args.certify_research_paper_discovery:
+                    plan_payload = write_research_paper_discovery_profile_plan(
+                        args=args,
+                        certification_run_id=certification_run_id,
+                        frontend_included=frontend_included,
+                        frontend_preflight_report=frontend_preflight_report_summary,
+                        frontend_preflight_blockers=preflight_blockers,
+                        phase_preflight_failed=phase_preflight_failed,
+                        steps_to_run=steps_to_run,
+                        output_path=args.phase_profile_plan_output,
+                    )
+                    phase_profile_plan_report_summary, plan_blockers = validate_research_paper_discovery_profile_plan(
+                        args.phase_profile_plan_output
+                    )
+                    phase_profile_plan_verification = verify_research_paper_discovery_profile_plan(
+                        args.phase_profile_plan_output,
+                        output_path=args.phase_profile_plan_verification_output,
+                    )
+                    if args.phase_profile_plan_only:
+                        if args.json:
+                            print(json.dumps(plan_payload, indent=2, sort_keys=True))
+                        if plan_blockers:
+                            print("Research-and-Paper-Discovery phase profile plan: FAIL", file=sys.stderr)
+                            for blocker in plan_blockers:
+                                print(f"local_certify: {blocker}", file=sys.stderr)
+                            print(f"Research-and-Paper-Discovery phase profile plan: written to {args.phase_profile_plan_output}", file=sys.stderr)
+                            return 1
+                        print("Research-and-Paper-Discovery phase profile plan: PASS")
+                        print(f"Research-and-Paper-Discovery phase profile plan: written to {args.phase_profile_plan_output}")
+                        return 0
+
+                frontend_certify_report_summary: dict[str, object] | None = None
+                frontend_clean_workspace_report_summary: dict[str, object] | None = None
+                python_core_report_summary: dict[str, object] | None = None
+                public_surface_dashboard_summary: dict[str, object] | None = None
+                package_repo_check_summary: dict[str, object] | None = None
+                researcher_fixture_report_summary: dict[str, object] | None = None
+                collection_shards_proof_summary: dict[str, object] | None = None
+                constitutional_shards_proof_summary: dict[str, object] | None = None
+                pytest_execution_shards_proof_summary: dict[str, object] | None = None
+                deferred_resumable_failure: LocalCertifyStep | None = None
+                for name, command, cwd in steps_to_run:
+                    if name == "frontend_clean_workspace":
+                        FRONTEND_CLEAN_WORKSPACE_REPORT_PATH.unlink(missing_ok=True)
+                    if name == "frontend_certify":
+                        FRONTEND_CERTIFY_REPORT_PATH.unlink(missing_ok=True)
+                    if name == "public_surface_dashboard":
+                        PUBLIC_SURFACE_DASHBOARD_REPORT_PATH.unlink(missing_ok=True)
+                    if name == "package_repo_check":
+                        PACKAGE_REPO_CHECK_REPORT_PATH.unlink(missing_ok=True)
+                    if name == "researcher_fixture":
+                        RESEARCHER_FIXTURE_REPORT_PATH.unlink(missing_ok=True)
+                    step_env: dict[str, str] | None = None
+                    if name == "frontend_certify":
+                        step_env = {"FRONTEND_CERTIFY_REPORT": str(FRONTEND_CERTIFY_REPORT_PATH)}
+                    if name in ("frontend_npm_ci", "frontend_certify"):
+                        step_env = {**(step_env or {}), **_npm_public_registry_env()}
+                    result = _run(
+                        name,
+                        command,
+                        cwd=cwd,
+                        extra_env=step_env,
+                        timeout_seconds=_local_wrapper_timeout_for_step(name, args),
+                        heartbeat_seconds=args.step_heartbeat_seconds,
+                    )
+                    results.append(result)
+                    if result.exit_code != 0 and _is_resumable_proof_step(name) and deferred_resumable_failure is None:
+                        deferred_resumable_failure = result
+                    if result.exit_code != 0 and failed is None and not _is_resumable_proof_step(name):
+                        failed = result
+                        if not args.no_fail_fast:
+                            break
+                    if name == "frontend_clean_workspace":
+                        validation_started = time.perf_counter()
+                        frontend_clean_workspace_report_summary, blockers = validate_frontend_clean_workspace_report(
+                            FRONTEND_CLEAN_WORKSPACE_REPORT_PATH
+                        )
+                        validation_step = _proof_report_step(
+                            step_name="frontend_clean_workspace_report_validation",
+                            validator_name="validate_frontend_clean_workspace_report",
+                            summary=frontend_clean_workspace_report_summary,
+                            blockers=blockers,
+                            report_path=FRONTEND_CLEAN_WORKSPACE_REPORT_PATH,
+                            started=validation_started,
+                        )
+                        results.append(validation_step)
+                        if validation_step.exit_code != 0 and failed is None:
+                            failed = validation_step
+                            if not args.no_fail_fast:
+                                break
+                    if name == "frontend_certify":
+                        validation_started = time.perf_counter()
+                        frontend_certify_report_summary, blockers = validate_frontend_certify_report(FRONTEND_CERTIFY_REPORT_PATH)
+                        validation_step = _frontend_certify_report_step(
+                            summary=frontend_certify_report_summary,
+                            blockers=blockers,
+                            started=validation_started,
+                        )
+                        results.append(validation_step)
+                        if validation_step.exit_code != 0 and failed is None:
+                            failed = validation_step
+                            if not args.no_fail_fast:
+                                break
+                    if name == "public_surface_dashboard":
+                        validation_started = time.perf_counter()
+                        public_surface_dashboard_summary, blockers = validate_public_surface_dashboard_report(
+                            PUBLIC_SURFACE_DASHBOARD_REPORT_PATH
+                        )
+                        validation_step = _proof_report_step(
+                            step_name="public_surface_dashboard_report_validation",
+                            validator_name="validate_public_surface_dashboard_report",
+                            summary=public_surface_dashboard_summary,
+                            blockers=blockers,
+                            report_path=PUBLIC_SURFACE_DASHBOARD_REPORT_PATH,
+                            started=validation_started,
+                        )
+                        results.append(validation_step)
+                        if validation_step.exit_code != 0 and failed is None:
+                            failed = validation_step
+                            if not args.no_fail_fast:
+                                break
+                    if name == "package_repo_check":
+                        validation_started = time.perf_counter()
+                        package_repo_check_summary, blockers = validate_package_repo_check_report(PACKAGE_REPO_CHECK_REPORT_PATH)
+                        validation_step = _proof_report_step(
+                            step_name="package_repo_check_report_validation",
+                            validator_name="validate_package_repo_check_report",
+                            summary=package_repo_check_summary,
+                            blockers=blockers,
+                            report_path=PACKAGE_REPO_CHECK_REPORT_PATH,
+                            started=validation_started,
+                        )
+                        results.append(validation_step)
+                        if validation_step.exit_code != 0 and failed is None:
+                            failed = validation_step
+                            if not args.no_fail_fast:
+                                break
+                    if name == "researcher_fixture":
+                        validation_started = time.perf_counter()
+                        researcher_fixture_report_summary, blockers = validate_researcher_fixture_report(RESEARCHER_FIXTURE_REPORT_PATH)
+                        validation_step = _proof_report_step(
+                            step_name="researcher_fixture_report_validation",
+                            validator_name="validate_researcher_fixture_report",
+                            summary=researcher_fixture_report_summary,
+                            blockers=blockers,
+                            report_path=RESEARCHER_FIXTURE_REPORT_PATH,
+                            started=validation_started,
+                        )
+                        results.append(validation_step)
+                        if validation_step.exit_code != 0 and failed is None:
+                            failed = validation_step
+                            if not args.no_fail_fast:
+                                break
+                    if name == "collection_shards_summary_verification":
+                        validation_started = time.perf_counter()
+                        collection_shards_proof_summary, blockers = validate_collection_shards_proof(
+                            COLLECTION_SHARDS_SUMMARY_PATH,
+                            COLLECTION_SHARDS_SUMMARY_VERIFICATION_PATH,
+                        )
+                        validation_step = _shard_proof_report_step(
+                            step_name="collection_shards_report_validation",
+                            validator_name="validate_collection_shards_proof",
+                            summary=collection_shards_proof_summary,
+                            blockers=blockers,
+                            summary_path=COLLECTION_SHARDS_SUMMARY_PATH,
+                            verification_path=COLLECTION_SHARDS_SUMMARY_VERIFICATION_PATH,
+                            started=validation_started,
+                        )
+                        results.append(validation_step)
+                        if validation_step.exit_code != 0 and failed is None:
+                            failed = deferred_resumable_failure or validation_step
+                            if not args.no_fail_fast:
+                                break
+                    if name == "constitutional_shards_summary_verification":
+                        validation_started = time.perf_counter()
+                        constitutional_shards_proof_summary, blockers = validate_constitutional_shards_proof(
+                            CONSTITUTIONAL_SHARDS_SUMMARY_PATH,
+                            CONSTITUTIONAL_SHARDS_SUMMARY_VERIFICATION_PATH,
+                        )
+                        validation_step = _shard_proof_report_step(
+                            step_name="constitutional_shards_report_validation",
+                            validator_name="validate_constitutional_shards_proof",
+                            summary=constitutional_shards_proof_summary,
+                            blockers=blockers,
+                            summary_path=CONSTITUTIONAL_SHARDS_SUMMARY_PATH,
+                            verification_path=CONSTITUTIONAL_SHARDS_SUMMARY_VERIFICATION_PATH,
+                            started=validation_started,
+                        )
+                        results.append(validation_step)
+                        if validation_step.exit_code != 0 and failed is None:
+                            failed = deferred_resumable_failure or validation_step
+                            if not args.no_fail_fast:
+                                break
+                    if name == "pytest_execution_shards_summary_verification":
+                        validation_started = time.perf_counter()
+                        pytest_execution_shards_proof_summary, blockers = validate_pytest_execution_shards_proof(
+                            PYTEST_EXECUTION_SHARDS_SUMMARY_PATH,
+                            PYTEST_EXECUTION_SHARDS_SUMMARY_VERIFICATION_PATH,
+                        )
+                        validation_step = _shard_proof_report_step(
+                            step_name="pytest_execution_shards_report_validation",
+                            validator_name="validate_pytest_execution_shards_proof",
+                            summary=pytest_execution_shards_proof_summary,
+                            blockers=blockers,
+                            summary_path=PYTEST_EXECUTION_SHARDS_SUMMARY_PATH,
+                            verification_path=PYTEST_EXECUTION_SHARDS_SUMMARY_VERIFICATION_PATH,
+                            started=validation_started,
+                        )
+                        results.append(validation_step)
+                        if args.include_pytest_shards and not monolithic_pytest_included:
+                            replacement_started = time.perf_counter()
+                            pytest_replacement_step = _pytest_execution_shards_replacement_step(
+                                summary=pytest_execution_shards_proof_summary,
+                                blockers=blockers,
+                                started=replacement_started,
+                            )
+                            results.append(pytest_replacement_step)
+                        if validation_step.exit_code != 0 and failed is None:
+                            failed = deferred_resumable_failure or validation_step
+                            if not args.no_fail_fast:
+                                break
+    
+                if failed is None and deferred_resumable_failure is not None:
+                    failed = deferred_resumable_failure
+    
+                python_core_report_payload = _write_python_core_report(results=results, failed=failed, report_path=PYTHON_CORE_REPORT_PATH)
+                validation_started = time.perf_counter()
+                python_core_report_summary, blockers = validate_python_core_report(PYTHON_CORE_REPORT_PATH)
+                python_core_validation_step = _proof_report_step(
+                    step_name="python_core_report_validation",
+                    validator_name="validate_python_core_report",
+                    summary=python_core_report_summary,
+                    blockers=blockers,
+                    report_path=PYTHON_CORE_REPORT_PATH,
+                    started=validation_started,
                 )
-            phase_evidence_bundle = write_research_paper_discovery_evidence_bundle(
-                local_report_path=REPORT_PATH,
-                verification_path=args.verification_output,
-                closure_path=args.phase_closure_output,
-                phase_profile_plan_path=args.phase_profile_plan_output,
-                phase_profile_plan_verification_path=args.phase_profile_plan_verification_output,
-                output_path=args.phase_evidence_bundle_output,
+                results.append(python_core_validation_step)
+                if python_core_validation_step.exit_code != 0 and failed is None:
+                    failed = python_core_validation_step
+    
+                payload = _build_payload(
+                    results=results,
+                    failed=failed,
+                    frontend_included=frontend_included,
+                    frontend_clean_workspace_included=bool(frontend_included and args.clean_frontend_workspace),
+                    researcher_fixture_included=args.include_researcher_fixture,
+                    collection_shards_included=args.include_collection_shards,
+                    collection_shard_count=args.collection_shard_count if args.include_collection_shards else None,
+                    constitutional_shards_included=args.include_constitutional_shards,
+                    constitutional_shard_count=args.constitutional_shard_count if args.include_constitutional_shards else None,
+                    pytest_execution_shards_included=args.include_pytest_shards,
+                    pytest_shard_count=args.pytest_shard_count if args.include_pytest_shards else None,
+                    monolithic_pytest_included=monolithic_pytest_included,
+                    pytest_execution_shards_replace_monolith=args.include_pytest_shards and not monolithic_pytest_included,
+                    frontend_certify_report=frontend_certify_report_summary,
+                    frontend_clean_workspace_report=frontend_clean_workspace_report_summary,
+                    frontend_preflight_report=frontend_preflight_report_summary,
+                    phase_profile_plan_report=phase_profile_plan_report_summary,
+                    python_core_report=python_core_report_summary,
+                    public_surface_dashboard=public_surface_dashboard_summary,
+                    package_repo_check=package_repo_check_summary,
+                    researcher_fixture_report=researcher_fixture_report_summary,
+                    collection_shards_proof=collection_shards_proof_summary,
+                    constitutional_shards_proof=constitutional_shards_proof_summary,
+                    pytest_execution_shards_proof=pytest_execution_shards_proof_summary,
+                    certification_profile=RESEARCH_PAPER_DISCOVERY_PROFILE if args.certify_research_paper_discovery else None,
+                certification_profile_contract=(
+                    _research_paper_discovery_profile_contract(frontend_included=frontend_included)
+                    if args.certify_research_paper_discovery
+                    else None
+                ),
+                certification_run_id=certification_run_id if args.certify_research_paper_discovery else None,
             )
-            if phase_evidence_bundle.get("status") != "PASS":
-                phase_profile_blockers.append(
-                    "RESEARCH_PAPER_DISCOVERY_PROFILE_EVIDENCE_BUNDLE_NOT_PASSING:"
-                    f"{phase_evidence_bundle.get('status')}"
-                )
-            phase_run_report = write_research_paper_discovery_phase_run_report(
-                local_certify_payload=payload,
-                local_report_path=REPORT_PATH,
-                local_report_verification=report_verification,
-                local_report_verification_path=args.verification_output,
-                phase_profile_plan_report=phase_profile_plan_report_summary,
-                phase_profile_plan_path=args.phase_profile_plan_output,
-                phase_profile_plan_verification=phase_profile_plan_verification,
-                phase_profile_plan_verification_path=args.phase_profile_plan_verification_output,
-                phase_closure_report=phase_closure_report,
-                phase_closure_path=args.phase_closure_output,
-                phase_evidence_bundle=phase_evidence_bundle,
-                phase_evidence_bundle_path=args.phase_evidence_bundle_output,
-                phase_profile_blockers=phase_profile_blockers,
-                output_path=args.phase_run_report_output,
-            )
-            final_certificate_index = write_final_research_paper_discovery_certification_index(
-                output_path=args.final_phase_certificate_index_output,
-            )
+                _write_report(payload)
+                phase_closure_report: dict[str, object] | None = None
+                phase_evidence_bundle: dict[str, object] | None = None
+                phase_run_report: dict[str, object] | None = None
+                final_certificate_index: dict[str, object] | None = None
+                report_verification: dict[str, object] | None = None
+                phase_profile_blockers: list[str] = []
+                if args.certify_research_paper_discovery:
+                    report_verification = verify_local_certify_report(REPORT_PATH, output_path=args.verification_output)
+                    if report_verification.get("status") != "PASS":
+                        phase_profile_blockers.append(
+                            "RESEARCH_PAPER_DISCOVERY_PROFILE_LOCAL_CERTIFY_REPORT_VERIFICATION_NOT_PASSING:"
+                            f"{report_verification.get('status')}"
+                        )
+                    phase_closure_report = write_research_paper_discovery_closure_report(
+                        payload,
+                        report_verification,
+                        output_path=args.phase_closure_output,
+                        report_path=REPORT_PATH,
+                        verification_path=args.verification_output,
+                    )
+                    if phase_closure_report.get("status") != "PASS":
+                        phase_profile_blockers.append(
+                            "RESEARCH_PAPER_DISCOVERY_PROFILE_CLOSURE_NOT_PASSING:"
+                            f"{phase_closure_report.get('status')}"
+                        )
+                    phase_evidence_bundle = write_research_paper_discovery_evidence_bundle(
+                        local_report_path=REPORT_PATH,
+                        verification_path=args.verification_output,
+                        closure_path=args.phase_closure_output,
+                        phase_profile_plan_path=args.phase_profile_plan_output,
+                        phase_profile_plan_verification_path=args.phase_profile_plan_verification_output,
+                        output_path=args.phase_evidence_bundle_output,
+                    )
+                    if phase_evidence_bundle.get("status") != "PASS":
+                        phase_profile_blockers.append(
+                            "RESEARCH_PAPER_DISCOVERY_PROFILE_EVIDENCE_BUNDLE_NOT_PASSING:"
+                            f"{phase_evidence_bundle.get('status')}"
+                        )
+                    phase_run_report = write_research_paper_discovery_phase_run_report(
+                        local_certify_payload=payload,
+                        local_report_path=REPORT_PATH,
+                        local_report_verification=report_verification,
+                        local_report_verification_path=args.verification_output,
+                        phase_profile_plan_report=phase_profile_plan_report_summary,
+                        phase_profile_plan_path=args.phase_profile_plan_output,
+                        phase_profile_plan_verification=phase_profile_plan_verification,
+                        phase_profile_plan_verification_path=args.phase_profile_plan_verification_output,
+                        phase_closure_report=phase_closure_report,
+                        phase_closure_path=args.phase_closure_output,
+                        phase_evidence_bundle=phase_evidence_bundle,
+                        phase_evidence_bundle_path=args.phase_evidence_bundle_output,
+                        phase_profile_blockers=phase_profile_blockers,
+                        output_path=args.phase_run_report_output,
+                    )
+                    final_certificate_index = write_final_research_paper_discovery_certification_index(
+                        output_path=args.final_phase_certificate_index_output,
+                    )
+                if args.json:
+                    if phase_closure_report is not None:
+                        payload = dict(payload)
+                        payload["phase_closure_report"] = phase_closure_report
+                        payload["phase_closure_report_path"] = str(args.phase_closure_output)
+                    if phase_evidence_bundle is not None:
+                        payload = dict(payload)
+                        payload["phase_evidence_bundle"] = phase_evidence_bundle
+                        payload["phase_evidence_bundle_path"] = str(args.phase_evidence_bundle_output)
+                    if phase_run_report is not None:
+                        payload = dict(payload)
+                        payload["phase_run_report"] = phase_run_report
+                        payload["phase_run_report_path"] = str(args.phase_run_report_output)
+                    if final_certificate_index is not None:
+                        payload = dict(payload)
+                        payload["final_phase_certificate_index"] = final_certificate_index
+                        payload["final_phase_certificate_index_path"] = str(args.final_phase_certificate_index_output)
+                    print(json.dumps(payload, indent=2, sort_keys=True))
+                if failed is not None:
+                    print(f"\nlocal_certify: FAIL at {failed.name} (exit {failed.exit_code})", file=sys.stderr)
+                    print(f"local_certify: report written to {REPORT_PATH}", file=sys.stderr)
+                    return failed.exit_code or 1
+                if phase_profile_blockers:
+                    print("\nlocal_certify: FAIL at research_paper_discovery_profile_validation", file=sys.stderr)
+                    for blocker in phase_profile_blockers:
+                        print(f"local_certify: {blocker}", file=sys.stderr)
+                    print(f"local_certify: report written to {REPORT_PATH}", file=sys.stderr)
+                    return 1
+                print("\nlocal_certify: PASS")
+                print(f"local_certify: report written to {REPORT_PATH}")
+                return 0
+
+    except CanonicalLatestWriteLockError:
         if args.json:
-            if phase_closure_report is not None:
-                payload = dict(payload)
-                payload["phase_closure_report"] = phase_closure_report
-                payload["phase_closure_report_path"] = str(args.phase_closure_output)
-            if phase_evidence_bundle is not None:
-                payload = dict(payload)
-                payload["phase_evidence_bundle"] = phase_evidence_bundle
-                payload["phase_evidence_bundle_path"] = str(args.phase_evidence_bundle_output)
-            if phase_run_report is not None:
-                payload = dict(payload)
-                payload["phase_run_report"] = phase_run_report
-                payload["phase_run_report_path"] = str(args.phase_run_report_output)
-            if final_certificate_index is not None:
-                payload = dict(payload)
-                payload["final_phase_certificate_index"] = final_certificate_index
-                payload["final_phase_certificate_index_path"] = str(args.final_phase_certificate_index_output)
-            print(json.dumps(payload, indent=2, sort_keys=True))
-        if failed is not None:
-            print(f"\nlocal_certify: FAIL at {failed.name} (exit {failed.exit_code})", file=sys.stderr)
-            print(f"local_certify: report written to {REPORT_PATH}", file=sys.stderr)
-            return failed.exit_code or 1
-        if phase_profile_blockers:
-            print("\nlocal_certify: FAIL at research_paper_discovery_profile_validation", file=sys.stderr)
-            for blocker in phase_profile_blockers:
-                print(f"local_certify: {blocker}", file=sys.stderr)
-            print(f"local_certify: report written to {REPORT_PATH}", file=sys.stderr)
-            return 1
-        print("\nlocal_certify: PASS")
-        print(f"local_certify: report written to {REPORT_PATH}")
-        return 0
+            print(
+                json.dumps(
+                    {"status": "FAIL", "blockers": [LOCAL_CERTIFY_CANONICAL_LATEST_WRITE_LOCKED]},
+                    indent=2,
+                    sort_keys=True,
+                )
+            )
+        print(LOCAL_CERTIFY_CANONICAL_LATEST_WRITE_LOCKED, file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":
