@@ -4880,7 +4880,12 @@ def main(argv: list[str] | None = None) -> int:
         help="Append resumable backend pytest execution shard proof steps and aggregate their JSON reports.",
     )
     parser.add_argument("--pytest-shard-count", type=int, default=16, help="Shard count for --include-pytest-shards.")
-    parser.add_argument("--pytest-shard-timeout-seconds", type=int, default=180, help="Per-shard watchdog timeout for --include-pytest-shards.")
+    parser.add_argument(
+        "--pytest-shard-timeout-seconds",
+        type=int,
+        default=600,
+        help="Per-shard watchdog timeout for --include-pytest-shards (inner certification_stability.py; outer local_certify adds 60s grace).",
+    )
     parser.add_argument("--pytest-shard-heartbeat-seconds", type=int, default=5, help="Per-shard heartbeat interval for --include-pytest-shards.")
     parser.add_argument(
         "--run-monolithic-pytest-with-shards",
