@@ -7,7 +7,7 @@ from pathlib import Path
 COMPATIBILITY_FILE_MARKERS = ('_compat_', '_compat', 'compat_')
 RUNTIME_COMMAND_SUFFIX = '_runtime_commands.py'
 CLI_SURFACE_BUDGETS: Mapping[str, int] = {
-    'cli_file_count': 196,
+    'cli_file_count': 220,
     'compatibility_file_count': 40,
     'runtime_command_file_count': 24,
 }

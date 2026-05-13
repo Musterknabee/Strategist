@@ -5695,6 +5695,18 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"local_certify: report written to {REPORT_PATH}")
                 return 0
 
+    except KeyboardInterrupt:
+        if args.json:
+            print(
+                json.dumps(
+                    {"blockers": ["interrupted"], "status": "INTERRUPTED"},
+                    indent=2,
+                    sort_keys=True,
+                )
+            )
+        print("\nlocal_certify: interrupted (subprocess stopped)", file=sys.stderr)
+        return 130
+
     except CanonicalLatestWriteLockError:
         if args.json:
             print(
@@ -5709,4 +5721,8 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except KeyboardInterrupt:
+        print("\nlocal_certify: interrupted", file=sys.stderr)
+        raise SystemExit(130)
