@@ -482,13 +482,18 @@ def _windows_subprocess_popen(
     stderr_file: TextIO,
     start_new_session: bool,
 ) -> subprocess.Popen[str]:
-    """Start a subprocess on Windows with best-effort job isolation.
+    """Start a subprocess on Windows with best-effort console and job isolation.
 
-    Some IDE-hosted shells attach certification workers to a job that is torn
-    down when the terminal session ends.  ``CREATE_BREAKAWAY_FROM_JOB`` (when
-    allowed by the parent job) lets long-running shard children leave that job
-    so they are less likely to disappear mid-run.  If ``CreateProcess`` rejects
-    breakaway, fall back to ``CREATE_NEW_PROCESS_GROUP`` only.
+    Keep in sync with ``certification_stability._windows_popen_redirected_stdio``.
+
+    ``local_certify`` always redirects child stdout/stderr to temp files.  On
+    Windows, children that share the same console can participate in console
+    control delivery; deep grandchildren (for example pytest) may trigger
+    ``GenerateConsoleCtrlEvent`` patterns that surface as ``KeyboardInterrupt``
+    in the parent even when the operator did not press Ctrl+C.  Prefer
+    ``CREATE_NO_WINDOW`` so the child has no console session while handles stay
+    redirected.  Layer ``CREATE_BREAKAWAY_FROM_JOB`` when the parent job
+    allows it.  Try weaker flag combinations if ``CreateProcess`` rejects a set.
     """
     popen_kw: dict[str, Any] = {
         "cwd": cwd,
@@ -501,15 +506,32 @@ def _windows_subprocess_popen(
         "close_fds": True,
         "start_new_session": start_new_session,
     }
-    new_group = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-    breakaway = getattr(subprocess, "CREATE_BREAKAWAY_FROM_JOB", 0)
-    combined = int(new_group) | int(breakaway)
-    if breakaway and combined:
+    new_group = int(getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
+    breakaway = int(getattr(subprocess, "CREATE_BREAKAWAY_FROM_JOB", 0))
+    no_window = int(getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    combos: list[int] = []
+    seen: set[int] = set()
+
+    def _add_flags(flags: int) -> None:
+        if flags and flags not in seen:
+            seen.add(flags)
+            combos.append(flags)
+
+    _add_flags(new_group | no_window | breakaway)
+    _add_flags(new_group | no_window)
+    _add_flags(new_group | breakaway)
+    _add_flags(new_group)
+
+    last_exc: OSError | None = None
+    for creationflags in combos:
         try:
-            return subprocess.Popen(argv, creationflags=combined, **popen_kw)
-        except OSError:
-            return subprocess.Popen(argv, creationflags=int(new_group), **popen_kw)
-    return subprocess.Popen(argv, creationflags=int(new_group), **popen_kw)
+            return subprocess.Popen(argv, creationflags=creationflags, **popen_kw)
+        except OSError as exc:
+            last_exc = exc
+            continue
+    if last_exc is not None:
+        raise last_exc
+    return subprocess.Popen(argv, **popen_kw)
 
 
 def _run(
@@ -5352,10 +5374,10 @@ def main(argv: list[str] | None = None) -> int:
                         "local_certify: Research-and-Paper-Discovery usually needs 20–40+ minutes; do not interrupt "
                         "until the run finishes or you will have no artifacts/local_certify/latest/local_certify_report.json "
                         f"(on Ctrl+C a snapshot is written to {LOCAL_CERTIFY_INTERRUPTED_SNAPSHOT_PATH.name}). "
-                        "IDE or agent-hosted terminals may stop long jobs without an explicit keypress—use external "
-                        "PowerShell (see scripts/run_local_certify_research_paper_discovery.ps1) for unattended runs. "
-                        "On Windows, local_certify also requests CREATE_BREAKAWAY_FROM_JOB for child processes when the "
-                        "host job allows it, so shard workers are less tied to IDE terminal teardown.",
+                        "On Windows, subprocesses prefer CREATE_NO_WINDOW (stdio stays redirected) plus "
+                        "CREATE_BREAKAWAY_FROM_JOB when allowed, so console-wide control events from deep children "
+                        "(for example pytest) are less likely to surface as KeyboardInterrupt in this process. "
+                        "External PowerShell is still recommended for unattended runs.",
                         file=sys.stderr,
                         flush=True,
                     )
@@ -5771,10 +5793,10 @@ def main(argv: list[str] | None = None) -> int:
             "note": "Full local_certify_report.json is not written until the run finishes; this file records interrupt-only state.",
             "interrupt_source_note": (
                 "Python raised KeyboardInterrupt in local_certify (SIGINT / console control event on Windows). "
-                "That is not always a deliberate Ctrl+C: IDE terminals, AI agents, or closing the terminal can stop "
-                "long-running commands the same way. For a full certification, rerun in a stable external shell. "
-                "On Windows, child steps request CREATE_BREAKAWAY_FROM_JOB when the host job allows it, but the parent "
-                "process can still receive console control events."
+                "That is not always a deliberate Ctrl+C: IDE terminals, closing the session, or console-wide control "
+                "delivery can stop the parent even in external PowerShell. Deep children (for example pytest) that "
+                "share the same console can also participate in control events. Child steps prefer CREATE_NO_WINDOW "
+                "plus CREATE_BREAKAWAY_FROM_JOB when supported so the parent is less coupled to shard workers."
             ),
         }
         rid = locals().get("certification_run_id")
