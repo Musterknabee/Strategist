@@ -50,6 +50,16 @@ def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def _concat_tracked_sources(root: Path, relatives: tuple[str, ...]) -> str:
+    """Join source files for substring gates that predate CLI decomposition."""
+    chunks: list[str] = []
+    for rel in relatives:
+        path = root / rel
+        if path.is_file():
+            chunks.append(_read_text(path))
+    return "\n".join(chunks)
+
+
 def _load_pyproject(repo_root: Path) -> dict[str, object]:
     with (repo_root / "pyproject.toml").open("rb") as handle:
         return tomllib.load(handle)
@@ -722,8 +732,16 @@ def run_repository_truth_check(repo_root: str | Path | None = None) -> Repositor
         )
     )
 
-    release_candidate_path = root / "strategy_validator/cli/release_candidate.py"
-    release_candidate_text = _read_text(release_candidate_path) if release_candidate_path.exists() else ""
+    release_candidate_text = _concat_tracked_sources(
+        root,
+        (
+            "strategy_validator/cli/release_candidate.py",
+            "strategy_validator/cli/release_candidate_assessment.py",
+            "strategy_validator/cli/release_candidate_bundle.py",
+            "strategy_validator/cli/release_candidate_cleanup.py",
+            "strategy_validator/cli/release_candidate_common.py",
+        ),
+    )
     for gate_name, script_name in (
         ("release_candidate_environment_gate_present", "scripts/environment_check.py"),
         ("release_candidate_source_health_gate_present", "scripts/source_health.py"),
@@ -1299,8 +1317,18 @@ def run_repository_truth_check(repo_root: str | Path | None = None) -> Repositor
     )
 
 
+    deployment_bundle_text = _concat_tracked_sources(
+        root,
+        (
+            "strategy_validator/cli/single_tenant_deployment_bundle.py",
+            "strategy_validator/cli/single_tenant_deployment_bundle_ops.py",
+            "strategy_validator/cli/single_tenant_deployment_bundle_common.py",
+            "strategy_validator/cli/single_tenant_deployment_bundle_template_commands.py",
+            "strategy_validator/cli/single_tenant_deployment_bundle_template_acceptance.py",
+            "strategy_validator/cli/single_tenant_deployment_bundle_template_runtime.py",
+        ),
+    )
     deployment_bundle_cli = root / "strategy_validator/cli/single_tenant_deployment_bundle.py"
-    deployment_bundle_text = _read_text(deployment_bundle_cli) if deployment_bundle_cli.exists() else ""
     deployment_bundle_test = root / "tests/constitutional/test_single_tenant_deployment_bundle.py"
     deployment_bundle_ledger = root / "NEXT_SINGLE_TENANT_BUNDLE_LEDGER.md"
     checks.append(
