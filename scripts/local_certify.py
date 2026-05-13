@@ -5306,7 +5306,8 @@ def main(argv: list[str] | None = None) -> int:
                         "local_certify: Research-and-Paper-Discovery usually needs 20–40+ minutes; do not interrupt "
                         "until the run finishes or you will have no artifacts/local_certify/latest/local_certify_report.json "
                         f"(on Ctrl+C a snapshot is written to {LOCAL_CERTIFY_INTERRUPTED_SNAPSHOT_PATH.name}). "
-                        "If the IDE terminal stops early, run the same command in an external PowerShell window.",
+                        "IDE or agent-hosted terminals may stop long jobs without an explicit keypress—use external "
+                        "PowerShell (see scripts/run_local_certify_research_paper_discovery.ps1) for unattended runs.",
                         file=sys.stderr,
                         flush=True,
                     )
@@ -5720,6 +5721,11 @@ def main(argv: list[str] | None = None) -> int:
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "canonical_report_path": str(REPORT_PATH),
             "note": "Full local_certify_report.json is not written until the run finishes; this file records interrupt-only state.",
+            "interrupt_source_note": (
+                "Python raised KeyboardInterrupt in local_certify (SIGINT / console control event on Windows). "
+                "That is not always a deliberate Ctrl+C: IDE terminals, AI agents, or closing the terminal can stop "
+                "long-running commands the same way. For a full certification, rerun in a stable external shell."
+            ),
         }
         rid = locals().get("certification_run_id")
         if isinstance(rid, str) and rid:
@@ -5747,6 +5753,11 @@ def main(argv: list[str] | None = None) -> int:
             encoding="utf-8",
         )
         print("\nlocal_certify: interrupted (subprocess stopped)", file=sys.stderr)
+        print(
+            "local_certify: if you did not press Ctrl+C, the hosting shell/IDE/agent may have sent SIGINT anyway "
+            "(common for long integrated-terminal jobs). Prefer external PowerShell for full certification.",
+            file=sys.stderr,
+        )
         print(
             f"local_certify: interrupted snapshot written to {LOCAL_CERTIFY_INTERRUPTED_SNAPSHOT_PATH}",
             file=sys.stderr,

@@ -4,7 +4,8 @@
   Run full Research-and-Paper-Discovery local_certify with clearer exit semantics on Windows.
 
 .DESCRIPTION
-  Integrated terminals sometimes stop long jobs before Python exits; $LASTEXITCODE may be -1.
+  Integrated terminals (including IDE-hosted shells) sometimes stop long jobs before Python exits; the
+  process can receive SIGINT even when you did not press Ctrl+C. $LASTEXITCODE may then be -1.
   This script maps -1 to exit 130 (interrupt-style failure) so CI/scripts do not treat the run as success.
 
   Usage (from repo root):
@@ -53,7 +54,7 @@ Write-Host "local_certify exit code (raw): $code"
 
 if ($code -eq -1) {
     Write-Host "Shell reported exit code -1 (job stopped or exit not captured). Treating as failure (130)." -ForegroundColor Yellow
-    Write-Host "If you interrupted intentionally, see artifacts/local_certify/latest/local_certify_interrupted.json" -ForegroundColor Yellow
+    Write-Host "See artifacts/local_certify/latest/local_certify_interrupted.json (interrupt may be host-driven, not Ctrl+C)." -ForegroundColor Yellow
     exit 130
 }
 
