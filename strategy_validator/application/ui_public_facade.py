@@ -67,6 +67,7 @@ _UI_PUBLIC_FACADE_ROUTES: tuple[UiPublicFacadeRoute, ...] = (
     UiPublicFacadeRoute('GET', '/ui/daily-operator-run', 'read', False, 'ui_daily_operator_run/v1'),
     UiPublicFacadeRoute('GET', '/ui/daily-operator-run/latest', 'read', False, 'ui_daily_operator_run/v1'),
     UiPublicFacadeRoute('GET', '/ui/research-compute', 'read', False, 'ui_research_compute/v1'),
+    UiPublicFacadeRoute('GET', '/ui/researcher/latest', 'read', False, 'ui_researcher_cockpit/v1'),
     UiPublicFacadeRoute('GET', '/ui/strategy-batches', 'read', False, 'ui_strategy_batch/v1'),
     UiPublicFacadeRoute('GET', '/ui/strategy-batches/latest', 'read', False, 'ui_strategy_batch/v1'),
     UiPublicFacadeRoute('GET', '/ui/strategy-batches/{run_id}', 'read', False, 'ui_strategy_batch/v1'),

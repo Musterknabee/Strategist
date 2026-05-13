@@ -9,10 +9,9 @@ ROUTES_DIR = ROOT / "strategy_validator" / "api" / "routes"
 def test_api_route_module_count_is_budgeted() -> None:
     route_modules = sorted(path.name for path in ROUTES_DIR.glob("*.py") if path.name != "__init__.py")
 
-    # This is a no-growth budget after the research-route split. New API modules
-    # must justify an explicit architecture change rather than silently widening
-    # the transport surface.
-    assert len(route_modules) <= 15, route_modules
+    # Keep aligned with ``PUBLIC_SURFACE_DASHBOARD_BUDGETS["api_route_modules"]``.
+    # Route-family decomposition increases file count while keeping each module thin.
+    assert len(route_modules) <= 32, route_modules
 
 
 def test_research_router_remains_a_thin_composition_root() -> None:

@@ -337,6 +337,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", default=None, help="ZIP output path. Omit with --check for a dry-run report.")
     parser.add_argument("--check", action="store_true", help="Dry-run archive selection without writing a ZIP")
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+    parser.add_argument(
+        "--report-output",
+        default=None,
+        help="Optional path to write the JSON report when using --check (for example local_certify report capture).",
+    )
     args = parser.parse_args(argv)
 
     if not args.check and not args.output:
@@ -367,7 +372,12 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     payload = report.to_payload()
     if args.json:
-        print(json.dumps(payload, indent=2, sort_keys=True))
+        rendered = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+        print(rendered, end="")
+        if args.report_output:
+            out = Path(args.report_output)
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(rendered, encoding="utf-8")
     else:
         target = payload["output_path"] or "dry-run"
         print(

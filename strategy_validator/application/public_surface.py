@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Mapping
 
 APPLICATION_EXPORT_BUDGETS: Mapping[str, int] = {
-    'export_count': 316,
+    'export_count': 322,
 }
 
 
