@@ -7697,6 +7697,57 @@
         ]
       }
     },
+    "/ui/researcher/latest": {
+      "get": {
+        "operationId": "get_researcher_cockpit_latest_ui_researcher_latest_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "artifact_root",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Artifact Root"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Researcher Cockpit Latest Ui Researcher Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Researcher Cockpit Latest",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
     "/ui/runtime": {
       "get": {
         "operationId": "get_ui_runtime_ui_runtime_get",

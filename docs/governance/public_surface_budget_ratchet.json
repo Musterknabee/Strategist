@@ -1,0 +1,81 @@
+{
+  "approved_budget_increases": [],
+  "approved_surface_growth": [
+    {
+      "approval_id": "phase-certification-export-replay-negative-proof-audit-doc",
+      "consolidation_offset": "No console script, route, frontend page, or test file added; documentation growth stays within docs budget headroom.",
+      "metric": "docs_pages",
+      "new_actual": 163,
+      "rationale": "Certification proof-chain closure requires one generated audit record for phase export replay and negative evidence-bundle proof; no executable/API/UI surface added."
+    },
+    {
+      "approval_id": "final-research-paper-discovery-certification-audit-doc",
+      "consolidation_offset": "No console script, route, frontend page, or test file added; documentation growth remains within docs budget headroom.",
+      "metric": "docs_pages",
+      "new_actual": 164,
+      "rationale": "Final operator-facing Research-and-Paper-Discovery certification report documents proof-chain artifacts, portable replay, negative proof coverage, no-live-authority confirmation, and remaining non-blocking risks without adding executable/API/UI surface."
+    },
+    {
+      "approval_id": "research-paper-discovery-artifact-ledger-release-and-dashboard-refresh",
+      "consolidation_offset": "No console script, route, or frontend page added; test file budget unchanged; documentation-only certification closure and measured dashboard refresh.",
+      "metric": "docs_pages",
+      "new_actual": 166,
+      "rationale": "Adds Research-and-Paper-Discovery artifact ledger and v0.1 certified release boundary doc; refreshes public_surface_dashboard.md to match current docs inventory after certification closure edits. No executable or API surface expansion."
+    }
+  ],
+  "baseline_created_at": "2026-05-13T00:00:00+00:00",
+  "baselines": {
+    "adr_count": {
+      "actual": 95,
+      "baseline_reason": "Research-and-Paper-Discovery certification pass: measured inventory with headroom on ADR budget.",
+      "budget": 98
+    },
+    "api_route_count": {
+      "actual": 289,
+      "baseline_reason": "Research-and-Paper-Discovery certification pass: decorator-count baseline aligned with dashboard.",
+      "budget": 366
+    },
+    "api_route_modules": {
+      "actual": 28,
+      "baseline_reason": "Research-and-Paper-Discovery certification pass: route-family modules after UI decomposition.",
+      "budget": 32
+    },
+    "application_exports": {
+      "actual": 316,
+      "baseline_reason": "Research-and-Paper-Discovery certification pass: application export inventory with modest headroom.",
+      "budget": 322
+    },
+    "cli_files": {
+      "actual": 215,
+      "baseline_reason": "Research-and-Paper-Discovery certification pass: CLI module inventory.",
+      "budget": 220
+    },
+    "compatibility_shims": {
+      "actual": 37,
+      "baseline_reason": "Research-and-Paper-Discovery certification pass: compatibility shim inventory.",
+      "budget": 40
+    },
+    "console_scripts": {
+      "actual": 45,
+      "baseline_reason": "Research-and-Paper-Discovery certification pass: pyproject console script inventory.",
+      "budget": 47
+    },
+    "docs_pages": {
+      "actual": 178,
+      "baseline_reason": "Research-and-Paper-Discovery certification pass: markdown docs inventory.",
+      "budget": 182
+    },
+    "frontend_pages": {
+      "actual": 80,
+      "baseline_reason": "Research-and-Paper-Discovery certification pass: Next.js page inventory.",
+      "budget": 88
+    },
+    "test_files": {
+      "actual": 720,
+      "baseline_reason": "Research-and-Paper-Discovery certification pass: pytest module inventory.",
+      "budget": 725
+    }
+  },
+  "policy": "No new public surface unless old surface is merged, retired, or explicitly justified. Budgets may not be raised without machine-readable rationale.",
+  "schema_version": "public_surface_budget_ratchet/v1"
+}
