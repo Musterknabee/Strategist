@@ -16,7 +16,10 @@ from strategy_validator.cli.release_candidate_common import (
     _candidate_dir,
     _ensure_dir,
     _git,
+    _git_available,
+    _safe_candidate_id,
     _utc_now_iso,
+    _which,
     _write_json,
     _write_text,
 )
@@ -134,14 +137,6 @@ def _tracked_files() -> list[Path]:
     out = subprocess.check_output(["git", "ls-files"], cwd=REPO_ROOT, text=True)
     rels = [line.strip() for line in out.splitlines() if line.strip()]
     return [Path(rel) for rel in rels]
-
-
-def _write_json(path: Path, payload: Any) -> None:
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-
-
-def _write_text(path: Path, content: str) -> None:
-    path.write_text(content.rstrip() + "\n", encoding="utf-8")
 
 
 def _build_bundle_manifest() -> dict[str, Any]:
