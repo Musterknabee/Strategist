@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
-import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -11,7 +9,6 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from strategy_validator.cli.release_candidate_common import (
-    ARTIFACTS_ROOT,
     REPO_ROOT,
     _candidate_dir,
     _ensure_dir,
@@ -217,7 +214,7 @@ def cmd_generate(candidate: str | None) -> Path:
                 "",
                 f"- Assess: `strategy-validator-release-candidate assess --candidate {candidate_id}`",
                 f"- Verify bundle: `strategy-validator-release-candidate verify-bundle --candidate {candidate_id}`",
-                f"- Cleanup transients: `strategy-validator-release-candidate cleanup`",
+                "- Cleanup transients: `strategy-validator-release-candidate cleanup`",
                 "",
             ]
         ),
