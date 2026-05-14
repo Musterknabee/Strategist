@@ -37,7 +37,6 @@ from strategy_validator.research.strategy_thesis_eval import build_ui_strategy_t
 from strategy_validator.research.strategy_thesis_generator import build_ui_strategy_thesis_generation_latest_payload
 from strategy_validator.application.shadow_book_ops import build_ui_shadow_book_latest_payload
 from strategy_validator.application.strategy_intake import build_ui_strategy_intake_latest_payload
-from strategy_validator.application.researcher_cockpit_payload import build_ui_researcher_cockpit_payload
 from strategy_validator.application.research_os_closure_ops import build_ui_research_os_closure_latest_payload
 from strategy_validator.application.research_os_attestation_ops import build_ui_research_os_attestation_latest_payload
 from strategy_validator.application.research_os_briefing_ops import build_ui_research_os_briefing_latest_payload
@@ -240,11 +239,6 @@ def get_shadow_book_latest() -> dict[str, object]:
 @router.get('/strategy-intake/latest')
 def get_strategy_intake_latest() -> dict[str, object]:
     return build_ui_strategy_intake_latest_payload()
-
-
-@router.get('/researcher/latest')
-def get_researcher_cockpit_latest(artifact_root: str | None = None) -> dict[str, object]:
-    return build_ui_researcher_cockpit_payload(artifact_root=artifact_root)
 
 
 @router.get('/research-os/closure/latest')
