@@ -3,6 +3,9 @@ from __future__ import annotations
 from typing import Any
 
 from strategy_validator.application.research_integrity_common import _sha256_payload
+from strategy_validator.application.research_integrity_validator_handoff_ingress_certificate import (
+    _validator_handoff_packet_ingress_certificate_payload_checksum,
+)
 from strategy_validator.application.research_integrity_release_handoff import (
     summarize_semantic_release_handoff_certificate_evidence,
     verify_semantic_release_handoff_certificate_evidence,
