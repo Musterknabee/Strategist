@@ -722,8 +722,18 @@ def run_repository_truth_check(repo_root: str | Path | None = None) -> Repositor
         )
     )
 
-    release_candidate_path = root / "strategy_validator/cli/release_candidate.py"
-    release_candidate_text = _read_text(release_candidate_path) if release_candidate_path.exists() else ""
+    # Release-candidate logic may be split across thin entrypoints and helpers.
+    # Repository truth gates key sentinels across the full surface (ordering, gates, bundle hygiene).
+    release_candidate_paths = (
+        root / "strategy_validator/cli/release_candidate.py",
+        root / "strategy_validator/cli/release_candidate_common.py",
+        root / "strategy_validator/cli/release_candidate_bundle.py",
+        root / "strategy_validator/cli/release_candidate_assessment.py",
+        root / "strategy_validator/cli/release_candidate_cleanup.py",
+    )
+    release_candidate_text = "\n".join(
+        _read_text(path) for path in release_candidate_paths if path.exists()
+    )
     for gate_name, script_name in (
         ("release_candidate_environment_gate_present", "scripts/environment_check.py"),
         ("release_candidate_source_health_gate_present", "scripts/source_health.py"),
