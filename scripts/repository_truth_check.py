@@ -1319,18 +1319,8 @@ def run_repository_truth_check(repo_root: str | Path | None = None) -> Repositor
     )
 
 
-    deployment_bundle_text = _concat_tracked_sources(
-        root,
-        (
-            "strategy_validator/cli/single_tenant_deployment_bundle.py",
-            "strategy_validator/cli/single_tenant_deployment_bundle_ops.py",
-            "strategy_validator/cli/single_tenant_deployment_bundle_common.py",
-            "strategy_validator/cli/single_tenant_deployment_bundle_template_commands.py",
-            "strategy_validator/cli/single_tenant_deployment_bundle_template_acceptance.py",
-            "strategy_validator/cli/single_tenant_deployment_bundle_template_runtime.py",
-        ),
-    )
     deployment_bundle_cli = root / "strategy_validator/cli/single_tenant_deployment_bundle.py"
+    deployment_bundle_text = _read_text(deployment_bundle_cli) if deployment_bundle_cli.exists() else ""
     deployment_bundle_test = root / "tests/constitutional/test_single_tenant_deployment_bundle.py"
     deployment_bundle_ledger = root / "NEXT_SINGLE_TENANT_BUNDLE_LEDGER.md"
     checks.append(

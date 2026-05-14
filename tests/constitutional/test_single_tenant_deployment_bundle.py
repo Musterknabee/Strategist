@@ -1,20 +1,8 @@
 from pathlib import Path
-
-from tests.constitutional.cli_single_tenant_bundle_sources import read_single_tenant_bundle_sources
-
-ROOT = Path(__file__).resolve().parents[2]
-
-
+ROOT=Path(__file__).resolve().parents[2]
 def test_single_tenant_deployment_bundle_is_secret_safe_and_backend_only():
-    text = read_single_tenant_bundle_sources(ROOT)
-    for item in [
-        "single_tenant_deployment_bundle/v1",
-        "deployment.env.redacted.json",
-        "docker-compose.single-tenant.yml",
-        "systemd/strategy-validator.service",
-        "frontend_readiness_claimed",
-        "STRATEGY_VALIDATOR_API_TOKEN",
-    ]:
+    text=(ROOT/"strategy_validator/cli/single_tenant_deployment_bundle.py").read_text()
+    for item in ["single_tenant_deployment_bundle/v1","deployment.env.redacted.json","docker-compose.single-tenant.yml","systemd/strategy-validator.service","frontend_readiness_claimed","STRATEGY_VALIDATOR_API_TOKEN"]:
         assert item in text
 
 
@@ -34,13 +22,12 @@ def _write_valid_single_tenant_env(path: Path) -> None:
 def test_single_tenant_bundle_generation_self_checks_generated_contract(monkeypatch, tmp_path):
     """Generation must fail closed if a generated template drifts before manifest creation."""
 
-    from strategy_validator.cli.single_tenant_deployment_bundle import build_single_tenant_deployment_bundle
-    from strategy_validator.cli import single_tenant_deployment_bundle_ops as ops
+    from strategy_validator.cli import single_tenant_deployment_bundle as bundle
 
     env_file = tmp_path / "deployment.env"
     _write_valid_single_tenant_env(env_file)
 
-    original_systemd_template = ops._systemd_template
+    original_systemd_template = bundle._systemd_template
 
     def drifted_systemd_template() -> str:
         return original_systemd_template().replace(
@@ -48,11 +35,9 @@ def test_single_tenant_bundle_generation_self_checks_generated_contract(monkeypa
             "0.0.0.0:8000:8000",
         )
 
-    # Patch the ops-module binding (lazy-import snapshot); patching template_runtime alone leaves a stale
-    # reference here and poisons later tests in the same session.
-    monkeypatch.setattr(ops, "_systemd_template", drifted_systemd_template)
+    monkeypatch.setattr(bundle, "_systemd_template", drifted_systemd_template)
 
-    report = build_single_tenant_deployment_bundle(
+    report = bundle.build_single_tenant_deployment_bundle(
         env_file=env_file,
         output_dir=tmp_path / "bundle",
         repo_root=ROOT,
@@ -102,16 +87,10 @@ def test_single_tenant_bundle_check_rejects_symlinked_generated_file(tmp_path):
 
 
 def test_single_tenant_bundle_repo_asset_manifest_rejects_symlinked_source_assets(tmp_path):
-    from strategy_validator.cli.single_tenant_deployment_bundle_common import (
-        _REQUIRED_REPO_ASSETS,
-        _repo_asset_manifest,
-    )
-    from strategy_validator.cli.single_tenant_deployment_bundle_verification_manifest import (
-        _verify_repo_asset_manifest_payload,
-    )
+    from strategy_validator.cli import single_tenant_deployment_bundle as bundle
 
     repo = tmp_path / "repo"
-    for relative in _REQUIRED_REPO_ASSETS:
+    for relative in bundle._REQUIRED_REPO_ASSETS:
         path = repo / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(f"regular asset for {relative}\n", encoding="utf-8")
@@ -124,9 +103,9 @@ def test_single_tenant_bundle_repo_asset_manifest_rejects_symlinked_source_asset
     except (OSError, NotImplementedError):
         return
 
-    payload = _repo_asset_manifest(repo, generated_at_utc="2026-05-02T00:00:00Z")
+    payload = bundle._repo_asset_manifest(repo, generated_at_utc="2026-05-02T00:00:00Z")
     dockerfile_item = next(item for item in payload["assets"] if item["path"] == "Dockerfile")
-    errors = _verify_repo_asset_manifest_payload(payload)
+    errors = bundle._verify_repo_asset_manifest_payload(payload)
 
     assert dockerfile_item["exists"] is False
     assert dockerfile_item["is_symlink"] is True
