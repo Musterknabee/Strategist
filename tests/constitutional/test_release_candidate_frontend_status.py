@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 def test_release_candidate_records_frontend_absence_when_skipped() -> None:
-    source = Path("strategy_validator/cli/release_candidate.py").read_text(encoding="utf-8")
+    source = Path("strategy_validator/cli/release_candidate_assessment.py").read_text(encoding="utf-8")
     assert "frontend_status" in source
     assert "backend assessment cannot imply frontend readiness" in source
     assert '"skipped": True' in source

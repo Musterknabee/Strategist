@@ -90,7 +90,7 @@ strategy_validator = ["migrations/sqlite/*.sql", "fixtures/*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "-ra"
+addopts = "-ra --import-mode=importlib -p no:ddtrace -p no:cov -p no:asyncio -p no:anyio -p no:metadata"
 markers = [
   "constitutional: architecture and repository-shape invariants",
   "boundary: import and module boundary tests",
