@@ -5681,11 +5681,11 @@ def main(argv: list[str] | None = None) -> int:
                     )
                 if package_repo_check_summary is not None:
                     package_repo_check_summary, _ = validate_package_repo_check_report(PACKAGE_REPO_CHECK_REPORT_PATH)
-                if frontend_clean_workspace_report_summary is not None and frontend_included and args.clean_frontend_workspace:
+                if frontend_included and args.clean_frontend_workspace:
                     frontend_clean_workspace_report_summary, _ = validate_frontend_clean_workspace_report(
                         FRONTEND_CLEAN_WORKSPACE_REPORT_PATH
                     )
-                if frontend_certify_report_summary is not None and frontend_included:
+                if frontend_included:
                     frontend_certify_report_summary, _ = validate_frontend_certify_report(FRONTEND_CERTIFY_REPORT_PATH)
                 if researcher_fixture_report_summary is not None and args.include_researcher_fixture:
                     researcher_fixture_report_summary, _ = validate_researcher_fixture_report(RESEARCHER_FIXTURE_REPORT_PATH)
