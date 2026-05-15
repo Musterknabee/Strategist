@@ -1,0 +1,10 @@
+{
+  "schema_version": "researcher_cycle_candidate_queue/v1",
+  "candidates": [
+    {
+      "candidate_id": "fixture-certification-demo-01",
+      "universe": "SPY",
+      "timeframe": "1d"
+    }
+  ]
+}

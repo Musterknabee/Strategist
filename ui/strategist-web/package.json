@@ -14,11 +14,12 @@
     "contract:generate": "python ../../scripts/generate_frontend_ui_facade_contract.py",
     "acceptance": "vitest run tests",
     "validate": "npm run contract:check && npm run lint && npm run typecheck && npm run test && npm run acceptance && npm run build",
-    "certify": "npm run validate"
+    "audit": "npm audit --audit-level=high",
+    "certify": "node ./scripts/certify.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.8",
-    "next": "15.5.15",
+    "next": "15.5.18",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
@@ -30,7 +31,7 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "eslint": "^8.57.0",
-    "eslint-config-next": "15.5.15",
+    "eslint-config-next": "15.5.18",
     "@testing-library/react": "^16.0.1",
     "jsdom": "^25.0.1",
     "typescript": "^5.7.2",

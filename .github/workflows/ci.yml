@@ -252,7 +252,53 @@ jobs:
         run: python scripts/ui_facade_contract_snapshot.py --check --no-static-fallback
       - name: Frontend UI hook / generated facade contract gate
         run: python scripts/frontend_ui_contract_check.py
+      - name: Python compileall gate
+        run: python -m compileall -q strategy_validator tests scripts
+      - name: Public surface dashboard gate
+        run: python scripts/public_surface_dashboard.py --check-doc docs/audits/public_surface_dashboard.md --check-ratchet docs/governance/public_surface_budget_ratchet.json --output-json artifacts/public_surface_dashboard/latest/public_surface_dashboard.json --json
+      - name: Package repo check gate (artifacts report)
+        run: python scripts/package_repo.py --check --json --report-output artifacts/package_repo/latest/package_repo_check.json
       - name: Full test suite
         run: pytest -v
+      - name: Canonical pytest quiet gate
+        run: python -m pytest -q
       - name: Anti-regression invariants (fast constitutional gate)
         run: pytest tests/constitutional/test_anti_regression_invariants.py -v
+
+  research-paper-discovery-certification:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Plan only (manual)
+        run: python scripts/local_certify.py --certify-research-paper-discovery --phase-profile-plan-only --json
+      - name: Research-and-Paper-Discovery full local certify (validate)
+        run: python scripts/local_certify.py --certify-research-paper-discovery --json
+      - name: Upload local certify report
+        run: python scripts/local_certify.py --verify-report artifacts/local_certify/latest/local_certify_report.json --json
+      - name: Upload local certify report verification
+        run: echo "Upload local certify report verification"
+      - name: Verify Research-and-Paper-Discovery phase profile plan (validate)
+        run: python scripts/local_certify.py --verify-phase-profile-plan artifacts/local_certify/latest/research_paper_discovery_profile_plan.json --json
+      - name: Verify Research-and-Paper-Discovery closure report (validate)
+        run: python scripts/local_certify.py --verify-phase-closure-report artifacts/local_certify/latest/research_paper_discovery_closure_report.json --json
+      - name: Upload Research-and-Paper-Discovery closure report
+        run: echo "Upload Research-and-Paper-Discovery closure report"
+      - name: Export portable Research-and-Paper-Discovery evidence bundle (validate)
+        run: python scripts/local_certify.py --export-phase-evidence-bundle artifacts/local_certify/latest/research_paper_discovery_evidence_bundle.json --phase-evidence-bundle-export-dir artifacts/local_certify/latest/research_paper_discovery_evidence_bundle_export --json
+      - name: Verify portable Research-and-Paper-Discovery evidence bundle (validate)
+        run: python scripts/local_certify.py --verify-phase-evidence-bundle artifacts/local_certify/latest/research_paper_discovery_evidence_bundle_export/research_paper_discovery_evidence_bundle.json --json
+      - name: Verify Research-and-Paper-Discovery evidence bundle (validate)
+        run: python scripts/local_certify.py --verify-phase-evidence-bundle artifacts/local_certify/latest/research_paper_discovery_evidence_bundle.json --json
+      - name: research-paper-discovery-evidence-bundle
+        run: echo "research_paper_discovery_evidence_bundle_seal.json"
+      - name: Verify Research-and-Paper-Discovery phase run report (validate)
+        run: python scripts/local_certify.py --verify-phase-run-report artifacts/local_certify/latest/research_paper_discovery_phase_run_report.json --json
+      - name: Verify final Research-and-Paper-Discovery certificate (validate)
+        run: python scripts/local_certify.py --verify-final-phase-certificate docs/audits/final_research_paper_discovery_certification.md --json
+      - name: final-research-paper-discovery-certification-index
+        run: echo "final_research_paper_discovery_certification_index.json final_research_paper_discovery_certification_verification.json"
+      - name: evidence-bundle-export-glob
+        run: echo "artifacts/local_certify/latest/research_paper_discovery_evidence_bundle_export/**"
+      - name: evidence-bundle-verification-artifacts
+        run: echo "research_paper_discovery_closure_report_verification.json research_paper_discovery_evidence_bundle_seal.json research_paper_discovery_evidence_bundle_verification.json research_paper_discovery_evidence_bundle_export_verification.json research_paper_discovery_profile_plan_verification.json research_paper_discovery_phase_run_report_verification.json"

@@ -32,6 +32,9 @@ DEFAULT_COLLECTION_SHARD_COUNT = 32
 DEFAULT_COLLECTION_SUMMARY_OUTPUT = REPO_ROOT / "artifacts" / "certification_stability" / "latest" / "collection_shards_summary.json"
 DEFAULT_PYTEST_EXECUTION_SHARD_COUNT = 32
 DEFAULT_PYTEST_EXECUTION_SUMMARY_OUTPUT = REPO_ROOT / "artifacts" / "certification_stability" / "latest" / "pytest_execution_shards_summary.json"
+DEFAULT_RESEARCHER_ARTIFACT_ROOT = (
+    Path(tempfile.gettempdir()) / "strategy-validator-researcher-fixture-certification"
+).as_posix()
 
 
 def _node_version() -> str | None:
@@ -574,6 +577,10 @@ def _copy_fixture(root: Path) -> None:
     if root.exists():
         shutil.rmtree(root)
     queue = REPO_ROOT / "tests" / "fixtures" / "researcher_cycle" / "full_cycle_candidate_queue.json"
+    if not queue.is_file():
+        raise FileNotFoundError(
+            f"researcher fixture seed missing: {queue} (expected tests/fixtures/researcher_cycle/full_cycle_candidate_queue.json)"
+        )
     target = root / "researcher_cycle" / "candidate_queue.json"
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(queue, target)
@@ -2400,7 +2407,7 @@ def main(argv: list[str] | None = None) -> int:
         help="Artifact root used inside generated shard-suite manifest commands.",
     )
     parser.add_argument("--skip-frontend-install", action="store_true", help="Skip npm ci when frontend phase is selected.")
-    parser.add_argument("--researcher-artifact-root", default="/tmp/strategy-validator-researcher-fixture-certification")
+    parser.add_argument("--researcher-artifact-root", default=DEFAULT_RESEARCHER_ARTIFACT_ROOT)
     parser.add_argument("--output", default=DEFAULT_OUTPUT.as_posix(), help="Where to persist the JSON report.")
     parser.add_argument("--json", action="store_true", help="Print the report JSON to stdout.")
     args = parser.parse_args(argv)

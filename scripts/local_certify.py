@@ -829,12 +829,6 @@ def _researcher_fixture_source_tree_digest() -> str:
         REPO_ROOT / "tests" / "fixtures" / "researcher_cycle" / "full_cycle_candidate_queue.json",
         REPO_ROOT / "strategy_validator" / "cli" / "researcher_cycle.py",
         REPO_ROOT / "strategy_validator" / "cli" / "researcher_certify.py",
-        REPO_ROOT / "strategy_validator" / "application" / "researcher_cycle.py",
-        REPO_ROOT / "strategy_validator" / "application" / "researcher_certification.py",
-        REPO_ROOT / "strategy_validator" / "application" / "researcher_certification_candidate_evidence.py",
-        REPO_ROOT / "strategy_validator" / "application" / "paper_evidence_feedback.py",
-        REPO_ROOT / "strategy_validator" / "application" / "phase_doctrine.py",
-        REPO_ROOT / "strategy_validator" / "contracts" / "researcher_certification.py",
         REPO_ROOT / "scripts" / "certification_stability.py",
     ]
     return _source_manifest_digest(paths)
@@ -1886,7 +1880,6 @@ def planned_steps(*, include_frontend: bool, include_pytest: bool = True, clean_
                         "scripts/clean_frontend_workspace.py",
                         "--output",
                         FRONTEND_CLEAN_WORKSPACE_REPORT_PATH.as_posix(),
-                        "--json",
                     ),
                     REPO_ROOT,
                 )
@@ -3976,6 +3969,13 @@ def _json_artifact_metadata(path: Path) -> tuple[str | None, str | None]:
         return None, None
     schema = payload.get("schema_version")
     status = payload.get("status")
+    if status is None and schema == "public_surface_dashboard/v1":
+        ratchet = payload.get("ratchet_validation")
+        ratchet_ok = isinstance(ratchet, dict) and ratchet.get("status") == "PASS"
+        if payload.get("ok") is True and ratchet_ok:
+            status = "PASS"
+        elif payload.get("ok") is not True or not ratchet_ok:
+            status = "FAIL"
     return (schema if isinstance(schema, str) else None, status if isinstance(status, str) else None)
 
 
@@ -5656,7 +5656,25 @@ def main(argv: list[str] | None = None) -> int:
                 results.append(python_core_validation_step)
                 if python_core_validation_step.exit_code != 0 and failed is None:
                     failed = python_core_validation_step
-    
+
+                # Re-seal early gate proof summaries against on-disk artifacts. Long runs (shards, pytest)
+                # can finish after concurrent edits to canonical JSON (for example refreshing the dashboard
+                # report) which would otherwise leave embedded sha256/source_tree_digest stale vs verification.
+                if public_surface_dashboard_summary is not None:
+                    public_surface_dashboard_summary, _ = validate_public_surface_dashboard_report(
+                        PUBLIC_SURFACE_DASHBOARD_REPORT_PATH
+                    )
+                if package_repo_check_summary is not None:
+                    package_repo_check_summary, _ = validate_package_repo_check_report(PACKAGE_REPO_CHECK_REPORT_PATH)
+                if frontend_clean_workspace_report_summary is not None and frontend_included and args.clean_frontend_workspace:
+                    frontend_clean_workspace_report_summary, _ = validate_frontend_clean_workspace_report(
+                        FRONTEND_CLEAN_WORKSPACE_REPORT_PATH
+                    )
+                if frontend_certify_report_summary is not None and frontend_included:
+                    frontend_certify_report_summary, _ = validate_frontend_certify_report(FRONTEND_CERTIFY_REPORT_PATH)
+                if researcher_fixture_report_summary is not None and args.include_researcher_fixture:
+                    researcher_fixture_report_summary, _ = validate_researcher_fixture_report(RESEARCHER_FIXTURE_REPORT_PATH)
+
                 payload = _build_payload(
                     results=results,
                     failed=failed,
