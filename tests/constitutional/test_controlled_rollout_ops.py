@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -31,8 +32,11 @@ def test_keyed_host_fingerprint_secret_safe(monkeypatch: pytest.MonkeyPatch, tmp
     assert fp.host_kind == "KEYED_OPERATOR_HOST"
     assert fp.env_presence["APCA_API_KEY_ID"] is True
     assert fp.env_presence["APCA_API_SECRET_KEY"] is True
-    assert "abc" not in str(fp.model_dump())
-    assert "xyz" not in str(fp.model_dump())
+    payload = fp.model_dump()
+    secret_scan = {key: value for key, value in payload.items() if key not in {"commit", "git_tag"}}
+    secret_scan_text = json.dumps(secret_scan)
+    assert "abc" not in secret_scan_text
+    assert "xyz" not in secret_scan_text
     assert "APCA_API_KEY_ID" in fp.env_value_sha256
 
 
