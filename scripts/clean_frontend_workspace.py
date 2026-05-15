@@ -4,13 +4,25 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
+import stat
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FRONTEND_ROOT = REPO_ROOT / "ui" / "strategist-web"
+
+
+def _rmtree_force(path: Path) -> None:
+    def _onerror(func, target: str, exc_info) -> None:  # type: ignore[no-untyped-def]
+        if not os.path.isdir(target):
+            raise exc_info[1]
+        os.chmod(target, stat.S_IWRITE)
+        func(target)
+
+    shutil.rmtree(path, onerror=_onerror)
 
 
 def clean_frontend_workspace(*, output: Path, dry_run: bool = False) -> dict[str, object]:
@@ -27,7 +39,7 @@ def clean_frontend_workspace(*, output: Path, dry_run: bool = False) -> dict[str
         skipped_reason: str | None = None
         if existed and not dry_run:
             try:
-                shutil.rmtree(path)
+                _rmtree_force(path)
                 removed = True
             except OSError as exc:
                 skipped_reason = f"remove_failed:{exc}"

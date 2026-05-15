@@ -270,6 +270,23 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _write_stable_verification_json(path: Path, payload: dict[str, object]) -> None:
+    """Write verification JSON without rewriting when only ``verified_at`` would change."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    body = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    if path.exists():
+        try:
+            existing = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(existing, dict):
+                new_compare = {key: value for key, value in payload.items() if key != "verified_at"}
+                old_compare = {key: value for key, value in existing.items() if key != "verified_at"}
+                if old_compare == new_compare:
+                    return
+        except (json.JSONDecodeError, OSError):
+            pass
+    path.write_text(body, encoding="utf-8")
+
+
 def _resolved_path(path: Path) -> Path:
     return path.expanduser().resolve()
 
@@ -2537,8 +2554,7 @@ def verify_research_paper_discovery_profile_plan(
         "verified_at": _utc_now(),
     }
     if output_path is not None:
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(json.dumps(verification, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        _write_stable_verification_json(output_path, verification)
     return verification
 
 
@@ -3685,8 +3701,7 @@ def verify_local_certify_report(
         "verified_at": datetime.now(timezone.utc).isoformat(),
     }
     if output_path is not None:
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(json.dumps(verification, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        _write_stable_verification_json(output_path, verification)
     return verification
 
 
@@ -5721,6 +5736,15 @@ def main(argv: list[str] | None = None) -> int:
                         phase_profile_blockers.append(
                             "RESEARCH_PAPER_DISCOVERY_PROFILE_LOCAL_CERTIFY_REPORT_VERIFICATION_NOT_PASSING:"
                             f"{report_verification.get('status')}"
+                        )
+                    phase_profile_plan_verification = verify_research_paper_discovery_profile_plan(
+                        args.phase_profile_plan_output,
+                        output_path=args.phase_profile_plan_verification_output,
+                    )
+                    if phase_profile_plan_verification.get("status") != "PASS":
+                        phase_profile_blockers.append(
+                            "RESEARCH_PAPER_DISCOVERY_PROFILE_PLAN_VERIFICATION_NOT_PASSING:"
+                            f"{phase_profile_plan_verification.get('status')}"
                         )
                     phase_closure_report = write_research_paper_discovery_closure_report(
                         payload,
