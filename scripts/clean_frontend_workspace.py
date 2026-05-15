@@ -7,7 +7,9 @@ import json
 import os
 import shutil
 import stat
+import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -25,9 +27,47 @@ def _rmtree_force(path: Path) -> None:
     shutil.rmtree(path, onerror=_onerror)
 
 
+def _release_windows_frontend_locks() -> None:
+    """Best-effort: stop Next dev listeners that hold SWC/node_modules open."""
+    if os.name != "nt":
+        return
+    ps = (
+        "Get-NetTCPConnection -LocalPort 3000,3001 -State Listen -ErrorAction SilentlyContinue | "
+        "ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }"
+    )
+    subprocess.run(
+        ["powershell", "-NoProfile", "-Command", ps],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    time.sleep(1.0)
+
+
+def _remove_tree_with_retries(path: Path, *, attempts: int = 6, pause_seconds: float = 2.0) -> str | None:
+    """Remove a directory tree; retry for transient Windows/OneDrive file locks."""
+    last_error: str | None = None
+    for attempt in range(attempts):
+        if not path.exists():
+            return None
+        try:
+            _rmtree_force(path)
+            if not path.exists():
+                return None
+            last_error = "remove_failed:path_still_exists"
+        except OSError as exc:
+            last_error = f"remove_failed:{exc}"
+        if attempt + 1 < attempts:
+            time.sleep(pause_seconds)
+    return last_error
+
+
 def clean_frontend_workspace(*, output: Path, dry_run: bool = False) -> dict[str, object]:
     started = datetime.now(timezone.utc).isoformat()
+    if not dry_run:
+        _release_windows_frontend_locks()
     paths_payload: list[dict[str, object]] = []
+    blockers: list[str] = []
     targets = (
         ("node_modules", FRONTEND_ROOT / "node_modules"),
         (".next", FRONTEND_ROOT / ".next"),
@@ -38,11 +78,10 @@ def clean_frontend_workspace(*, output: Path, dry_run: bool = False) -> dict[str
         removed = False
         skipped_reason: str | None = None
         if existed and not dry_run:
-            try:
-                _rmtree_force(path)
-                removed = True
-            except OSError as exc:
-                skipped_reason = f"remove_failed:{exc}"
+            skipped_reason = _remove_tree_with_retries(path)
+            removed = skipped_reason is None and not path.exists()
+            if skipped_reason is not None:
+                blockers.append(f"{name}:{skipped_reason}")
         elif dry_run:
             skipped_reason = "dry_run"
         paths_payload.append(
@@ -57,14 +96,14 @@ def clean_frontend_workspace(*, output: Path, dry_run: bool = False) -> dict[str
     finished = datetime.now(timezone.utc).isoformat()
     payload: dict[str, object] = {
         "schema_version": "frontend_clean_workspace/v1",
-        "status": "PASS",
+        "status": "PASS" if not blockers else "FAIL",
         "repo_root": str(REPO_ROOT),
         "frontend_root": str(FRONTEND_ROOT.resolve()),
         "dry_run": dry_run,
         "started_at": started,
         "finished_at": finished,
         "paths": paths_payload,
-        "blockers": [],
+        "blockers": blockers,
     }
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -93,7 +132,16 @@ def main(argv: list[str] | None = None) -> int:
                 sort_keys=True,
             )
         )
-    return 0
+    if payload.get("status") != "PASS":
+        blockers = payload.get("blockers") or []
+        print("frontend_clean_workspace: FAIL", file=sys.stderr)
+        for item in blockers:
+            print(f"  blocker: {item}", file=sys.stderr)
+        print(
+            "hint: stop npm run dev, pause OneDrive on this repo, then re-run clean_frontend_workspace.py",
+            file=sys.stderr,
+        )
+    return 0 if payload.get("status") == "PASS" else 1
 
 
 if __name__ == "__main__":

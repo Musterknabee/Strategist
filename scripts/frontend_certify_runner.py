@@ -60,7 +60,17 @@ def main() -> int:
         command = commands[name]
         t0 = time.perf_counter()
         st = datetime.now(timezone.utc).isoformat()
-        proc = subprocess.run(command, cwd=FRONTEND_ROOT, env=env, capture_output=True, text=True)
+        # On Windows, npm lifecycle scripts resolve eslint/tsc/vitest via npm.cmd + .bin;
+        # a bare argv list without shell often yields "'eslint' is not recognized".
+        use_shell = os.name == "nt"
+        proc = subprocess.run(
+            command,
+            cwd=FRONTEND_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            shell=use_shell,
+        )
         ed = datetime.now(timezone.utc).isoformat()
         dur = round(time.perf_counter() - t0, 3)
         tail = (proc.stdout or "")[-4000:]

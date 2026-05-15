@@ -11,7 +11,7 @@ Generated from `python scripts/public_surface_dashboard.py --json`.
 | `cli_files` | 202 | 220 | 18 | WITH_HEADROOM |
 | `compatibility_shims` | 37 | 40 | 3 | WITH_HEADROOM |
 | `console_scripts` | 45 | 47 | 2 | WITH_HEADROOM |
-| `docs_pages` | 170 | 182 | 12 | WITH_HEADROOM |
+| `docs_pages` | 171 | 182 | 11 | WITH_HEADROOM |
 | `frontend_pages` | 31 | 88 | 57 | WITH_HEADROOM |
 | `test_files` | 469 | 725 | 256 | WITH_HEADROOM |
 
