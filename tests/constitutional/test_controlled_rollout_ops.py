@@ -32,7 +32,7 @@ def test_keyed_host_fingerprint_secret_safe(monkeypatch: pytest.MonkeyPatch, tmp
     assert fp.host_kind == "KEYED_OPERATOR_HOST"
     assert fp.env_presence["APCA_API_KEY_ID"] is True
     assert fp.env_presence["APCA_API_SECRET_KEY"] is True
-    payload = fp.model_dump()
+    payload = fp.model_dump(mode="json")
     secret_scan = {key: value for key, value in payload.items() if key not in {"commit", "git_tag"}}
     secret_scan_text = json.dumps(secret_scan)
     assert "abc" not in secret_scan_text
