@@ -4058,6 +4058,7 @@ def build_research_paper_discovery_evidence_bundle(
         ("phase_profile_plan", "research_paper_discovery_profile_plan", phase_profile_plan_path),
         ("phase_profile_plan_verification", "research_paper_discovery_profile_plan_verification", phase_profile_plan_verification_path),
     )
+    included_optional_proof_names: list[str] = []
     for role, proof_name, optional_path in optional_phase_artifacts:
         if (
             optional_path.exists()
@@ -4072,6 +4073,7 @@ def build_research_paper_discovery_evidence_bundle(
                     declared_sha256=_file_sha256(optional_path),
                 )
             )
+            included_optional_proof_names.append(proof_name)
     if isinstance(closure_payload, dict):
         for row in closure_payload.get("required_proofs", []):
             if not isinstance(row, dict):
@@ -4113,6 +4115,9 @@ def build_research_paper_discovery_evidence_bundle(
         for row in closure_payload["required_proofs"]:
             if isinstance(row, dict) and isinstance(row.get("proof_name"), str) and row.get("proof_name"):
                 required_artifact_proof_names.append(row["proof_name"])
+    for proof_name in included_optional_proof_names:
+        if proof_name not in required_artifact_proof_names:
+            required_artifact_proof_names.append(proof_name)
     provenance = _evidence_bundle_provenance(artifacts=artifacts, output_path=output_path)
     artifact_manifest_sha256 = _evidence_bundle_artifact_manifest_digest(artifacts)
     payload: dict[str, object] = {
