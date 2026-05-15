@@ -164,6 +164,8 @@ def _candidate_artifacts(repo_root: Path | None = None, artifact_root: Path | No
         ("strategy_memory_index", root / "strategy_memory" / "latest" / "memory_index.json", False),
         ("strategy_thesis_evaluation", root / "strategy_theses" / "latest" / "thesis_evaluation.json", False),
         ("research_os_runtime_manifest", root / "research_os_runtime" / "latest" / "runtime_demo_manifest.json", False),
+        ("oracle_cycle_manifest", root / "oracle_cycle" / "latest" / "oracle_research_cycle_manifest.json", False),
+        ("operator_wiring_report", root / "operator_wiring" / "latest" / "operator_evidence_wiring_report.json", False),
     ]
     if batch_path is not None:
         candidates.append(("strategy_batch_summary", batch_path, False))

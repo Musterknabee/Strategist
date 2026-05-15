@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 from strategy_validator.api.routes import ui as ui_root
+from strategy_validator.contracts.research_cycle_scheduler import UiResearchCycleTriggerRequest
 
 router = APIRouter()
 
@@ -14,6 +15,17 @@ def post_ui_command(
 ) -> dict[str, object]:
     try:
         return ui_root.execute_ui_operator_command(action=action, request=request, auth_context=auth_context)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post('/research-cycle/trigger')
+def post_ui_research_cycle_trigger(
+    request: UiResearchCycleTriggerRequest,
+    auth_context: ui_root.UiMutationAuthContext = Depends(ui_root.require_mutation_auth),
+) -> dict[str, object]:
+    try:
+        return ui_root.trigger_ui_research_cycle(request=request, auth_context=auth_context)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

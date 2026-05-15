@@ -5,12 +5,13 @@
  *
  * Usage:
  *   node scripts/smoke-frontend.mjs --api-base-url http://127.0.0.1:8000 --json
+ *   node scripts/smoke-frontend.mjs --api-base-url http://127.0.0.1:8000 --frontend-base-url http://127.0.0.1:3001 --json
  *   STRATEGIST_SMOKE_API_BASE_URL=http://127.0.0.1:8000 node scripts/smoke-frontend.mjs
  *   NEXT_PUBLIC_STRATEGIST_API_BASE_URL=http://127.0.0.1:8000 node scripts/smoke-frontend.mjs
  *
  * Optional: checks .next/BUILD_ID when present (run `npm run build` first).
  */
-import { access } from "node:fs/promises";
+import { access, readdir } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -39,13 +40,16 @@ function parseArgv(argv) {
     process.env.STRATEGIST_SMOKE_API_BASE_URL?.trim() ||
     process.env.NEXT_PUBLIC_STRATEGIST_API_BASE_URL?.trim() ||
     "";
+  let frontendBase = process.env.STRATEGIST_SMOKE_FRONTEND_BASE_URL?.trim() || "";
   const i = argv.indexOf("--api-base-url");
   if (i !== -1 && argv[i + 1]) base = String(argv[i + 1]).trim();
+  const frontendI = argv.indexOf("--frontend-base-url");
+  if (frontendI !== -1 && argv[frontendI + 1]) frontendBase = String(argv[frontendI + 1]).trim();
   if (!base) {
     const pos = argv.filter((a) => a && !a.startsWith("-") && !a.endsWith(".mjs"));
     if (pos.length) base = pos[pos.length - 1];
   }
-  return { base: normalizeBase(base), json };
+  return { base: normalizeBase(base), frontendBase: frontendBase ? normalizeBase(frontendBase) : null, json };
 }
 
 async function fetchJson(url) {
@@ -60,7 +64,45 @@ async function fetchJson(url) {
   return { res, data, text };
 }
 
-export async function runReadPlaneSmoke({ base, json }) {
+async function discoverTopLevelFrontendRoutes() {
+  const appDir = path.join(_webRoot, "app");
+  const entries = await readdir(appDir, { withFileTypes: true });
+  const routes = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    try {
+      await access(path.join(appDir, entry.name, "page.tsx"));
+      routes.push(`/${entry.name}`);
+    } catch {
+      // Not a top-level page route.
+    }
+  }
+  return ["/", ...routes.sort()];
+}
+
+async function probeFrontendRoutes(frontendBase) {
+  if (!frontendBase) {
+    return { routeStatuses: {}, routeCount: 0, routeErrors: [] };
+  }
+
+  const routeStatuses = {};
+  const routeErrors = [];
+  const routes = await discoverTopLevelFrontendRoutes();
+  for (const route of routes) {
+    const url = new URL(route, frontendBase + "/").toString();
+    try {
+      const res = await fetch(url, { method: "GET", headers: { accept: "text/html" } });
+      routeStatuses[route] = res.status;
+      if (!res.ok) routeErrors.push(`${route} HTTP ${res.status}`);
+    } catch (e) {
+      routeStatuses[route] = null;
+      routeErrors.push(`${route} fetch: ${e instanceof Error ? e.message : e}`);
+    }
+  }
+  return { routeStatuses, routeCount: routes.length, routeErrors };
+}
+
+export async function runReadPlaneSmoke({ base, frontendBase = null, json }) {
   const errors = [];
 
   const facadeUrl = new URL("/ui/facade", base + "/").toString();
@@ -118,15 +160,26 @@ export async function runReadPlaneSmoke({ base, json }) {
     buildOk = false;
   }
 
+  let frontend = { routeStatuses: {}, routeCount: 0, routeErrors: [] };
+  try {
+    frontend = await probeFrontendRoutes(frontendBase);
+    errors.push(...frontend.routeErrors.map((e) => `frontend: ${e}`));
+  } catch (e) {
+    errors.push(`frontend route probe: ${e instanceof Error ? e.message : e}`);
+  }
+
   const ok = errors.length === 0;
   const payload = {
     schema_version: "strategist_frontend_smoke/v1",
     ok,
     disclaimer: "Read-plane reachability only; does not certify frontend production readiness (NOT_CLAIMED).",
     api_base: base,
+    frontend_base: frontendBase,
     facade_http: facade?.res?.status ?? null,
     workboard_http: workboard?.res?.status ?? null,
     next_build_present: buildOk,
+    frontend_route_count: frontend.routeCount,
+    frontend_route_http: frontend.routeStatuses,
     errors,
   };
 
@@ -142,8 +195,8 @@ export async function runReadPlaneSmoke({ base, json }) {
 }
 
 async function cliMain() {
-  const { base, json } = parseArgv(process.argv);
-  const payload = await runReadPlaneSmoke({ base, json });
+  const { base, frontendBase, json } = parseArgv(process.argv);
+  const payload = await runReadPlaneSmoke({ base, frontendBase, json });
   process.exit(payload.ok ? 0 : 1);
 }
 

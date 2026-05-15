@@ -526,6 +526,32 @@ body {
   border-color: var(--term-border);
 }
 
+.term-cmdbar__route {
+  display: grid;
+  gap: 1px;
+  min-width: 132px;
+  max-width: 190px;
+  padding: 2px 6px;
+  border-left: 1px solid var(--term-border);
+  font-family: var(--term-mono);
+}
+
+.term-cmdbar__route span {
+  color: var(--term-dim);
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.term-cmdbar__route strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--term-text);
+  font-size: 10px;
+}
+
 .term-cmdbar__ticker {
   flex: 1;
   min-width: 0;
@@ -966,7 +992,9 @@ body {
 }
 
 .term-palette__item {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
   width: 100%;
   text-align: left;
   padding: 8px 12px;
@@ -978,10 +1006,56 @@ body {
   cursor: pointer;
 }
 
+.term-palette__item-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.term-palette__item-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.term-palette__item-group {
+  color: var(--term-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.term-palette__item-desc {
+  color: var(--term-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.term-palette__item-desc code {
+  color: #c9d1d9;
+  font-size: 10px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
 .term-palette__item:hover,
 .term-palette__item--active {
   background: #1c2128;
   color: var(--term-accent);
+}
+
+.term-palette__item:hover .term-palette__item-desc,
+.term-palette__item--active .term-palette__item-desc,
+.term-palette__item:hover .term-palette__item-group,
+.term-palette__item--active .term-palette__item-group {
+  color: #9fb8d4;
+}
+
+.term-palette__empty {
+  padding: 18px 12px;
+  color: var(--term-muted);
+  font-family: var(--term-mono);
+  font-size: 12px;
 }
 
 .term-palette__hint {
@@ -992,6 +1066,8 @@ body {
 
 .term-shortcut-help {
   width: min(440px, 92vw);
+  max-height: 84vh;
+  overflow: auto;
   background: var(--term-panel);
   border: 1px solid var(--term-border);
   padding: 0;
@@ -1119,7 +1195,30 @@ body {
 .term-rail__nav {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 7px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+
+.term-rail__group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(31, 51, 66, 0.72);
+}
+
+.term-rail__group:last-child {
+  border-bottom: none;
+}
+
+.term-rail__group-label {
+  padding: 2px 6px 1px;
+  color: var(--term-dim);
+  font: 700 8px var(--term-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .term-rail__link {
@@ -1204,7 +1303,7 @@ body {
   display: flex;
   gap: 5px;
   align-items: center;
-  min-width: 300px;
+  min-width: 250px;
 }
 
 .term-cmdbar__endpoint,
@@ -2097,7 +2196,44 @@ code {
 .cockpit-home__hero h2 { margin: 0 0 2px; color: var(--term-text); font: 700 14px var(--term-mono); text-transform: none; }
 .cockpit-home__hero p { margin: 0; color: var(--term-dim); font-size: 10px; line-height: 1.35; }
 .cockpit-safety-chip { flex: 0 1 470px; border: 1px solid rgba(228, 189, 59, 0.42); background: rgba(40, 32, 8, 0.45); color: #f0d27a; padding: 4px 6px; font: 9px var(--term-mono); line-height: 1.35; }
+.cockpit-read-plane-status { display: grid; grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.3fr); gap: 6px; margin: 0 0 7px; }
+.cockpit-read-plane-status__main { min-width: 0; display: grid; gap: 3px; padding: 6px 7px; border: 1px solid var(--term-border-strong); background: rgba(7, 19, 26, 0.72); }
+.cockpit-read-plane-status__main span,
+.cockpit-read-plane-status__facts span { color: var(--term-dim); font: 9px var(--term-mono); text-transform: uppercase; letter-spacing: 0.04em; }
+.cockpit-read-plane-status__main strong { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; color: var(--term-text); font: 700 11px var(--term-mono); line-height: 1.3; }
+.cockpit-read-plane-status__main em { color: var(--term-dim); font: 9px var(--term-mono); font-style: normal; line-height: 1.3; overflow-wrap: anywhere; }
+.cockpit-read-plane-status__facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+.cockpit-read-plane-status__facts div { min-width: 0; display: grid; gap: 2px; padding: 6px; border: 1px solid var(--term-border); background: rgba(6, 16, 24, 0.72); }
+.cockpit-read-plane-status__facts strong { min-width: 0; color: var(--term-text); font: 700 10px var(--term-mono); overflow-wrap: anywhere; }
+.cockpit-guided-flow { display: grid; gap: 5px; margin: 0 0 7px; padding: 6px; border: 1px solid rgba(65, 217, 195, 0.36); background: rgba(7, 24, 29, 0.58); }
+.cockpit-guided-flow__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; font-family: var(--term-mono); }
+.cockpit-guided-flow__head span { color: var(--term-dim); font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; }
+.cockpit-guided-flow__head strong { color: var(--term-cyan); font-size: 11px; }
+.cockpit-guided-flow__head em { color: var(--term-dim); font-size: 9px; font-style: normal; }
+.cockpit-guided-flow__steps { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; }
+.cockpit-guided-step { min-width: 0; min-height: 84px; display: grid; grid-template-rows: 24px 16px minmax(28px, auto); gap: 2px; align-content: start; text-align: left; padding: 5px; border: 1px solid var(--term-border); background: rgba(5, 14, 20, 0.82); color: var(--term-text); cursor: pointer; font-family: var(--term-mono); }
+.cockpit-guided-step:hover,
+.cockpit-guided-step:focus-visible { border-color: var(--term-cyan); outline: none; }
+.cockpit-guided-step span { color: var(--term-dim); font-size: 9px; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; }
+.cockpit-guided-step strong { min-width: 0; }
+.cockpit-guided-step em { color: var(--term-text); font: 9px var(--term-mono); font-style: normal; line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; }
 .cockpit-home__intro { margin: 0 0 6px; font-size: 10px; color: var(--term-dim); }
+.cockpit-ease-layer { display: grid; grid-template-columns: minmax(220px, 0.72fr) minmax(0, 1.6fr); gap: 6px; margin: 0 0 7px; }
+.cockpit-ease-layer__primary { min-width: 0; display: grid; gap: 4px; align-content: start; padding: 7px; border: 1px solid var(--term-cyan); background: rgba(7, 28, 33, 0.82); }
+.cockpit-ease-layer__primary span,
+.cockpit-ease-layer__facts span,
+.cockpit-ease-mode span { color: var(--term-dim); font: 9px var(--term-mono); text-transform: uppercase; letter-spacing: 0.04em; }
+.cockpit-ease-layer__primary strong { display: grid; gap: 3px; color: var(--term-text); font: 700 11px var(--term-mono); line-height: 1.3; overflow-wrap: anywhere; }
+.cockpit-ease-layer__primary em,
+.cockpit-ease-mode em { color: var(--term-dim); font: 9px var(--term-mono); font-style: normal; line-height: 1.25; }
+.cockpit-ease-layer__modes { min-width: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+.cockpit-ease-mode { min-width: 0; text-align: left; display: grid; grid-template-rows: 11px minmax(25px, auto) 12px; gap: 2px; padding: 5px; border: 1px solid var(--term-border); background: #07131a; color: var(--term-text); cursor: pointer; font-family: var(--term-mono); }
+.cockpit-ease-mode:hover,
+.cockpit-ease-mode:focus-visible { border-color: var(--term-cyan); outline: none; }
+.cockpit-ease-mode strong { min-width: 0; color: var(--term-text); font: 700 10px var(--term-mono); line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; }
+.cockpit-ease-layer__facts { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+.cockpit-ease-layer__facts div { min-width: 0; display: grid; gap: 2px; padding: 5px; border: 1px solid var(--term-border); background: rgba(7, 19, 26, 0.62); }
+.cockpit-ease-layer__facts strong { min-width: 0; color: var(--term-text); font: 700 10px var(--term-mono); overflow-wrap: anywhere; }
 .cockpit-home__cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; }
 .cockpit-home__card { border: 1px solid var(--term-border); background: #09151d; padding: 7px; display: grid; gap: 3px; min-height: 70px; align-content: start; }
 .cockpit-home__card--primary { border-color: var(--term-cyan); background: rgba(11, 27, 36, 0.9); }
@@ -2178,6 +2314,8 @@ summary:focus-visible,
   }
 
   .term-rail__label,
+  .term-rail__group-label,
+  .term-cmdbar__route,
   .term-cmdbar__meta,
   .term-cmdbar__ticker,
   .term-cmdbar__clock {
@@ -2194,6 +2332,12 @@ summary:focus-visible,
     overflow: visible;
   }
   .cockpit-home__cards,
+  .cockpit-read-plane-status,
+  .cockpit-read-plane-status__facts,
+  .cockpit-guided-flow__steps,
+  .cockpit-ease-layer,
+  .cockpit-ease-layer__modes,
+  .cockpit-ease-layer__facts,
   .candidate-summary-grid,
   .operator-mode-switchboard__groups,
   .cockpit-home__split,

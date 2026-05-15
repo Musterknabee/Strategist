@@ -20,7 +20,11 @@ const repoRoot = resolve(webRoot, "../..");
 const routes = (contract.routes as FacadeRoute[]).filter((route) => route.method === "GET" || route.method === "POST");
 
 const allowedProbeOrExternal = new Set(["/", "/healthz", "/livez", "/readyz", "/readiness/deployment"]);
-const explicitMutationPaths = new Set(["/ui/commands/{action}", "/ui/strategy-intake"]);
+const explicitMutationPaths = new Set([
+  "/ui/commands/{action}",
+  "/ui/strategy-intake",
+  "/ui/research-cycle/trigger",
+]);
 
 function walk(dir: string, predicate: (path: string) => boolean): string[] {
   const out: string[] = [];
@@ -93,10 +97,11 @@ describe("cockpit acceptance pack: contract and route safety", () => {
     const mutationHookFiles = hookFiles().filter((file) => readFileSync(file, "utf8").includes("strategistPostJson"));
     expect(mutationHookFiles.map((file) => webRelative(file)).sort()).toEqual([
       "hooks/useUiOperatorCommand.ts",
+      "hooks/useUiResearchCycle.ts",
       "hooks/useUiStrategyIntake.ts",
     ]);
 
-    const postRoutes = ["/ui/commands/{action}", "/ui/strategy-intake"];
+    const postRoutes = ["/ui/commands/{action}", "/ui/strategy-intake", "/ui/research-cycle/trigger"];
     for (const path of postRoutes) {
       const route = assertFacadeRoute(path, "POST");
       expect(route.auth_required).toBe(true);

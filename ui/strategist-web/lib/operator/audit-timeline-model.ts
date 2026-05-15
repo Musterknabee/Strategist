@@ -315,7 +315,7 @@ export function buildAuditTimelineModel(input: {
 
   const ev = asRecord(input.evidence);
   const reg = ev ? asRecord(ev.registry) : null;
-  const genEv = asString(ev?.generated_at_utc) ?? asString(chain?.generated_at_utc) ?? new Date().toISOString();
+  const genEv = asString(ev?.generated_at_utc) ?? asString(chain?.generated_at_utc) ?? "UNKNOWN";
   if (ev) {
     normalized.push(
       synth(

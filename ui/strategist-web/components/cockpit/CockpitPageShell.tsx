@@ -38,7 +38,7 @@ import { useUiSurfaceHealth } from "@/hooks/useUiSurfaceHealth";
 import { useUiWorkboard } from "@/hooks/useUiWorkboard";
 import { useUiBacktestForensicsLatest } from "@/hooks/useUiBacktestForensics";
 import { useUiPaperTrackingLatest } from "@/hooks/useUiPaperTracking";
-import { tryGetPublicStrategistApiBaseUrl } from "@/lib/config/public-config";
+import { isStrategistDemoModeEnabled, tryGetPublicStrategistApiBaseUrl } from "@/lib/config/public-config";
 import { chainIntegrityLabel } from "@/lib/operator/evidence-provenance-map";
 import {
   asBool,
@@ -114,7 +114,7 @@ import { WorkboardPane } from "./WorkboardPane";
 import { SystemTopologyPane } from "./SystemTopologyPane";
 import { OperatorModeSwitchboard } from "./OperatorModeSwitchboard";
 import { CandidateWorkbenchPane } from "./CandidateWorkbenchPane";
-import { OperatorHomePane } from "./OperatorHomePane";
+import { OperatorHomePane, type OperatorReadPlaneStatus } from "./OperatorHomePane";
 import { buildOperatorHomeSummary } from "@/lib/operator/operator-home-summary-model";
 
 export function CockpitPageShell() {
@@ -996,6 +996,84 @@ export function CockpitPageShell() {
     ],
   );
 
+  const operatorReadPlaneStatus = useMemo((): OperatorReadPlaneStatus => {
+    const demoMode = isStrategistDemoModeEnabled();
+    const apiOk = Boolean(healthz.data);
+    const facadeOk = Boolean(facade.data);
+    const readinessHttp = readyz.data?.httpStatus;
+    const readinessLabel = readyStatus !== UNKNOWN ? readyStatus : readinessHttp != null ? `HTTP_${readinessHttp}` : "PENDING";
+    const apiLabel = config.ok ? config.baseUrl.replace(/^https?:\/\//, "") : "API_CONFIG_MISSING";
+
+    if (demoMode) {
+      return {
+        label: "Demo preview",
+        tone: "NEEDS_REVIEW",
+        api: "synthetic fallback",
+        readiness: readinessLabel,
+        facade: facadeOk ? "loaded" : "synthetic pending",
+        hint: "Demo mode uses synthetic read-plane data only; no readiness, signoff, provider, or deployment claim is real.",
+      };
+    }
+    if (!config.ok) {
+      return {
+        label: "API base URL not configured",
+        tone: "DEGRADED",
+        api: "missing",
+        readiness: "not checked",
+        facade: "not checked",
+        hint: config.error.message,
+      };
+    }
+    if (!apiOk && (healthz.isError || readyz.isError || facade.isError)) {
+      return {
+        label: "API unreachable",
+        tone: "DEGRADED",
+        api: apiLabel,
+        readiness: "not reachable",
+        facade: "not reachable",
+        hint: "Start the FastAPI backend or enable explicit demo mode; cockpit values will remain UNKNOWN until read-plane routes respond.",
+      };
+    }
+    if (apiOk && !facadeOk) {
+      return {
+        label: "API reachable; UI facade pending",
+        tone: "NEEDS_REVIEW",
+        api: apiLabel,
+        readiness: readinessLabel,
+        facade: facade.isLoading ? "loading" : "missing",
+        hint: "Probe routes respond, but /ui/facade has not returned yet; route-specific panes may still be UNKNOWN.",
+      };
+    }
+    if (readyStatus !== "READY") {
+      return {
+        label: "Read-plane reachable; readiness not green",
+        tone: "NEEDS_REVIEW",
+        api: apiLabel,
+        readiness: readinessLabel,
+        facade: facadeOk ? "loaded" : "pending",
+        hint: "Use First Run / Setup and Readiness Matrix before treating any operator view as complete.",
+      };
+    }
+    return {
+      label: "Read-plane connected",
+      tone: "OK",
+      api: apiLabel,
+      readiness: readinessLabel,
+      facade: facadeOk ? "loaded" : "pending",
+      hint: "Backend probes and facade are available; empty panes now mean no evidence/artifact has been produced for that surface yet.",
+    };
+  }, [
+    config,
+    facade.data,
+    facade.isError,
+    facade.isLoading,
+    healthz.data,
+    healthz.isError,
+    readyStatus,
+    readyz.data?.httpStatus,
+    readyz.isError,
+  ]);
+
   const postGridSectionOrder = useMemo(() => {
     const o = getPostGridSectionOrder(operatorMode);
     if (modeShowsOperatorCommandPane(operatorMode)) return o;
@@ -1559,6 +1637,7 @@ export function CockpitPageShell() {
       )}
       <OperatorHomePane
         summary={operatorHomeSummary}
+        readPlaneStatus={operatorReadPlaneStatus}
         onShowAdvanced={() => setShowAdvancedCockpit(true)}
         onOpenDetail={(mode) => {
           setOperatorMode(mode);

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
-import { G_CHORD_ROUTES } from "@/lib/terminal/command-registry";
+import { G_CHORD_ROUTES, TERMINAL_NAV_GROUPS } from "@/lib/terminal/command-registry";
 import { useTerminalCockpit } from "@/lib/terminal/cockpit-context";
 import { CommandBar } from "./CommandBar";
 import { CommandPalette } from "./CommandPalette";
@@ -13,42 +13,16 @@ import { InspectorDrawer } from "./InspectorDrawer";
 import { ShortcutHelp } from "./ShortcutHelp";
 import { DemoModeBanner } from "@/components/demo/DemoModeBanner";
 
-const RAIL: { href: string; icon: string; label: string }[] = [
-  { href: "/", icon: "O", label: "Overview" },
-  { href: "/readiness", icon: "R", label: "Readiness" },
-  { href: "/evidence", icon: "E", label: "Evidence" },
-  { href: "/ledger", icon: "L", label: "Ledger" },
-  { href: "/providers", icon: "P", label: "Providers" },
-  { href: "/runtime", icon: "T", label: "Runtime" },
-  { href: "/workboard", icon: "W", label: "Workboard" },
-  { href: "/strategy-lab", icon: "S", label: "Strategy Lab" },
-  { href: "/paper-tracking", icon: "K", label: "Paper" },
-  { href: "/strategy-memory", icon: "M", label: "Memory" },
-  { href: "/thesis", icon: "F", label: "Thesis" },
-  { href: "/shadow-book", icon: "B", label: "Shadow Book" },
-  { href: "/research-closure", icon: "C", label: "Closure" },
-  { href: "/research-attestation", icon: "A", label: "Attest" },
-  { href: "/research-briefing", icon: "D", label: "Brief" },
-  { href: "/research-export", icon: "Z", label: "Export" },
-  { href: "/research-run", icon: "U", label: "Run" },
-  { href: "/research-catalog", icon: "I", label: "Catalog" },
-  { href: "/research-drift", icon: "V", label: "Drift" },
-  { href: "/research-policy-gate", icon: "Y", label: "Policy" },
-  { href: "/research-exception", icon: "N", label: "Exception" },
-  { href: "/research-remediation", icon: "M", label: "Remediate" },
-  { href: "/research-release-readiness", icon: "Q", label: "Release" },
-  { href: "/research-handoff", icon: "H", label: "Handoff" },
-  { href: "/research-handoff-signoff", icon: "S", label: "Signoff" },
-  { href: "/research-review-journal", icon: "J", label: "Journal" },
-  { href: "/research-os", icon: "X", label: "Research OS" },
-];
-
 function typingTarget(): boolean {
   const el = document.activeElement;
   if (!el) return false;
   const tag = el.tagName;
   if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
   return el instanceof HTMLElement && el.isContentEditable;
+}
+
+function railLabel(label: string): string {
+  return label.replace(/^Go: /, "");
 }
 
 const G_CHORD_MS = 1000;
@@ -145,18 +119,23 @@ export function TerminalShell({ children }: { children: ReactNode }) {
       <div className="term-layout">
         <aside className="term-rail" aria-label="Quick nav">
           <nav className="term-rail__nav" aria-label="Operator sections">
-            {RAIL.map((r) => (
-              <Link
-                key={r.href}
-                href={r.href}
-                className={`term-rail__link${pathname === r.href ? " is-active" : ""}`}
-                title={r.label}
-              >
-                <span className="term-rail__icon" aria-hidden="true">
-                  {r.icon}
-                </span>
-                <span className="term-rail__label">{r.label}</span>
-              </Link>
+            {TERMINAL_NAV_GROUPS.map((group) => (
+              <div key={group.id} className="term-rail__group" aria-label={group.label}>
+                <span className="term-rail__group-label">{group.label}</span>
+                {group.items.map((r) => (
+                  <Link
+                    key={r.path}
+                    href={r.path}
+                    className={`term-rail__link${pathname === r.path ? " is-active" : ""}`}
+                    title={railLabel(r.label)}
+                  >
+                    <span className="term-rail__icon" aria-hidden="true">
+                      {r.icon}
+                    </span>
+                    <span className="term-rail__label">{railLabel(r.label)}</span>
+                  </Link>
+                ))}
+              </div>
             ))}
           </nav>
           <div className="term-rail__bottom" aria-label="Utilities">
@@ -180,7 +159,7 @@ export function TerminalShell({ children }: { children: ReactNode }) {
             <div className="term-footer__hints muted">
               <span>⌘K palette</span>
               <span>/ palette</span>
-              <span>G+O/W/R/E/L/P/T/U nav</span>
+              <span>G chord nav</span>
               <span>R refresh route</span>
               <span>? help</span>
               <span>Esc close</span>

@@ -6,6 +6,7 @@ import { DenseTable, type DenseColumn } from "@/components/terminal/DenseTable";
 import { Pane } from "@/components/terminal/Pane";
 import { TermKV } from "@/components/terminal/TermKV";
 import { useTerminalPageBind } from "@/hooks/useTerminalPageBind";
+import { ResearchCyclePanel } from "@/components/operator/ResearchCyclePanel";
 import { useUiResearchOsBriefingLatest } from "@/hooks/useUiResearchOsBriefing";
 import { tryGetPublicStrategistApiBaseUrl } from "@/lib/config/public-config";
 import { asRecord, asString, asStringArray } from "@/lib/operator/payload-utils";
@@ -97,6 +98,8 @@ export default function ResearchBriefingPage() {
           It packages current evidence posture and suggested operator actions. It does not authorize execution or profitability claims.
         </p>
       </div>
+
+      <ResearchCyclePanel />
 
       <div className="cockpit-grid" style={{ gridTemplateColumns: "1fr" }}>
         <Pane title="Briefing summary" dense onInspect={() => openInspector({ title: "Research briefing", rawJson: q.data ?? {} })}>

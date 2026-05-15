@@ -82,6 +82,10 @@ def paper_broker_status_artifact_path(repo_root: Path | None = None) -> Path:
     return (artifact_root_directory(repo_root) / "paper_broker" / "latest" / "paper_broker_status.json").resolve()
 
 
+def oracle_cycle_manifest_path(repo_root: Path | None = None) -> Path:
+    return (artifact_root_directory(repo_root) / "oracle_cycle" / "latest" / "oracle_research_cycle_manifest.json").resolve()
+
+
 def research_os_runtime_manifest_path(repo_root: Path | None = None) -> Path:
     raw = os.environ.get("STRATEGY_VALIDATOR_RESEARCH_OS_RUNTIME_MANIFEST", "").strip()
     if raw:
@@ -96,6 +100,7 @@ __all__ = [
     "paper_tracking_root_directory",
     "provider_historical_snapshot_run_path",
     "provider_paper_loop_manifest_path",
+    "oracle_cycle_manifest_path",
     "research_os_runtime_manifest_path",
     "resolve_artifact_output_dir",
     "resolve_artifact_root",

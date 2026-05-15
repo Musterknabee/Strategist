@@ -32,6 +32,7 @@ from strategy_validator.application.backtest_forensics_projection import (
 from strategy_validator.application.strategy_graveyard_projection import build_ui_strategy_graveyard_latest_payload
 from strategy_validator.application.daily_operator_run_projection import build_ui_daily_operator_run_payload
 from strategy_validator.application.ui_research_os import build_ui_research_os_status_payload
+from strategy_validator.application.research_cycle_ops import build_ui_research_cycle_status_payload
 from strategy_validator.application.strategy_memory_ops import build_ui_strategy_memory_latest_payload
 from strategy_validator.research.strategy_thesis_eval import build_ui_strategy_thesis_latest_payload
 from strategy_validator.research.strategy_thesis_generator import build_ui_strategy_thesis_generation_latest_payload
@@ -314,3 +315,8 @@ def get_research_os_review_journal_latest() -> dict[str, object]:
 @router.get('/research-os/status')
 def get_research_os_status() -> dict[str, object]:
     return build_ui_research_os_status_payload()
+
+
+@router.get('/research-cycle/status/latest')
+def get_research_cycle_status_latest() -> dict[str, object]:
+    return build_ui_research_cycle_status_payload()

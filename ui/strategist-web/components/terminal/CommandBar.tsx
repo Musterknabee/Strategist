@@ -9,22 +9,26 @@ import { useUiRuntime } from "@/hooks/useUiRuntime";
 import { tryGetPublicStrategistApiBaseUrl } from "@/lib/config/public-config";
 import { asString, asRecord } from "@/lib/operator/payload-utils";
 import { readUiEvidenceCockpit } from "@/lib/operator/ui-evidence-cockpit";
+import { findTerminalNavItem } from "@/lib/terminal/command-registry";
 import { useTerminalCockpit } from "@/lib/terminal/cockpit-context";
 import { StatusBadge } from "@/components/operator/StatusBadge";
 import { StatusTicker } from "./StatusTicker";
 
 export function CommandBar() {
   const pathname = usePathname();
+  const route = findTerminalNavItem(pathname);
   const { setPaletteOpen, refreshRouteQueries, rawJsonMode, tickerItems } = useTerminalCockpit();
   const config = tryGetPublicStrategistApiBaseUrl();
   const facade = useUiFacade();
   const evidence = useUiEvidence(undefined);
   const runtime = useUiRuntime("operator");
-  const [utc, setUtc] = useState(() => new Date().toISOString().replace(/\.\d{3}Z$/, "Z"));
+  const [utc, setUtc] = useState("UTC_PENDING");
 
   useEffect(() => {
+    const tick = () => setUtc(new Date().toISOString().replace(/\.\d{3}Z$/, "Z"));
+    tick();
     const id = window.setInterval(() => {
-      setUtc(new Date().toISOString().replace(/\.\d{3}Z$/, "Z"));
+      tick();
     }, 1000);
     return () => window.clearInterval(id);
   }, []);
@@ -50,6 +54,10 @@ export function CommandBar() {
           STRATEGIST TERMINAL
         </Link>
         <span className="term-cmdbar__ver muted">Strategy Validator Terminal</span>
+      </div>
+      <div className="term-cmdbar__route" aria-label="Current route">
+        <span>{route?.group ?? "Route"}</span>
+        <strong>{route?.label.replace(/^Go: /, "") ?? pathname}</strong>
       </div>
       <div className="term-cmdbar__meta" aria-label="Environment and deployment">
         <StatusBadge raw={env} />

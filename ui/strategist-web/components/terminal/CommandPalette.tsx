@@ -126,20 +126,34 @@ export function CommandPalette() {
           aria-autocomplete="list"
         />
         <ul className="term-palette__list" role="listbox">
-          {list.map((cmd, i) => (
-            <li key={cmd.id}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={i === active}
-                className={`term-palette__item${i === active ? " term-palette__item--active" : ""}`}
-                onMouseEnter={() => setActive(i)}
-                onClick={() => run(cmd)}
-              >
-                {cmd.label}
-              </button>
-            </li>
-          ))}
+          {list.length === 0 ? (
+            <li className="term-palette__empty">No command matches this filter.</li>
+          ) : (
+            list.map((cmd, i) => (
+              <li key={cmd.id}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={i === active}
+                  className={`term-palette__item${i === active ? " term-palette__item--active" : ""}`}
+                  onMouseEnter={() => setActive(i)}
+                  onClick={() => run(cmd)}
+                >
+                  <span className="term-palette__item-head">
+                    <span className="term-palette__item-label">{cmd.label}</span>
+                    {cmd.group ? <span className="term-palette__item-group">{cmd.group}</span> : null}
+                  </span>
+                  {cmd.description || cmd.action.type === "nav" ? (
+                    <span className="term-palette__item-desc">
+                      {cmd.description}
+                      {cmd.description && cmd.action.type === "nav" ? " · " : ""}
+                      {cmd.action.type === "nav" ? <code>{cmd.action.path}</code> : null}
+                    </span>
+                  ) : null}
+                </button>
+              </li>
+            ))
+          )}
         </ul>
         <div className="term-palette__hint muted">
           {TERMINAL_COMMANDS.length} commands · ↑↓ enter · esc close · read-plane only

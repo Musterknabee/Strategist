@@ -46,6 +46,25 @@ from strategy_validator.application.api_ui_surfaces import (
 )
 
 from strategy_validator.application.strategy_intake import submit_ui_strategy_intake
+from strategy_validator.application.research_cycle_ops import (
+    build_ui_research_cycle_status_payload,
+    request_research_cycle_trigger,
+)
+from strategy_validator.contracts.research_cycle_scheduler import UiResearchCycleTriggerRequest
+
+
+def trigger_ui_research_cycle(
+    *,
+    request: UiResearchCycleTriggerRequest,
+    auth_context: UiMutationAuthContext,
+) -> dict[str, object]:
+    _ = auth_context
+    return request_research_cycle_trigger(
+        operator_id=request.operator_id,
+        mode=request.mode,
+        idempotency_key=request.idempotency_key,
+    )
+
 
 router = APIRouter(prefix='/ui', tags=['ui'])
 

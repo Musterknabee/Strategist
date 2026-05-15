@@ -91,9 +91,14 @@ describe("TerminalShell", () => {
       </TestHarness>,
     );
     expect(screen.getByLabelText(/quick nav/i)).toBeTruthy();
+    expect(screen.getByLabelText("Ops")).toBeTruthy();
+    expect(screen.getByLabelText("Research")).toBeTruthy();
+    expect(screen.getByLabelText("Evidence")).toBeTruthy();
+    expect(screen.getByLabelText("Release")).toBeTruthy();
     expect(screen.getByTitle("Overview").textContent).toContain("Overview");
+    expect(screen.getByLabelText("Current route").textContent).toContain("Overview");
     expect(screen.getByTestId("page").textContent).toBe("page");
-    expect(screen.getByText(/G\+O\/W\/R\/E\/L\/P\/T\/U nav/i)).toBeTruthy();
+    expect(screen.getByText(/G chord nav/i)).toBeTruthy();
     expect(document.getElementById("terminal-status-rail")).toBeTruthy();
     expect(document.getElementById("terminal-event-tape")).toBeTruthy();
   });

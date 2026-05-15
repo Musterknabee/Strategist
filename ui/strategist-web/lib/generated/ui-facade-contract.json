@@ -1,7 +1,7 @@
 {
   "mutation_route": "/ui/commands/{action}",
   "read_plane_only": true,
-  "route_count": 59,
+  "route_count": 61,
   "routes": [
     {
       "auth_required": false,

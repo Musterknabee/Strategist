@@ -11,6 +11,7 @@ import { TerminalCockpitProvider } from "@/lib/terminal/cockpit-context";
 import HomePage from "./page";
 
 vi.mock("@/lib/config/public-config", () => ({
+  isStrategistDemoModeEnabled: () => false,
   tryGetPublicStrategistApiBaseUrl: () => ({ ok: true, baseUrl: "http://127.0.0.1:8000" }),
 }));
 

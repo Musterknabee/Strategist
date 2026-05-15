@@ -233,11 +233,15 @@ def generate_strategy_theses(
         evaluation_path: str | None = None
         evaluation_sha256: str | None = None
         if evaluate:
-            evaluation_root = root / "generated_evaluations" / batch_summary.run_id
-            evaluation = evaluate_strategy_thesis(thesis=thesis, batch_summary=batch_summary, output_root=evaluation_root)
+            evaluation = evaluate_strategy_thesis(
+                thesis=thesis,
+                batch_summary=batch_summary,
+                output_root=root,
+                repo_root=None,
+            )
             evaluated_count += 1
             support_status = evaluation.support_status
-            evaluation_path = str(evaluation_root / result.strategy_id / "thesis_evaluation.json")
+            evaluation_path = str(root / result.strategy_id / "thesis_evaluation.json")
             evaluation_sha256 = evaluation.evaluation_sha256
 
         artifacts.append(

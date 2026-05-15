@@ -28,7 +28,8 @@ def _md(title, report): return f"# {title}\n\n- schema_version: {getattr(report,
 
 from strategy_validator.contracts.oracle_strategic_programs import OracleScenarioLabReport, OracleScenarioPlanInput
 def load_scenario_plan_input(path: str|Path)->OracleScenarioPlanInput: return OracleScenarioPlanInput.model_validate(_read(path))
-def build_oracle_scenario_lab_report(payload: Any, fusion_report: Any|None=None, posterior_report: Any|None=None, scenario_plan: OracleScenarioPlanInput|None=None, now_utc: datetime|None=None, **_: Any)->OracleScenarioLabReport:
+def build_oracle_scenario_lab_report(payload: Any, fusion_report: Any|None=None, posterior_report: Any|None=None, scenario_plan: OracleScenarioPlanInput|None=None, now_utc: datetime|None=None, **kwargs: Any)->OracleScenarioLabReport:
+    fusion_report = fusion_report or kwargs.get("baseline_fusion_report")
     t=now_utc or _now()
     return OracleScenarioLabReport(generated_at_utc=t,universe_label=_universe(payload),oracle_run_id=getattr(fusion_report,"oracle_run_id",_run(payload,t)),input_timestamp_utc=_ts(payload,t),baseline_dominant_regime=_regime(fusion_report),baseline_strategic_posture=_posture(fusion_report),preferred_strategic_backing_source=getattr(fusion_report,"preferred_strategic_backing_source",None),preferred_strategic_backing_classification=getattr(fusion_report,"preferred_strategic_backing_classification",None),exact_evidence_support_score=_score(fusion_report,posterior_report),baseline_average_posterior_edge_confidence=float(getattr(posterior_report,"average_posterior_edge_confidence",0.0) or 0.0),summary_line="Scenario lab initialized from baseline context.",scenarios=[],highest_downside_scenario_id=None,highest_upside_scenario_id=None,operator_actions=["Populate explicit scenario plans before operational use."])
 def render_oracle_scenario_lab_markdown(report: OracleScenarioLabReport)->str: return _md("Oracle Scenario Lab Report", report)

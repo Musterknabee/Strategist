@@ -43,5 +43,6 @@ export const queryKeys = {
   uiResearchOsHandoffLatest: ["strategist", "ui", "research-os", "handoff", "latest"] as const,
   uiResearchOsHandoffSignoffLatest: ["strategist", "ui", "research-os", "handoff-signoff", "latest"] as const,
   uiResearchOsReviewJournalLatest: ["strategist", "ui", "research-os", "review-journal", "latest"] as const,
+  uiResearchCycleStatusLatest: ["strategist", "ui", "research-cycle", "status", "latest"] as const,
   uiRuntime: (role: string) => ["strategist", "ui", "runtime", role] as const,
 };

@@ -1,17 +1,12 @@
 "use client";
 
 import { useTerminalCockpit } from "@/lib/terminal/cockpit-context";
+import { G_CHORD_HELP_ROWS } from "@/lib/terminal/command-registry";
 
 const ROWS: [string, string][] = [
   ["Ctrl+K / ⌘K", "Command palette"],
   ["/", "Command palette (when not typing)"],
-  ["G then O", "Overview (/) · not while typing in inputs"],
-  ["G then W", "Workboard"],
-  ["G then R", "Readiness"],
-  ["G then E", "Evidence"],
-  ["G then L", "Ledger"],
-  ["G then P", "Providers"],
-  ["G then T", "Runtime"],
+  ...G_CHORD_HELP_ROWS,
   ["R", "Refresh queries for the current route only"],
   ["Palette: Refresh current route", "Same as R · scoped TanStack invalidation"],
   ["Palette: Refresh all (full)", "Invalidates every strategist query"],

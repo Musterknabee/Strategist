@@ -9,6 +9,7 @@ from typing import Any
 
 from strategy_validator.application.research_os_paths import (
     artifact_root_directory,
+    oracle_cycle_manifest_path,
     paper_broker_status_artifact_path,
     provider_historical_snapshot_run_path,
     provider_paper_loop_manifest_path,
@@ -35,6 +36,7 @@ from strategy_validator.application.research_os_handoff_ops import build_ui_rese
 from strategy_validator.application.research_os_handoff_signoff_ops import build_ui_research_os_handoff_signoff_latest_payload
 from strategy_validator.application.research_os_review_journal_ops import build_ui_research_os_review_journal_latest_payload
 from strategy_validator.research.strategy_thesis_eval import build_ui_strategy_thesis_latest_payload
+from strategy_validator.research.strategy_thesis_generator import build_ui_strategy_thesis_generation_latest_payload
 from strategy_validator.application.ui_strategy_batch import build_ui_strategy_batch_latest_payload
 
 _SCHEMA = "ui_research_os_status/v1"
@@ -155,6 +157,25 @@ def _paper_broker_artifact_hint(*, repo_root: Path | None = None) -> dict[str, A
     }
 
 
+def _oracle_cycle_manifest_hint(*, repo_root: Path | None = None) -> dict[str, Any]:
+    p = oracle_cycle_manifest_path(repo_root)
+    if not p.is_file():
+        return {"status": "NOT_PRESENT", "artifact_path": str(p)}
+    raw = _safe_read(p)
+    if raw is None:
+        return {"status": "UNREADABLE", "artifact_path": str(p)}
+    return {
+        "status": "PRESENT",
+        "artifact_path": str(p),
+        "batch_id": raw.get("batch_id"),
+        "run_id": raw.get("run_id"),
+        "fusion_posture": raw.get("fusion_posture"),
+        "dominant_regime": raw.get("dominant_regime"),
+        "news_semantic_source": raw.get("news_semantic_source"),
+        "strategy_snapshots": raw.get("strategy_snapshots"),
+    }
+
+
 def _runtime_demo_manifest_hint(*, repo_root: Path | None = None) -> dict[str, Any]:
     p = research_os_runtime_manifest_path(repo_root)
     if not p.is_file():
@@ -223,6 +244,7 @@ def build_ui_research_os_status_payload(*, repo_root: Path | None = None) -> dic
     compute_payload = build_ui_research_compute_payload()
     strategy_memory_payload = build_ui_strategy_memory_latest_payload(repo_root=root)
     strategy_thesis_payload = build_ui_strategy_thesis_latest_payload(repo_root=root)
+    strategy_thesis_generation_payload = build_ui_strategy_thesis_generation_latest_payload(repo_root=root)
     shadow_book_payload = build_ui_shadow_book_latest_payload(repo_root=root)
     research_os_closure_payload = build_ui_research_os_closure_latest_payload(repo_root=root)
     research_os_attestation_payload = build_ui_research_os_attestation_latest_payload(repo_root=root)
@@ -242,6 +264,8 @@ def build_ui_research_os_status_payload(*, repo_root: Path | None = None) -> dic
         degraded.extend(str(x) for x in strategy_memory_payload["degraded"])
     if strategy_thesis_payload.get("degraded"):
         degraded.extend(str(x) for x in strategy_thesis_payload["degraded"])
+    if strategy_thesis_generation_payload.get("degraded"):
+        degraded.extend(str(x) for x in strategy_thesis_generation_payload["degraded"])
     if shadow_book_payload.get("degraded"):
         degraded.extend(str(x) for x in shadow_book_payload["degraded"])
     if research_os_closure_payload.get("degraded"):
@@ -279,6 +303,7 @@ def build_ui_research_os_status_payload(*, repo_root: Path | None = None) -> dic
 
     demo = _demo_manifest_hint(repo_root=root)
     runtime_demo = _runtime_demo_manifest_hint(repo_root=root)
+    oracle_cycle = _oracle_cycle_manifest_hint(repo_root=root)
     if demo.get("status") != "PRESENT" and runtime_demo.get("status") != "PRESENT":
         degraded.append("RESEARCH_OS_OPERATOR_MANIFEST_ABSENT")
 
@@ -329,6 +354,7 @@ def build_ui_research_os_status_payload(*, repo_root: Path | None = None) -> dic
             "strategy_data_root": str(strategy_data_directory(repo_root)),
         },
         "runtime_demo_manifest": runtime_demo,
+        "oracle_cycle_latest": oracle_cycle,
         "provider_historical_snapshot_latest": provider_hist_run,
         "provider_paper_loop_latest": provider_paper_loop,
         "paper_broker_status_latest": paper_broker_art,
@@ -336,6 +362,7 @@ def build_ui_research_os_status_payload(*, repo_root: Path | None = None) -> dic
         "provider_loop_warnings": prov_loop_warns,
         "strategy_memory_latest": strategy_memory_payload,
         "strategy_thesis_latest": strategy_thesis_payload,
+        "strategy_thesis_generation_latest": strategy_thesis_generation_payload,
         "shadow_book_latest": shadow_book_payload,
         "research_os_closure_latest": research_os_closure_payload,
         "research_os_attestation_latest": research_os_attestation_payload,

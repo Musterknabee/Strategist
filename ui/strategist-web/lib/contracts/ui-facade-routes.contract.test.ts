@@ -37,10 +37,11 @@ describe("ui-facade-routes.json (backend-derived contract)", () => {
     }
 
     const postAuthed = routes.filter((r) => r.method === "POST" && r.auth_required);
-    expect(postAuthed).toHaveLength(2);
+    expect(postAuthed).toHaveLength(3);
     const postPaths = new Set(postAuthed.map((r) => r.path));
     expect(postPaths.has("/ui/commands/{action}")).toBe(true);
     expect(postPaths.has("/ui/strategy-intake")).toBe(true);
+    expect(postPaths.has("/ui/research-cycle/trigger")).toBe(true);
     for (const r of postAuthed) {
       expect(r.kind).toBe("mutation");
     }

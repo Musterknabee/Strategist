@@ -1,5 +1,5 @@
 {
-  "route_count": 59,
+  "route_count": 61,
   "routes": [
     {
       "auth_required": false,
@@ -322,6 +322,20 @@
       "method": "POST",
       "path": "/ui/strategy-intake",
       "payload_schema": "strategy_intake_receipt/v1"
+    },
+    {
+      "auth_required": true,
+      "kind": "mutation",
+      "method": "POST",
+      "path": "/ui/research-cycle/trigger",
+      "payload_schema": "ui_research_cycle_trigger_receipt/v1"
+    },
+    {
+      "auth_required": false,
+      "kind": "read",
+      "method": "GET",
+      "path": "/ui/research-cycle/status/latest",
+      "payload_schema": "ui_research_cycle_status/v1"
     },
     {
       "auth_required": false,
